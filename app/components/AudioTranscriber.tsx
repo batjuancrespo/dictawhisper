@@ -50,7 +50,9 @@ export default function AudioTranscriber() {
     setIsProcessing(true)
     try {
       const app = await client("batjuancrespo/openai-whisper-large-v3-turbo")
-      const result = await app.predict("/predict", [audioBlob])
+      const result = await app.predict("/predict", [
+        audioBlob
+      ])
       
       if (typeof result.data === 'string') {
         setTranscription(result.data)
