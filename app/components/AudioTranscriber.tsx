@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Client } from '@gradio/client'
+import { client } from '@gradio/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Mic, Square, Loader2 } from 'lucide-react'
@@ -49,12 +49,14 @@ export default function AudioTranscriber() {
   const transcribeAudio = async (audioBlob: Blob) => {
     setIsProcessing(true)
     try {
-      const client = await Client.connect("batjuancrespo/openai-whisper-large-v3-turbo")
-      const result = await client.predict("/predict", { 
-        param_0: audioBlob,
-      })
+      const app = await client("batjuancrespo/openai-whisper-large-v3-turbo")
+      const result = await app.predict("/predict", [audioBlob])
       
-      setTranscription(result.data)
+      if (typeof result.data === 'string') {
+        setTranscription(result.data)
+      } else {
+        setTranscription('Unexpected response format')
+      }
     } catch (error) {
       console.error('Error transcribing audio:', error)
       setTranscription('Error transcribing audio. Please try again.')
