@@ -1,0 +1,283 @@
+body {
+  font-family: 'Roboto Slab', serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  transition: background-color 0.3s, color 0.3s;
+  /* More formal color scheme - Day theme - based on dictatorial style */
+  --bg-color: #f8f9fa; /* Light grey background */
+  --text-color: #495057; /* Dark grey text */
+  --primary-color: #0056b3; /* Darker blue for primary elements */
+}
+
+body.night-theme {
+  /* More formal color scheme - Night theme - based on dictatorial style */
+  --bg-color: #343a40; /* Dark grey background */
+  --text-color: #e0e0e0; /* Light grey text */
+  --primary-color: #8da9c4; /* Muted blue for primary elements */
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+.container {
+  background-color: var(--bg-color);
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+  text-align: center;
+  transition: background-color 0.3s;
+}
+
+h1 {
+  margin-bottom: 30px;
+  color: var(--primary-color);
+}
+
+button {
+  padding: 14px 28px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 7px;
+  background-color: var(--primary-color);
+  color: white; /* Changed button text to white for better contrast on blue */
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease; /* Added color transition */
+}
+
+button:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 80%, black);
+}
+
+#status {
+  margin-top: 20px;
+  font-style: italic;
+  color: #6c757d;
+}
+
+#loading {
+  margin-top: 20px;
+  color: #28a745;
+}
+
+.hidden {
+  display: none;
+}
+
+.transcription-area {
+  margin-top: 30px;
+  padding: 20px;
+  border: 2px solid #ced4da;
+  border-radius: 7px;
+  background-color: #fff;
+  color: #333;
+  text-align: left;
+  min-height: 300px; /* Increased min-height for a larger text box */
+  font-size: 1.1rem;
+  white-space: pre-wrap;
+  outline: none;
+  transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease; /* Added transitions */
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+body.night-theme .transcription-area {
+  background-color: #212121;
+  color: #eee;
+  border-color: #555;
+}
+
+.transcription-area:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.button-group {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+#correctButton {
+  background-color: #28a745;
+}
+
+#correctButton:hover {
+  background-color: #218838;
+}
+
+#copyButton {
+  background-color: #6c757d; /* Grey color for copy button */
+}
+
+#copyButton:hover {
+  background-color: color-mix(in srgb, #6c757d 80%, black);
+}
+
+.theme-switch-wrapper {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.theme-switch-wrapper span {
+  margin-right: 10px;
+  font-size: 1rem;
+}
+
+.theme-switch {
+  display: inline-block;
+  height: 28px;
+  position: relative;
+  width: 60px;
+}
+
+.theme-switch input {
+  display:none;
+}
+
+.slider {
+  background-color: #ccc;
+  bottom: 0;
+  cursor: pointer;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  background-color: white;
+  bottom: 4px;
+  content: "";
+  height: 20px;
+  left: 4px;
+  position: absolute;
+  transition: .4s;
+  width: 20px;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--primary-color);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary-color);
+}
+
+input:checked + .slider:before {
+  transform: translateX(32px);
+}
+
+#recordButton::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: transparent;
+  margin-right: 8px;
+  vertical-align: middle;
+  opacity: 0;
+  transition: opacity 0.3s, background-color 0.3s;
+}
+
+#recordButton.recording::before {
+  opacity: 1;
+  background-color: red;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
+
+.modal {
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+  background-color: var(--bg-color); /* Match modal background to body background */
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  border-radius: 12px;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+body.night-theme .modal-content {
+  background-color: var(--bg-color); /* Ensure modal content also respects night theme */
+  border-color: #e0e0e0;
+}
+
+.close-button {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal-content h3, .modal-content p, .modal-content textarea, .modal-content label, .modal-content button {
+  color: var(--text-color);
+}
+
+.modal-actions {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.modal-actions button {
+  margin: 0 10px;
+}
+
+#correctionText {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ced4da;
+  border-radius: 7px;
+  box-sizing: border-box;
+  color: var(--text-color); /* Modal textarea text color */
+  background-color: #fff; /* Modal textarea background */
+}
+
+body.night-theme #correctionText {
+  background-color: #212121; /* Night theme textarea background */
+  color: #eee; /* Night theme textarea text color */
+  border-color: #555; /* Night theme textarea border */
+}
