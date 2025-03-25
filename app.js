@@ -20,6 +20,7 @@ let learningEnabled = true; // Enable/disable automatic learning
 let learningConfidence = {}; // Track confidence in learned patterns
 let patternStats = {}; // Statistical tracking of correction patterns
 let userFeedback = []; // Store user feedback on corrections
+let dictionaryLoaded = false; // Track if dictionary was loaded successfully
 
 // Inicialización del reconocimiento de voz
 function initSpeechRecognition() {
@@ -424,8 +425,10 @@ function correctSelectedText() {
     if (selectedText.split(/\s+/).length === 1 && correctedText.split(/\s+/).length === 1) {
         addToDictionary(selectedText, correctedText);
         showTempMessage(`Corrección añadida al diccionario: ${selectedText} → ${correctedText}`);
+        console.log(` Nueva corrección añadida: "${selectedText}" → "${correctedText}"`);
     } else {
         showTempMessage("Texto corregido");
+        console.log(` Corrección compleja aplicada: "${selectedText}" → "${correctedText}"`);
         
         // Registrar corrección compleja para aprendizaje
         if (learningEnabled) {
@@ -548,8 +551,11 @@ function formatPunctuationAndCapitalization(element) {
 
 // Procesar los resultados del reconocimiento de voz
 function applyCustomDictionary(text) {
-    console.log("Aplicando diccionario a:", text);
+    console.log(" Aplicando diccionario personalizado a:", text);
+    console.log(` Estado del diccionario: ${customDictionary.length} entradas, cargado: ${dictionaryLoaded}`);
+    
     let correctedText = text;
+    let correctionsApplied = 0;
     
     // Aplicar cada palabra del diccionario personalizado
     customDictionary.forEach(entry => {
@@ -558,14 +564,21 @@ function applyCustomDictionary(text) {
         let matchCount = 0;
         correctedText = correctedText.replace(regex, function() {
             matchCount++;
+            correctionsApplied++;
             return entry.correctWord;
         });
         if (matchCount > 0) {
-            console.log(`Reemplazado '${entry.commonMistake}' con '${entry.correctWord}' ${matchCount} veces`);
+            console.log(` Reemplazado '${entry.commonMistake}' con '${entry.correctWord}' ${matchCount} veces`);
         }
     });
     
-    console.log("Texto corregido final:", correctedText);
+    if (correctionsApplied > 0) {
+        console.log(` Total correcciones aplicadas: ${correctionsApplied}`);
+    } else {
+        console.log("ℹ️ No se encontraron coincidencias para corregir");
+    }
+    
+    console.log(" Texto corregido final:", correctedText);
     return correctedText;
 }
 
@@ -721,11 +734,11 @@ async function saveDictionary() {
             dictionary: customDictionary,
             updatedAt: Date.now()
         });
-        console.log("✅ Diccionario guardado con éxito en Firebase");
+        console.log(" Diccionario guardado con éxito en Firebase");
         pendingSyncChanges = false; 
         updateSyncStatus("Sincronizado", true);
     } catch (error) {
-        console.error('❌ Error al guardar el diccionario:', error);
+        console.error(' Error al guardar el diccionario:', error);
         pendingSyncChanges = true;
         updateSyncStatus("Error al sincronizar");
     }
@@ -740,13 +753,18 @@ async function loadDictionary() {
         
         if (docSnap.exists() && docSnap.data().dictionary) {
             customDictionary = docSnap.data().dictionary;
+            dictionaryLoaded = true;
             renderDictionary();
-            console.log("✅ Diccionario cargado desde Firebase:", customDictionary.length, "entradas");
+            console.log(" Diccionario cargado desde Firebase:", customDictionary.length, "entradas");
+            console.log(" Contenido del diccionario:", JSON.stringify(customDictionary, null, 2));
         } else {
             console.log("ℹ️ No hay diccionario guardado en Firebase para este usuario");
+            dictionaryLoaded = false;
+            customDictionary = [];
         }
     } catch (error) {
-        console.error('❌ Error al cargar el diccionario:', error);
+        console.error(' Error al cargar el diccionario:', error);
+        dictionaryLoaded = false;
     }
 }
 
@@ -758,9 +776,9 @@ async function saveErrorLog() {
             errorLog: textJoinErrorLog,
             updatedAt: Date.now()
         });
-        console.log("✅ Registro de errores guardado con éxito en Firebase");
+        console.log(" Registro de errores guardado con éxito en Firebase");
     } catch (error) {
-        console.error('❌ Error al guardar el registro de errores:', error);
+        console.error(' Error al guardar el registro de errores:', error);
     }
 }
 
@@ -773,7 +791,7 @@ async function loadErrorLog() {
         
         if (docSnap.exists() && docSnap.data().errorLog) {
             textJoinErrorLog = docSnap.data().errorLog;
-            console.log(`✅ Cargados ${textJoinErrorLog.length} registros de errores desde Firebase`);
+            console.log(` Cargados ${textJoinErrorLog.length} registros de errores desde Firebase`);
             
             // Analizar datos al cargar
             if (textJoinErrorLog.length > 5) {
@@ -783,7 +801,7 @@ async function loadErrorLog() {
             console.log("ℹ️ No hay registro de errores en Firebase para este usuario");
         }
     } catch (error) {
-        console.error('❌ Error al cargar el registro de errores:', error);
+        console.error(' Error al cargar el registro de errores:', error);
     }
 }
 
@@ -799,9 +817,9 @@ async function saveUserFeedback() {
             patternStats: patternStats,
             updatedAt: Date.now()
         });
-        console.log("✅ Datos de aprendizaje guardados con éxito en Firebase");
+        console.log(" Datos de aprendizaje guardados con éxito en Firebase");
     } catch (error) {
-        console.error('❌ Error al guardar feedback de usuario:', error);
+        console.error(' Error al guardar feedback de usuario:', error);
     }
 }
 
@@ -816,23 +834,23 @@ async function loadUserFeedback() {
             const data = docSnap.data();
             if (data.userFeedback) {
                 userFeedback = data.userFeedback;
-                console.log(`✅ Cargados ${userFeedback.length} registros de feedback desde Firebase`);
+                console.log(` Cargados ${userFeedback.length} registros de feedback desde Firebase`);
             }
             
             if (data.learningConfidence) {
                 learningConfidence = data.learningConfidence;
-                console.log(`✅ Cargados ${Object.keys(learningConfidence).length} patrones de confianza desde Firebase`);
+                console.log(` Cargados ${Object.keys(learningConfidence).length} patrones de confianza desde Firebase`);
             }
             
             if (data.patternStats) {
                 patternStats = data.patternStats;
-                console.log("✅ Estadísticas de patrones cargadas desde Firebase:", patternStats);
+                console.log(" Estadísticas de patrones cargadas desde Firebase:", patternStats);
             }
         } else {
             console.log("ℹ️ No hay datos de aprendizaje en Firebase para este usuario");
         }
     } catch (error) {
-        console.error('❌ Error al cargar feedback de usuario:', error);
+        console.error(' Error al cargar feedback de usuario:', error);
     }
 }
 
@@ -896,7 +914,7 @@ function showTempMessage(message, isError = false) {
 
 // Sincronizar con base de datos externa (ahora real con Firebase)
 async function syncWithExternalDB() {
-    console.log("🔄 Iniciando sincronización con Firebase...");
+    console.log(" Iniciando sincronización con Firebase...");
     updateSyncStatus("Sincronizando...");
     
     try {
@@ -907,9 +925,9 @@ async function syncWithExternalDB() {
         
         pendingSyncChanges = false;
         updateSyncStatus("Sincronizado", true);
-        console.log("✅ Sincronización completada con éxito");
+        console.log(" Sincronización completada con éxito");
     } catch (error) {
-        console.error('❌ Error al sincronizar con Firebase:', error);
+        console.error(' Error al sincronizar con Firebase:', error);
         updateSyncStatus("Error al sincronizar");
     }
 }
@@ -1084,21 +1102,23 @@ function restartRecognition() {
 }
 
 // Event listeners al cargar la página
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("🚀 Iniciando aplicación de dictado de voz a texto...");
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log(" Iniciando aplicación de dictado de voz a texto...");
     // Inicializar reconocimiento de voz
     initSpeechRecognition();
     
-    console.log("📂 Cargando datos del usuario", userId);
+    console.log(" Cargando datos del usuario", userId);
     
-    // Cargar diccionario guardado
-    loadDictionary();
+    // Cargar diccionario guardado y esperar a que termine
+    await loadDictionary();
+    console.log(" Estado del diccionario después de carga:", 
+        {entries: customDictionary.length, loaded: dictionaryLoaded});
     
     // Cargar registro de errores para el aprendizaje automático
-    loadErrorLog();
+    await loadErrorLog();
     
     // Cargar feedback de usuario y estadísticas de aprendizaje
-    loadUserFeedback();
+    await loadUserFeedback();
     
     // Cargar preferencia de tema
     loadThemePreference();
@@ -1114,10 +1134,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Simular sincronización periódica - ahora real con Firebase
     setInterval(() => {
         if (pendingSyncChanges) {
-            console.log("🔄 Detectados cambios pendientes, iniciando sincronización");
+            console.log(" Detectados cambios pendientes, iniciando sincronización");
             syncWithExternalDB();
         }
     }, 60000); // Cada minuto
     
-    console.log("✅ Aplicación inicializada correctamente");
+    console.log(" Aplicación inicializada correctamente");
 });
