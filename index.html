@@ -1,0 +1,130 @@
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dictado de Voz a Texto</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="theme-toggle">
+            <span class="theme-label">Modo oscuro</span>
+            <label class="theme-switch">
+                <input type="checkbox" id="themeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <header>
+            <h1>Dictado de Voz a Texto</h1>
+        </header>
+        
+        <main>
+            <div class="controls">
+                <button id="startBtn" class="btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="12" cy="12" r="6" fill="currentColor"/>
+                    </svg>
+                    Iniciar Dictado
+                </button>
+                <button id="stopBtn" class="btn" disabled style="display:none;">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <rect x="8" y="8" width="8" height="8" fill="currentColor"/>
+                    </svg>
+                    Detener
+                </button>
+                <button id="copyBtn" class="btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <path d="M8 8h6v2h2v6h-8v-8z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M10 6v2h6v6h2v-8h-8z" fill="currentColor"/>
+                    </svg>
+                    Copiar Texto
+                </button>
+                <button id="correctionBtn" class="btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <path d="M8 12l3 3 6-6" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                    Corregir Selección
+                </button>
+                <div class="status-indicator">
+                    <span id="status">Listo para dictar</span>
+                </div>
+            </div>
+            
+            <div class="header-controls">
+                <div class="header-textbox-container">
+                    <p class="header-label">Técnica (si procede...)</p>
+                    <div class="header-textbox" id="headerText" contenteditable="true"></div>
+                </div>
+                <div class="header-buttons-container">
+                    <div class="button-row">
+                        <div class="header-buttons-left">
+                            <button class="header-btn header-btn-red" data-header="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">TAC ABD ART y PORT</button>
+                            <button class="header-btn header-btn-red" data-header="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase portal.">TAC ABD PORT</button>
+                            <button class="header-btn header-btn-red" data-header="Se realiza exploración toracoabdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">TAC TAP ART y PORT</button>
+                            <button class="header-btn header-btn-red" data-header="Se realiza exploración sin administración endovenosa de contraste con adquisición de imágenes en reposo y durante maniobra de Valsalva.">TAC HERNIA</button>
+                            <button class="header-btn header-btn-red" data-header="Se realiza exploración sin y tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">TAC 3 FASES</button>
+                            <button class="header-btn header-btn-blue" data-header="Exploración ecográfica con sonda multifrecuencia.">ECO</button>
+                        </div>
+                    </div>
+                    <div class="button-row">
+                        <div class="header-buttons-right">
+                            <button class="header-btn header-btn-yellow" data-header="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM HEP</button>
+                            <button class="header-btn header-btn-yellow" data-header="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, estudio dinámico tras la administración endovenosa de contraste completándose la valoración con cortes radiales respecto al colédoco orientados a la valoración de la via biliar.">COLANGIO RM</button>
+                            <button class="header-btn header-btn-yellow" data-header="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa en los tres planos del espacio, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM PELVIS NEO</button>
+                            <button class="header-btn header-btn-yellow" data-header="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa y difusión.">RM PELVIS FIST</button>
+                            <button class="header-btn header-btn-yellow" data-header="Se realiza exploración abdominal con secuencias potenciadas en T2, difusión y estudio dinámico tras la administración endovenosa de contraste previa distensión de las asas intestinales. Exploración orientada a la valoración de asas de intestino delgado.">ENTERO RM</button>
+                            <button class="header-btn header-btn-clear" id="clearHeaderBtn">Limpiar encabezado</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="transcript-container">
+                <div class="transcript-text" id="transcript" contenteditable="true"></div>
+            </div>
+
+            <div class="custom-dictionary" style="display: none;">
+                <h2>Vocabulario Personalizado</h2>
+                <div class="dictionary-input">
+                    <input type="text" id="customWord" placeholder="Palabra a añadir">
+                    <button id="addWordBtn" class="btn">Añadir</button>
+                </div>
+                <div class="dictionary-list-container">
+                    <h3>Palabras añadidas:</h3>
+                    <ul id="dictionaryList" class="dictionary-list"></ul>
+                </div>
+            </div>
+
+            <div class="correction-panel">
+                <h2>Correcciones recientes</h2>
+                <ul id="correctionsList" class="corrections-list"></ul>
+            </div>
+        </main>
+
+        <div class="sync-status">
+            <span id="syncStatus">No sincronizado</span>
+        </div>
+        
+        <footer>
+            <p>Dictado de Voz a Texto - Desarrollado con Web Speech API</p>
+        </footer>
+    </div>
+    
+    <script type="module" src="config.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
