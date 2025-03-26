@@ -120,12 +120,12 @@ h1, h2, h3 {
 }
 
 #copyBtn {
-    background-color: var(--primary-color);
+    background-color: #ff9800;
     margin-left: 5px;
 }
 
 #copyBtn:hover {
-    background-color: var(--button-hover);
+    background-color: #e68a00;
 }
 
 .status-indicator {

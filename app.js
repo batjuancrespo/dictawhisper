@@ -951,8 +951,13 @@ function toggleTheme() {
 
 // Función para copiar al portapapeles
 function copyTranscriptToClipboard() {
-    const text = document.getElementById('transcript').innerText;
-    navigator.clipboard.writeText(text)
+    const headerText = document.getElementById('headerText').innerText;
+    const transcriptText = document.getElementById('transcript').innerText;
+    
+    // Combinar el texto del encabezado y la transcripción si hay encabezado
+    const textToCopy = headerText ? `${headerText}\n${transcriptText}` : transcriptText;
+    
+    navigator.clipboard.writeText(textToCopy)
         .then(() => {
             showTempMessage("Texto copiado al portapapeles");
         })
