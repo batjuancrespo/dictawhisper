@@ -1156,6 +1156,17 @@ function updateSyncStatus(message, success = false) {
     } else {
         statusElement.style.color = 'var(--text-color)';
     }
+    
+    // Update the duplicate element if it exists (for backward compatibility)
+    const duplicateElement = document.getElementById('syncStatus-duplicate');
+    if (duplicateElement) {
+        duplicateElement.textContent = message;
+        if (success) {
+            duplicateElement.style.color = 'var(--success-color)';
+        } else {
+            duplicateElement.style.color = 'var(--text-color)';
+        }
+    }
 }
 
 // Reiniciar reconocimiento para evitar duplicación
@@ -1225,10 +1236,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cargar preferencia de tema
     loadThemePreference();
     
+    // Añadir listener para teclas de acceso rápido (Shift+Meta+Shift)
+    document.addEventListener('keydown', function(event) {
+        if (event.shiftKey && event.metaKey && event.key === 'Shift') {
+            event.preventDefault();
+            document.getElementById('startBtn').click();
+        }
+    });
+    
     // Event listeners para botones
     document.getElementById('startBtn').addEventListener('click', startDictation);
     document.getElementById('stopBtn').addEventListener('click', stopDictation); // Keep for backward compatibility
     document.getElementById('copyBtn').addEventListener('click', copyTranscriptToClipboard);
+    document.getElementById('correctionBtn').addEventListener('click', correctSelectedText);
+    document.getElementById('themeToggle').addEventListener('change', toggleTheme);
     
     // Event listeners para botones de encabezado
     document.querySelectorAll('.header-btn-red, .header-btn-yellow, .header-btn-blue').forEach(button => {

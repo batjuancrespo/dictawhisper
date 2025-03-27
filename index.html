@@ -22,10 +22,16 @@
                 <input type="checkbox" id="themeToggle">
                 <span class="slider"></span>
             </label>
+            <div class="joker-container">
+                <img src="joker.jpg" alt="Joker" class="theme-image dark-theme-image">
+                <img src="batmanneal.jpg" alt="Batman" class="theme-image light-theme-image">
+            </div>
         </div>
         
         <header>
-            <h1>Programa de Transcripción Rx</h1>
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <h1>Programa de Transcripción Rx</h1>
+            </div>
         </header>
         
         <main>
@@ -60,7 +66,10 @@
                     Corregir Selección
                 </button>
                 <div class="status-indicator">
-                    <span id="status">Listo para dictar</span>
+                    <span id="status" class="status-text">Listo para dictar</span>
+                    <div class="sync-status">
+                        <span id="syncStatus">No sincronizado</span>
+                    </div>
                 </div>
             </div>
             
@@ -115,13 +124,10 @@
             </div>
         </main>
 
-        <div class="sync-status">
-            <span id="syncStatus">No sincronizado</span>
+        <div class="sync-status-container">
+            <span id="syncStatus-duplicate">No sincronizado</span>
         </div>
         
-        <footer>
-            <p>Programa de Transcripción Rx - Desarrollado con Web Speech API</p>
-        </footer>
     </div>
     
     <script type="module" src="config.js"></script>
