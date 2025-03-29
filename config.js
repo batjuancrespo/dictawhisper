@@ -10,13 +10,6 @@ export const firebaseConfig = {
 };
 
 // User ID management (simple approach - could be enhanced with authentication)
-let userId = localStorage.getItem('userId');
-if (!userId) {
-  userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-  localStorage.setItem('userId', userId);
-  console.log("Created new user ID:", userId);
-} else {
-  console.log("Using existing user ID:", userId);
-}
-
-export { userId };
+// User ID management with fixed ID
+export const userId = 'user_1743099040522_yds5p2t';
+console.log("Using fixed user ID:", userId);
