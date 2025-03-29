@@ -9,6 +9,7 @@ export const firebaseConfig = {
   measurementId: "G-6PQSKYMDP0"
 };
 
+
 // User ID management (simple approach - could be enhanced with authentication)
 export const userId = 'user_1743099040522_yds5p2t';
 console.log("Using fixed user ID:", userId);
