@@ -11,5 +11,5 @@ export const firebaseConfig = {
 
 // User ID management (simple approach - could be enhanced with authentication)
 // User ID management with fixed ID
-export const userId = 'user_1743099040522_yds5p2t';
+export const userId = '1743099040522_yds5p2t';
 console.log("Using fixed user ID:", userId);
