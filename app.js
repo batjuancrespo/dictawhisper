@@ -33,19 +33,6 @@ let speechQualityMetrics = { // Track speech quality metrics
 };
 let adaptiveDictionary = {}; // Dictionary that adapts based on user context
 let contextualPatterns = []; // Store patterns based on document context
-let domainSpecificVocabulary = {}; // Store vocabulary specific to medical domains
-let voiceProfile = {
-    speed: 'normal',
-    accent: 'neutral',
-    clarity: 'medium',
-    adjustments: {}
-}; // Voice characteristics profile
-let environmentalFactors = {
-    noiseLevel: 'low',
-    micQuality: 'unknown',
-    detectedIssues: []
-}; // Track environmental factors affecting recognition
-let intelligentCorrections = []; // Track corrections made by AI without user input
 
 // Inicialización del reconocimiento de voz
 function initSpeechRecognition() {
@@ -60,7 +47,7 @@ function initSpeechRecognition() {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'es-ES';
-    recognition.maxAlternatives = 5; // Increased from 3 to 5 for better comparison
+    recognition.maxAlternatives = 3; // Get multiple alternatives for better comparison
     
     // Evento para procesar resultados
     recognition.onresult = handleRecognitionResult;
@@ -273,15 +260,6 @@ function handleRecognitionResult(event) {
         if (bestAlternative !== finalTranscript) {
             console.log("Usando alternativa con mejor coincidencia:", bestAlternative);
             finalTranscript = bestAlternative;
-            
-            // Record this intelligent correction
-            intelligentCorrections.push({
-                original: finalTranscript,
-                corrected: bestAlternative,
-                confidence: bestConfidence,
-                method: 'alternative_selection',
-                timestamp: Date.now()
-            });
         }
     }
     
@@ -1045,10 +1023,6 @@ async function saveUserFeedback() {
         console.log("- Diccionario adaptativo:", adaptiveDictionary);
         console.log("- Patrones contextuales:", contextualPatterns);
         console.log("- Métricas de calidad del habla:", speechQualityMetrics);
-        console.log("- Perfil de voz:", voiceProfile);
-        console.log("- Factores ambientales:", environmentalFactors);
-        console.log("- Vocabulario específico:", Object.keys(domainSpecificVocabulary).length, "términos");
-        console.log("- Correcciones inteligentes:", intelligentCorrections.length, "realizadas");
         
         await setDoc(doc(db, 'users', userId, 'data', 'learning'), {
             userFeedback: userFeedback,
@@ -1057,10 +1031,6 @@ async function saveUserFeedback() {
             adaptiveDictionary: adaptiveDictionary,
             contextualPatterns: contextualPatterns,
             speechQualityMetrics: speechQualityMetrics,
-            voiceProfile: voiceProfile,
-            environmentalFactors: environmentalFactors,
-            domainSpecificVocabulary: domainSpecificVocabulary,
-            intelligentCorrections: intelligentCorrections,
             updatedAt: Date.now()
         });
         
@@ -1133,64 +1103,19 @@ async function loadUserFeedback() {
                     noiseEvents: 0
                 };
             }
-            
-            if (data.voiceProfile) {
-                voiceProfile = data.voiceProfile;
-                console.log("Perfil de voz cargado:", voiceProfile);
-            } else {
-                console.log("No hay perfil de voz, inicializando");
-                voiceProfile = {
-                    speed: 'normal',
-                    accent: 'neutral',
-                    clarity: 'medium',
-                    adjustments: {}
-                };
-            }
-            
-            if (data.environmentalFactors) {
-                environmentalFactors = data.environmentalFactors;
-                console.log("Factores ambientales cargados:", environmentalFactors);
-            } else {
-                console.log("No hay factores ambientales, inicializando");
-                environmentalFactors = {
-                    noiseLevel: 'low',
-                    micQuality: 'unknown',
-                    detectedIssues: []
-                };
-            }
-            
-            if (data.domainSpecificVocabulary) {
-                domainSpecificVocabulary = data.domainSpecificVocabulary;
-                console.log(`Cargado vocabulario específico con ${Object.keys(domainSpecificVocabulary).length} términos`);
-            } else {
-                console.log("No hay vocabulario específico, inicializando vacío");
-                domainSpecificVocabulary = {};
-            }
-            
-            if (data.intelligentCorrections) {
-                intelligentCorrections = data.intelligentCorrections;
-                console.log(`Cargadas ${intelligentCorrections.length} correcciones inteligentes`);
-            } else {
-                console.log("No hay correcciones inteligentes, inicializando vacío");
-                intelligentCorrections = [];
-            }
-            
-            // ... existing code ...
         } else {
-            // ... existing code ...
-            voiceProfile = {
-                speed: 'normal',
-                accent: 'neutral',
-                clarity: 'medium',
-                adjustments: {}
+            console.log("No hay datos de aprendizaje en Firebase para este usuario, inicializando vacíos");
+            userFeedback = [];
+            learningConfidence = {};
+            patternStats = {};
+            adaptiveDictionary = {};
+            contextualPatterns = [];
+            speechQualityMetrics = {
+                totalSegments: 0,
+                clearedSegments: 0,
+                confidenceScores: [],
+                noiseEvents: 0
             };
-            environmentalFactors = {
-                noiseLevel: 'low',
-                micQuality: 'unknown',
-                detectedIssues: []
-            };
-            domainSpecificVocabulary = {};
-            intelligentCorrections = [];
         }
     } catch (error) {
         console.error('Error al cargar feedback de usuario:', error);
@@ -1495,7 +1420,7 @@ function updateSpeechQualityMetrics(type, value = null) {
     }
 }
 
-// New function to select best alternative based on context, dictionaries and domain knowledge
+// New function to select best alternative based on context and dictionaries
 function selectBestAlternative(original, alternatives, dictionary, adaptiveDictionary) {
     // Calculate base scores for each alternative
     const scores = alternatives.map(alt => {
@@ -1517,34 +1442,13 @@ function selectBestAlternative(original, alternatives, dictionary, adaptiveDicti
         
         // Consider context from recent text
         const transcriptElement = document.getElementById('transcript');
-        const recentText = transcriptElement.innerText.slice(-200); // Increased from 100 to 200
+        const recentText = transcriptElement.innerText.slice(-100);
         
         // Check for topical consistency
         const topics = extractTopics(recentText);
         for (const topic of topics) {
             if (alt.text.includes(topic)) {
                 score += 0.05;
-            }
-        }
-        
-        // Check for domain-specific medical terminology
-        if (Object.keys(domainSpecificVocabulary).length > 0) {
-            const medicalTerms = identifyDomainSpecificTerms(alt.text);
-            score += medicalTerms.length * 0.03;
-        }
-        
-        // Check for improved grammatical structure
-        const grammarScore = assessGrammaticalQuality(alt.text);
-        score += grammarScore * 0.1;
-        
-        // Consider voice profile adjustments
-        if (voiceProfile.adjustments) {
-            if (voiceProfile.speed === 'fast' && alt.text.length > original.length) {
-                score += 0.05; // Prefer longer transcriptions for fast speakers
-            }
-            
-            if (voiceProfile.clarity === 'low' && alt.confidence > 0.5) {
-                score += 0.1; // Give more weight to confidence for unclear speech
             }
         }
         
@@ -1584,7 +1488,44 @@ function extractTopics(text) {
     return [...new Set(topics)]; // Return unique topics
 }
 
-// Enhanced function to update learning system
+// New function to analyze and optimize speech recognition
+function analyzeAndOptimizeSpeechRecognition() {
+    if (speechQualityMetrics.totalSegments < 10) return; // Need enough data
+    
+    // Calculate average confidence
+    const avgConfidence = speechQualityMetrics.confidenceScores.reduce((a, b) => a + b, 0) / 
+                          speechQualityMetrics.confidenceScores.length;
+    
+    // Calculate clear speech percentage
+    const clearPercentage = (speechQualityMetrics.clearedSegments / speechQualityMetrics.totalSegments) * 100;
+    
+    console.log(`Métricas de calidad del habla: Confianza promedio ${avgConfidence.toFixed(2)}, 
+                Claridad ${clearPercentage.toFixed(1)}%, Eventos de ruido ${speechQualityMetrics.noiseEvents}`);
+    
+    // Make recommendations or adjustments
+    if (avgConfidence < 0.6 || clearPercentage < 70) {
+        console.log("Calidad del habla subóptima detectada");
+        
+        // Show suggestions to user
+        if (speechQualityMetrics.noiseEvents > 5) {
+            showTempMessage("Recomendación: Reduce el ruido ambiental para mejorar el reconocimiento", false);
+        } else if (avgConfidence < 0.5) {
+            showTempMessage("Recomendación: Habla más claramente y a ritmo constante", false);
+        }
+        
+        // Could dynamically adjust recognition parameters here if API allowed
+    }
+    
+    // Update learning system with this data
+    updateLearningSystem({
+        avgConfidence,
+        clearPercentage,
+        noiseEvents: speechQualityMetrics.noiseEvents,
+        timestamp: Date.now()
+    });
+}
+
+// Enhanced learning system
 function updateLearningSystem(metrics) {
     // Store performance metrics
     if (!patternStats.performance) {
@@ -1617,301 +1558,139 @@ function updateLearningSystem(metrics) {
         
         // Analyze document context to improve future recognition
         analyzeDocumentContext();
-        
-        // New: Analyze user voice characteristics
-        analyzeVoiceCharacteristics();
-        
-        // New: Update domain-specific vocabulary
-        updateDomainVocabulary();
-    }
-    
-    // Auto-apply learned corrections to current text
-    if (Object.keys(adaptiveDictionary).length > 5) {
-        setTimeout(autoApplyLearnedCorrections, 2000);
     }
     
     // Flag for sync
     pendingSyncChanges = true;
 }
 
-// New function to analyze user voice characteristics
-function analyzeVoiceCharacteristics() {
-    // Use speech metrics to deduce voice characteristics
-    const confidenceScores = speechQualityMetrics.confidenceScores;
-    if (confidenceScores.length < 10) return;
+// Find patterns in user corrections
+function findCorrectionPatterns(feedback) {
+    const patterns = [];
     
-    const avgConfidence = confidenceScores.reduce((sum, val) => sum + val, 0) / confidenceScores.length;
-    const recentConfidence = confidenceScores.slice(-5).reduce((sum, val) => sum + val, 0) / 5;
+    // Group similar corrections
+    const groupedCorrections = {};
     
-    // Determine speech clarity
-    if (avgConfidence > 0.8) {
-        voiceProfile.clarity = 'high';
-    } else if (avgConfidence < 0.6) {
-        voiceProfile.clarity = 'low';
-    } else {
-        voiceProfile.clarity = 'medium';
-    }
-    
-    // Determine speech speed based on text length and recognition time
-    const transcript = document.getElementById('transcript').innerText;
-    const wordsPerMinute = calculateWordsPerMinute(transcript);
-    
-    if (wordsPerMinute > 150) {
-        voiceProfile.speed = 'fast';
-        voiceProfile.adjustments.preferLongerMatches = true;
-    } else if (wordsPerMinute < 100) {
-        voiceProfile.speed = 'slow';
-        voiceProfile.adjustments.preferExactMatches = true;
-    } else {
-        voiceProfile.speed = 'normal';
-    }
-    
-    // Detect improvement or degradation
-    if (recentConfidence > avgConfidence + 0.1) {
-        console.log("Mejoría detectada en la calidad del reconocimiento de voz");
-    } else if (recentConfidence < avgConfidence - 0.1) {
-        console.log("Degradación detectada en la calidad del reconocimiento de voz");
-        detectEnvironmentalIssues();
-    }
-    
-    console.log("Perfil de voz actualizado:", voiceProfile);
-}
-
-// Helper function to calculate words per minute
-function calculateWordsPerMinute(text) {
-    const wordCount = text.split(/\s+/).length;
-    const minutesActive = (Date.now() - lastSpeechTimestamp) / 60000;
-    if (minutesActive < 0.1) return 120; // Default for short samples
-    
-    return wordCount / minutesActive;
-}
-
-// New function to detect environmental issues
-function detectEnvironmentalIssues() {
-    const confidenceScores = speechQualityMetrics.confidenceScores.slice(-10);
-    const noiseEvents = speechQualityMetrics.noiseEvents;
-    
-    // Reset detected issues
-    environmentalFactors.detectedIssues = [];
-    
-    // Check for fluctuating confidence (potential noise issue)
-    const fluctuation = calculateStandardDeviation(confidenceScores);
-    if (fluctuation > 0.2) {
-        environmentalFactors.noiseLevel = 'high';
-        environmentalFactors.detectedIssues.push('background_noise');
-        showTempMessage("Ruido de fondo detectado. Intente usar el dictado en un entorno más silencioso", false);
-    }
-    
-    // Frequent reconnects may indicate connection problems
-    if (reconnectAttempts > 2) {
-        environmentalFactors.detectedIssues.push('connection_issues');
-        showTempMessage("Posibles problemas de conexión detectados", true);
-    }
-    
-    // Check for consistently low confidence (might be poor microphone)
-    if (confidenceScores.filter(score => score < 0.5).length > 7) {
-        environmentalFactors.micQuality = 'low';
-        environmentalFactors.detectedIssues.push('microphone_quality');
-        showTempMessage("Calidad de micrófono potencialmente baja. Considere usar un mejor micrófono", false);
-    }
-    
-    console.log("Factores ambientales actualizados:", environmentalFactors);
-}
-
-// Helper function to calculate standard deviation
-function calculateStandardDeviation(array) {
-    const n = array.length;
-    if (n === 0) return 0;
-    
-    const mean = array.reduce((sum, val) => sum + val, 0) / n;
-    const variance = array.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
-    return Math.sqrt(variance);
-}
-
-// New function to update domain vocabulary based on context
-function updateDomainVocabulary() {
-    const transcript = document.getElementById('transcript').innerText;
-    const headerText = document.getElementById('headerText').innerText;
-    
-    // Detect medical domain from header
-    const isMedicalDomain = detectMedicalDomain(headerText);
-    
-    if (isMedicalDomain) {
-        // Extract relevant medical terms
-        const medicalTerms = extractMedicalTerms(transcript + " " + headerText);
+    for (const item of feedback) {
+        if (!item.original || !item.corrected) continue;
         
-        // Update domain vocabulary with new terms
-        for (const term of medicalTerms) {
-            if (!domainSpecificVocabulary[term]) {
-                domainSpecificVocabulary[term] = {
-                    domain: 'medical',
-                    confidence: 0.6,
-                    occurrences: 1
-                };
-            } else {
-                domainSpecificVocabulary[term].occurrences++;
-                domainSpecificVocabulary[term].confidence = 
-                    Math.min(0.95, domainSpecificVocabulary[term].confidence + 0.05);
-            }
-        }
+        const key = `${item.original.toLowerCase()} -> ${item.corrected.toLowerCase()}`;
         
-        console.log(`Vocabulario específico del dominio actualizado con ${medicalTerms.length} términos médicos`);
-    }
-}
-
-// Helper function to detect medical domain
-function detectMedicalDomain(text) {
-    const medicalIndicators = [
-        'tac', 'rm', 'eco', 'tomografía', 'resonancia', 'ecografía',
-        'contraste', 'endovenoso', 'fase arterial', 'portal', 
-        'secuencias', 'saturación grasa', 'difusión', 'exploración'
-    ];
-    
-    text = text.toLowerCase();
-    return medicalIndicators.some(term => text.includes(term));
-}
-
-// New function to auto-apply learned corrections
-function autoApplyLearnedCorrections() {
-    if (!learningEnabled || Object.keys(adaptiveDictionary).length < 3) return;
-    
-    const transcriptElement = document.getElementById('transcript');
-    const text = transcriptElement.innerText;
-    let correctedText = text;
-    let corrections = [];
-    
-    // Apply corrections from adaptive dictionary
-    for (const [mistake, correction] of Object.entries(adaptiveDictionary)) {
-        // Only apply high-confidence corrections automatically
-        if (correction.confidence > 0.75) {
-            const regex = new RegExp('\\b' + mistake.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '\\b', 'gi');
-            let matchCount = 0;
-            
-            correctedText = correctedText.replace(regex, function() {
-                matchCount++;
-                return correction.to;
-            });
-            
-            if (matchCount > 0) {
-                corrections.push({
-                    from: mistake,
-                    to: correction.to,
-                    count: matchCount,
-                    automatic: true
-                });
-            }
-        }
-    }
-    
-    // If corrections were made, update the text
-    if (corrections.length > 0) {
-        console.log("Aplicando correcciones automáticas:", corrections);
-        
-        // Update text with corrections
-        transcriptElement.innerText = correctedText;
-        
-        // Format after corrections
-        formatPunctuationAndCapitalization(transcriptElement);
-        
-        // Record these intelligent corrections
-        corrections.forEach(correction => {
-            intelligentCorrections.push({
-                original: correction.from,
-                corrected: correction.to,
-                confidence: adaptiveDictionary[correction.from].confidence,
-                method: 'auto_correction',
-                timestamp: Date.now()
-            });
-        });
-        
-        // Show subtle notification
-        if (corrections.length === 1) {
-            showTempMessage(`Corrección automática: "${corrections[0].from}" → "${corrections[0].to}"`, false);
+        if (!groupedCorrections[key]) {
+            groupedCorrections[key] = 1;
         } else {
-            showTempMessage(`${corrections.length} correcciones automáticas aplicadas`, false);
+            groupedCorrections[key]++;
         }
     }
+    
+    // Extract patterns with multiple occurrences
+    for (const [key, count] of Object.entries(groupedCorrections)) {
+        if (count >= 2) { // Pattern must appear at least twice
+            const [from, to] = key.split(' -> ');
+            patterns.push({ from, to, count });
+        }
+    }
+    
+    return patterns;
 }
 
-// New function to identify domain-specific terms in text
-function identifyDomainSpecificTerms(text) {
-    const identifiedTerms = [];
+// Analyze document context for better recognition
+function analyzeDocumentContext() {
+    const transcriptElement = document.getElementById('transcript');
+    const headerElement = document.getElementById('headerText');
     
-    // Medical terminology patterns
-    const medicalPatterns = [
-        /\b[Tt]omograf[íi]a\b/,
-        /\b[Ee]cograf[íi]a\b/,
-        /\b[Rr]esonanc[íi]a\b/,
-        /\b[Hh]epat[oó]\w+/,
-        /\b[Gg]astr[oó]\w+/,
-        /\b[Cc]ardi[oó]\w+/,
-        /\b[Nn]eur[oó]\w+/,
-        /\b[Nn]efrec\w+/,
-        /\b[Ee]ndoven\w+/,
-        /\b[Cc]ontraste\b/,
-        /\b[Ff]ase\s+(arterial|portal|venosa)\b/,
-        /\b[Cc]ortes\s+[a-z]+\b/,
-        /\b[Ss]ecuenc\w+\s+[TtWw][12]\b/,
-        /\b[Dd]ifusi[óo]n\b/,
-        /\b[Ss]aturac\w+\s+[gG]rasa\b/
-    ];
+    const fullText = `${headerElement.innerText} ${transcriptElement.innerText}`;
     
-    for (const pattern of medicalPatterns) {
-        const matches = text.match(pattern);
-        if (matches) {
-            identifiedTerms.push(...matches);
-        }
-    }
+    // Extract key terms and topic indicators
+    const topics = extractTopics(fullText);
+    const medicalTerms = extractMedicalTerms(fullText);
     
-    // Check against domain-specific vocabulary dictionary
+    contextualPatterns = [...topics, ...medicalTerms];
+    console.log("Contexto del documento analizado:", contextualPatterns);
+    
+    // This context can be used to improve recognition accuracy
+}
+
+// Extract medical terms based on common prefixes/suffixes
+function extractMedicalTerms(text) {
+    const medicalTerms = [];
     const words = text.toLowerCase().split(/\s+/);
-    for (const word of words) {
-        const cleanWord = word.replace(/[.,;:!?]/g, '');
-        if (domainSpecificVocabulary[cleanWord]) {
-            identifiedTerms.push(cleanWord);
-            
-            // Increase confidence for this term
-            domainSpecificVocabulary[cleanWord].occurrences++;
+    
+    // Common medical prefixes and suffixes
+    const medicalPrefixes = ['cardio', 'neuro', 'gastro', 'hepato', 'nefro', 'dermato'];
+    const medicalSuffixes = ['itis', 'osis', 'oma', 'patía', 'algia', 'ectomía'];
+    
+    for (let word of words) {
+        word = word.replace(/[.,;:!?]/g, '').trim();
+        
+        // Check for medical prefixes
+        if (medicalPrefixes.some(prefix => word.startsWith(prefix))) {
+            medicalTerms.push(word);
+        }
+        
+        // Check for medical suffixes
+        if (medicalSuffixes.some(suffix => word.endsWith(suffix))) {
+            medicalTerms.push(word);
         }
     }
     
-    return [...new Set(identifiedTerms)]; // Return unique terms
+    return [...new Set(medicalTerms)]; // Return unique terms
 }
 
-// New function to assess grammatical quality of text
-function assessGrammaticalQuality(text) {
-    let score = 0;
+// Reset the silence detection timer
+function resetSilenceDetection() {
+    // Clear any existing timer
+    clearSilenceDetection();
     
-    // Check for complete sentences (basic check - starts with capital, ends with punctuation)
-    if (/^[A-ZÁÉÍÓÚÜÑ].*[.!?]$/.test(text)) {
-        score += 0.2;
-    }
-    
-    // Check for verb-subject agreement (simplified)
-    const hasVerb = /\b(es|son|está|están|ha|han|tiene|tienen)\b/i.test(text);
-    if (hasVerb) {
-        score += 0.1;
-    }
-    
-    // Check for proper article usage
-    const properArticles = /\b(el|la|los|las|un|una|unos|unas)\s+[a-záéíóúüñ]+\b/gi;
-    const articleMatches = text.match(properArticles) || [];
-    score += Math.min(0.2, articleMatches.length * 0.05);
-    
-    // Check for common error patterns and subtract points
-    const errorPatterns = [
-        /\b[aeiouáéíóú]\s+[aeiouáéíóú]\b/i, // Two consecutive vowels with space
-        /\b(el|la)\s+(el|la)\b/i, // Double articles
-        /\b(de|con)\s+(de|con)\b/i // Double prepositions
-    ];
-    
-    for (const pattern of errorPatterns) {
-        if (pattern.test(text)) {
-            score -= 0.1;
+    // Set a new timer to detect silence
+    silenceTimer = setTimeout(() => {
+        console.warn("Silencio prolongado detectado, comprobando estado del reconocedor...");
+        
+        // Update status to inform user
+        updateStatus("Verificando conexión de audio...", true);
+        
+        // If we're still supposed to be listening but haven't had speech for a while
+        if (isListening) {
+            // Check how long since last speech
+            const timeSinceLastSpeech = Date.now() - lastSpeechTimestamp;
+            
+            if (timeSinceLastSpeech > SILENCE_THRESHOLD) {
+                console.warn(`Sin audio detectado durante ${Math.round(timeSinceLastSpeech/1000)} segundos, reiniciando reconocimiento...`);
+                
+                // Force a restart of the recognition
+                try {
+                    recognition.stop();
+                    updateStatus("Reconectando servicio de dictado...", true);
+                    
+                    // Short delay before restart
+                    setTimeout(() => {
+                        if (isListening) {
+                            try {
+                                recognition.start();
+                                updateStatus("Reconexión completada, continúe dictando", true);
+                            } catch (e) {
+                                console.error("Error al reiniciar tras silencio:", e);
+                                updateStatus("Error al reconectar. Intente de nuevo.");
+                            }
+                        }
+                    }, 500);
+                } catch (e) {
+                    console.error("Error al detener reconocimiento para reinicio:", e);
+                }
+            } else {
+                // If silence hasn't reached threshold yet, just reset the timer
+                resetSilenceDetection();
+            }
         }
+    }, SILENCE_THRESHOLD);
+}
+
+// Clear the silence detection timer
+function clearSilenceDetection() {
+    if (silenceTimer) {
+        clearTimeout(silenceTimer);
+        silenceTimer = null;
     }
-    
-    return Math.max(0, Math.min(1, score)); // Ensure score is between 0 and 1
 }
 
 // Event listeners al cargar la página
