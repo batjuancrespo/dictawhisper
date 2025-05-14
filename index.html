@@ -26,121 +26,37 @@
             box-sizing: border-box;
             color: #333;
         }
-
-        .container {
-            background-color: #ffffff;
-            padding: 25px 35px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-            text-align: center;
-            width: 100%;
-            max-width: 750px;
-        }
-
-        h1 {
-            color: #1c1e21;
-            margin-bottom: 10px;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        
-        p#status {
-            color: #555;
-            min-height: 20px;
-            margin-bottom: 20px;
-            font-size: 15px;
-        }
-
-        .controls button {
-            padding: 12px 20px;
-            margin: 10px 8px;
-            font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            background-color: #007aff;
-            color: white;
-            transition: background-color 0.2s ease-in-out, transform 0.1s ease;
-            font-weight: 500;
-        }
-
-        .controls button:hover {
-            background-color: #005ecb;
-        }
-        .controls button:active {
-            transform: scale(0.98);
-        }
-
-        .controls button:disabled {
-            background-color: #d1d5db;
-            cursor: not-allowed;
-        }
-
-        #recordButton.recording {
-            background-color: #ff3b30;
-        }
-
-        #recordButton.recording:hover {
-            background-color: #d92c23;
-        }
-        
-        h2 {
-            margin-top: 30px;
-            margin-bottom: 10px;
-            font-size: 20px;
-            color: #333;
-            text-align: left;
-            font-weight: 500;
-        }
-
-        #transcriptionOutput {
-            width: 100%; 
-            box-sizing: border-box;
-            min-height: 250px;
-            margin-top: 5px;
-            padding: 15px;
-            border: 1px solid #ccd0d5;
-            border-radius: 8px;
-            font-size: 16px;
-            line-height: 1.6;
-            text-align: left;
-            white-space: pre-wrap; 
-            background-color: #f9f9f9;
-            color: #1c1e21;
-            overflow-y: auto; 
-        }
-
-        #transcriptionOutput[placeholder]:empty:before {
-            content: attr(placeholder);
-            color: #888;
-            font-style: italic;
-        }
-
-        .error-message {
-            color: #d93025;
-            margin-top: 15px;
-            font-size: 14px;
-            min-height: 18px;
-        }
+        .container { background-color: #ffffff; padding: 25px 35px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); text-align: center; width: 100%; max-width: 750px; }
+        h1 { color: #1c1e21; margin-bottom: 10px; font-size: 28px; font-weight: 600; }
+        p#status { color: #555; min-height: 20px; margin-bottom: 20px; font-size: 15px; }
+        .controls button { padding: 12px 20px; margin: 10px 8px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; background-color: #007aff; color: white; transition: background-color 0.2s ease-in-out, transform 0.1s ease; font-weight: 500; }
+        .controls button:hover { background-color: #005ecb; }
+        .controls button:active { transform: scale(0.98); }
+        .controls button:disabled { background-color: #d1d5db; cursor: not-allowed; }
+        #recordButton.recording { background-color: #ff3b30; }
+        #recordButton.recording:hover { background-color: #d92c23; }
+        h2 { margin-top: 30px; margin-bottom: 10px; font-size: 20px; color: #333; text-align: left; font-weight: 500; }
+        #transcriptionOutput { width: 100%; box-sizing: border-box; min-height: 250px; margin-top: 5px; padding: 15px; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 16px; line-height: 1.6; text-align: left; white-space: pre-wrap; background-color: #f9f9f9; color: #1c1e21; overflow-y: auto; }
+        #transcriptionOutput[placeholder]:empty:before { content: attr(placeholder); color: #888; font-style: italic; }
+        .error-message { color: #d93025; margin-top: 15px; font-size: 14px; min-height: 18px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Dictado Inteligente con Gemini</h1>
         <p id="status">Haz clic en "Iniciar Dictado" y habla.</p>
-
         <div class="controls">
             <button id="recordButton">Iniciar Dictado</button>
             <button id="copyButton" style="display:none;">Copiar Transcripción</button>
         </div>
-        
         <h2>Transcripción Pulida:</h2>
         <div id="transcriptionOutput" contenteditable="true" placeholder="La transcripción aparecerá aquí..."></div>
         <p id="error" class="error-message"></p>
     </div>
 
     <script type="module">
-        import * as genaiModule from "@google/genai"; // Renombrado para claridad
+        // Volviendo al método de importación nombrada original
+        import { GoogleGenerativeAI } from "@google/genai"; 
 
         const API_KEY = "AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc"; 
         const MODEL_NAME = "gemini-1.0-pro-latest"; 
@@ -166,34 +82,13 @@
                 return false;
             }
             try {
-                // Intentar encontrar el constructor de diferentes maneras
-                let ConstructorToUse = null;
-
-                if (genaiModule.GoogleGenerativeAI && typeof genaiModule.GoogleGenerativeAI === 'function') {
-                    ConstructorToUse = genaiModule.GoogleGenerativeAI;
-                    console.log("Usando genaiModule.GoogleGenerativeAI");
-                } else if (genaiModule.default && genaiModule.default.GoogleGenerativeAI && typeof genaiModule.default.GoogleGenerativeAI === 'function') {
-                    ConstructorToUse = genaiModule.default.GoogleGenerativeAI;
-                    console.log("Usando genaiModule.default.GoogleGenerativeAI");
-                } else if (genaiModule.default && typeof genaiModule.default === 'function') {
-                    // Podría ser que la clase sea la exportación default
-                    // Necesitamos verificar si es el constructor correcto (difícil sin instanceof o nombre)
-                    // Esto es una suposición más arriesgada.
-                    ConstructorToUse = genaiModule.default;
-                    console.log("Intentando usar genaiModule.default como constructor");
-                }
-                
-                if (ConstructorToUse) {
-                    genAIInstance = new ConstructorToUse(API_KEY);
-                } else {
-                    console.error("No se pudo encontrar el constructor GoogleGenerativeAI en el módulo importado.", genaiModule);
-                    throw new Error("Constructor GoogleGenerativeAI no encontrado en el módulo @google/genai provisto por esm.sh.");
-                }
-                console.log("GoogleGenAI inicializado correctamente.");
+                // Usar la importación nombrada directamente
+                genAIInstance = new GoogleGenerativeAI(API_KEY);
+                console.log("GoogleGenAI inicializado correctamente usando importación nombrada.");
                 return true;
             } catch (error) {
-                console.error("Error inicializando GoogleGenerativeAI:", error, "Módulo importado:", genaiModule);
-                errorDisplay.textContent = `Error inicializando API: ${error.message}`;
+                console.error("Error inicializando GoogleGenerativeAI (con importación nombrada):", error);
+                errorDisplay.textContent = `Error inicializando API (importación nombrada): ${error.message}`;
                 recordButton.disabled = true;
                 return false;
             }
