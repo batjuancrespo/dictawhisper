@@ -8,8 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const polishedTextarea = document.getElementById('polishedText');
     const audioPlayback = document.getElementById('audioPlayback');
 
-    // console.log({ startRecordBtn, stopRecordBtn, statusDiv, originalTextarea, polishedTextarea, audioPlayback });
-
     if (!originalTextarea || !polishedTextarea || !statusDiv || !startRecordBtn || !stopRecordBtn || !audioPlayback) {
         const errorMessage = "Error crítico: Uno o más elementos HTML no se encontraron. Revisa los IDs en index.html y script.js.";
         alert(errorMessage);
@@ -27,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // TU API KEY
 
     async function startRecording() {
-        console.log("Solicitando permiso para grabar...");
+        // console.log("Solicitando permiso para grabar...");
         statusDiv.textContent = "Solicitando permiso para grabar...";
         originalTextarea.value = '';
         polishedTextarea.value = '';
@@ -36,7 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
             URL.revokeObjectURL(audioPlayback.src);
             audioPlayback.src = '';
             audioPlayback.removeAttribute('src');
-            // console.log("Audio playback source limpiado.");
         }
         currentAudioBlob = null;
 
@@ -47,16 +44,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            // console.log("Permiso de micrófono concedido. Stream obtenido:", stream);
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            // console.log("MediaRecorder instanciado:", mediaRecorder);
 
             mediaRecorder.ondataavailable = event => {
                 if (event.data.size > 0) {
                     audioChunks.push(event.data);
-                    // console.log(`Chunk de audio recibido. Tamaño: ${event.data.size} bytes. Total chunks: ${audioChunks.length}`);
-                } else {
-                    // console.log("Chunk de audio vacío recibido.");
                 }
             };
 
@@ -72,7 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 currentAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                // console.log(`Blob de audio creado. Tamaño: ${currentAudioBlob.size} bytes. Tipo: ${currentAudioBlob.type}`);
 
                 if (currentAudioBlob.size === 0) {
                     console.error("El Blob de audio está vacío después de la grabación.");
@@ -85,8 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const audioURL = URL.createObjectURL(currentAudioBlob);
                 audioPlayback.src = audioURL;
-                // console.log("Audio listo para reproducción en:", audioURL);
-                // audioPlayback.oncanplaythrough = () => console.log("El audio se puede reproducir completamente.");
                 audioPlayback.onerror = (e) => console.error("Error al cargar audio para reproducción:", e);
 
                 statusDiv.textContent = 'Procesando audio...';
@@ -94,13 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 polishedTextarea.value = '';
 
                 try {
-                    // console.log("Convirtiendo Blob a Base64...");
                     const base64Audio = await blobToBase64(currentAudioBlob);
                     if (!base64Audio || base64Audio.length < 100) {
                         console.error("La conversión a Base64 resultó en una cadena vacía o muy corta:", base64Audio ? base64Audio.substring(0,50) + '...' : 'null');
                         throw new Error("Fallo al convertir audio a Base64 o audio demasiado corto.");
                     }
-                    // console.log(`Audio convertido a Base64. Longitud (aprox): ${base64Audio.length} caracteres.`);
                     await transcribeAndPolishAudio(base64Audio);
                 } catch (error) {
                     console.error('Error procesando audio (onstop):', error);
@@ -121,7 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             mediaRecorder.start();
-            // console.log("MediaRecorder.start() llamado. Estado:", mediaRecorder.state);
             statusDiv.textContent = 'Grabando... Habla ahora (puedes dictar "coma", "punto", "punto y aparte").';
             startRecordBtn.disabled = true;
             stopRecordBtn.disabled = false;
@@ -134,12 +120,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function stopRecording() {
-        // console.log("Botón Detener Grabación presionado.");
         if (mediaRecorder && mediaRecorder.state === "recording") {
             mediaRecorder.stop();
-            // console.log("MediaRecorder.stop() llamado. Estado actual:", mediaRecorder.state);
         } else {
-            // console.warn("Se intentó detener la grabación, pero MediaRecorder no estaba grabando o no existía.");
             statusDiv.textContent = "Nada que detener.";
             stopRecordBtn.disabled = true;
             startRecordBtn.disabled = false;
@@ -147,10 +130,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function blobToBase64(blob) {
-        // console.log("Iniciando blobToBase64 para blob de tamaño:", blob.size);
         return new Promise((resolve, reject) => {
             if (!blob || blob.size === 0) {
-                console.error("blobToBase64: Blob nulo o vacío proporcionado.");
                 return reject(new Error("Blob nulo o vacío proporcionado a blobToBase64"));
             }
             const reader = new FileReader();
@@ -158,37 +139,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (reader.result) {
                     const base64String = reader.result.toString().split(',')[1];
                     if (!base64String) {
-                         console.error("blobToBase64: La cadena Base64 es nula o indefinida después del split.");
                          return reject(new Error("Fallo al extraer cadena Base64 del resultado del FileReader."));
                     }
-                    // console.log(`blobToBase64: Conversión completada. Longitud de cadena Base64: ${base64String.length}`);
                     resolve(base64String);
                 } else {
-                    console.error("blobToBase64: reader.result es nulo o indefinido.");
                     reject(new Error("FileReader no produjo un resultado."));
                 }
             };
-            reader.onerror = (error) => {
-                console.error("blobToBase64: Error de FileReader:", error);
-                reject(error);
-            };
+            reader.onerror = (error) => reject(error);
             reader.readAsDataURL(blob);
-            // console.log("blobToBase64: readAsDataURL llamado.");
         });
     }
 
     async function callGeminiAPI(promptParts, isTextOnly = false) {
-        // console.log("Llamando a Gemini API. Es solo texto:", isTextOnly);
-        // if (!isTextOnly) {
-        //     const promptSummary = {
-        //         text_part: promptParts[0],
-        //         audio_data_length: promptParts[1]?.inline_data?.data?.length
-        //     };
-        //     console.log("Prompt para Gemini (con audio - resumen):", JSON.stringify(promptSummary, null, 2));
-        // } else {
-        //     console.log("Prompt para Gemini (solo texto):", JSON.stringify(promptParts, null, 2));
-        // }
-
         if (!userApiKey) {
             alert('API Key no configurada.');
             throw new Error('API Key no configurada.');
@@ -201,18 +164,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 parts: promptParts
             }],
             generationConfig: {
-                temperature: isTextOnly ? 0.1 : 0.7, // Aún más determinista para pulir
+                temperature: isTextOnly ? 0.1 : 0.7, // Temperatura baja para pulido
             }
         };
 
         try {
-            // console.log("Enviando solicitud a Gemini API...");
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
-            // console.log(`Respuesta de Gemini API recibida. Estado: ${response.status}`);
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -222,11 +183,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
             if (data.candidates && data.candidates.length > 0) {
-                // console.log("Respuesta de Gemini (candidato principal):", JSON.stringify(data.candidates[0], null, 2).substring(0,500) + "...");
                 if (data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
-                    const textResult = data.candidates[0].content.parts[0].text;
-                    // console.log("Texto extraído de la respuesta de Gemini:", textResult);
-                    return textResult;
+                    return data.candidates[0].content.parts[0].text;
                 }
             }
             console.warn("Respuesta inesperada de Gemini o sin texto candidato:", data);
@@ -246,12 +204,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function transcribeAndPolishAudio(base64Audio) {
-        // console.log("Iniciando transcribeAndPolishAudio...");
         statusDiv.textContent = 'Transcribiendo audio con Gemini...';
         let transcribedText = '';
         try {
             const transcriptPromptParts = [
-                { "text": "Transcribe el siguiente audio a texto. Es muy importante que transcribas literalmente las palabras dictadas, incluyendo si el usuario dice 'coma', 'punto', 'punto y aparte', 'nueva línea', 'dos puntos', 'punto y coma', 'signo de interrogación', 'signo de exclamación', etc. No interpretes estas palabras de puntuación todavía, solo transcríbelas tal cual se oyen para que luego puedan ser procesadas." },
+                { "text": "Transcribe el siguiente audio a texto. Transcribe literalmente las palabras dictadas, incluyendo 'coma', 'punto', 'punto y aparte', 'nueva línea', 'dos puntos', 'punto y coma', 'signo de interrogación', 'signo de exclamación'. No interpretes estas palabras de puntuación todavía, solo transcríbelas tal cual se oyen." },
                 {
                     "inline_data": {
                         "mime_type": "audio/webm",
@@ -271,63 +228,72 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!transcribedText.trim()) {
-            // console.log("No hay texto transcrito para pulir.");
             polishedTextarea.value = "No se transcribió texto para pulir.";
             statusDiv.textContent = "Proceso completado (sin texto para pulir).";
             return;
         }
-        // console.log("Iniciando pulido de texto...");
+
         try {
             const polishPromptParts = [
                 {
-                    "text": `Por favor, revisa y pule el siguiente texto que fue transcrito literalmente. Tu tarea es aplicar la puntuación y formato correctos según las palabras clave dictadas, además de corregir otros errores.
-Instrucciones MUY IMPORTANTES para la puntuación y formato dictados:
-1.  Reemplaza las siguientes palabras clave (que aparecen en el texto tal cual fueron transcritas) por sus signos/formatos correspondientes:
-    *   La palabra 'coma' (y sus variantes como 'comas'): Reemplaza por una coma (,) seguida de un espacio.
-    *   La palabra 'punto' (y sus variantes como 'puntos'): Reemplaza por un punto final (.). NO añadas un salto de línea después de un punto a menos que la siguiente instrucción sea 'punto y aparte' o 'nueva línea'.
-    *   La frase 'punto y aparte': Reemplaza por un punto final (.) seguido inmediatamente de UN ÚNICO salto de línea (\n). Si la palabra 'punto' ya precede inmediatamente a 'punto y aparte' en la transcripción, entonces 'punto y aparte' solo añade UN ÚNICO salto de línea (\n) después del punto existente. El objetivo es terminar la oración actual y comenzar la siguiente en una nueva línea inmediatamente debajo, sin espacio vertical adicional entre líneas.
-    *   La frase 'nueva línea': Reemplaza por UN ÚNICO salto de línea (\n).
-    *   La frase 'dos puntos': Reemplaza por dos puntos (:) seguidos de un espacio.
-    *   La frase 'punto y coma': Reemplaza por un punto y coma (;) seguido de un espacio.
-    *   Las frases 'signo de interrogación', 'pregunta', o similares al final de una oración: Reemplaza por un signo de interrogación (?).
-    *   Las frases 'signo de exclamación', 'admiración', o similares al final de una oración: Reemplaza por un signo de exclamación (!).
-2.  Precisión en reemplazos: Aplica estos reemplazos con la máxima precisión. NO introduzcas saltos de línea adicionales o espacios innecesarios alrededor de estos puntos de reemplazo, más allá de lo especificado. El objetivo es un texto limpio y bien formateado según las intenciones del dictado.
-3.  Correcciones Generales: Adicionalmente, corrige otros errores gramaticales, de ortografía y de puntuación (que no hayan sido dictados explícitamente y no estén cubiertos por las palabras clave anteriores). Por ejemplo, si una frase termina sin un punto dictado, añádelo.
-4.  Claridad y Fluidez: Mejora la claridad y la fluidez general del texto.
-5.  Significado Original: Es absolutamente crucial que mantengas el significado original del texto.
-6.  Mínimas Correcciones: Si el texto ya parece correcto después de aplicar los reemplazos y correcciones, solo haz las mínimas modificaciones necesarias. Evita reescrituras extensas si no son necesarias.
+                    "text": `Por favor, revisa y pule el siguiente texto transcrito literalmente. Tu tarea es aplicar la puntuación y formato correctos según las palabras clave dictadas, además de corregir otros errores.
+Instrucciones para la puntuación y formato dictados:
+1.  Reemplaza las siguientes palabras clave por sus signos/formatos:
+    *   'coma': Reemplaza por ', '.
+    *   'punto': Reemplaza por '.'. No añadas saltos de línea después de un 'punto' a menos que la siguiente palabra clave sea 'punto y aparte' o 'nueva línea'.
+    *   'punto y aparte': Si la palabra 'punto' no precede inmediatamente, reemplaza por '.\\n'. Si 'punto' ya está antes, simplemente añade '\\n' después del punto existente. El resultado final debe ser [texto anterior].\\n[texto siguiente].
+    *   'nueva línea': Reemplaza por '\\n'.
+    *   'dos puntos': Reemplaza por ': '.
+    *   'punto y coma': Reemplaza por '; '.
+    *   'signo de interrogación' o 'pregunta': Reemplaza por '?'.
+    *   'signo de exclamación' o 'admiración': Reemplaza por '!'.
+2.  Asegúrate de que cada '\\n' introducido represente solo un salto a la línea siguiente, sin espacio vertical adicional.
+3.  Correcciones Generales: Corrige otros errores gramaticales, de ortografía y puntuación (ej. capitalización al inicio de oración si es necesario).
+4.  Mantén el significado original.
+5.  Evita reescrituras extensas si no son necesarias.
 
-Texto a pulir (transcrito literalmente, contiene palabras clave de puntuación):
+Texto a pulir:
 "${transcribedText}"`
                 }
             ];
-            let polishedResult = await callGeminiAPI(polishPromptParts, true);
-            // console.log("Texto pulido por Gemini (antes de post-proceso):", JSON.stringify(polishedResult));
+            let polishedResult = await callGeminiAPI(polishPromptParts, true); // isTextOnly = true
 
-            // --- INICIO DEL POST-PROCESAMIENTO ---
-            // Este paso es una salvaguarda por si Gemini aún no es 100% preciso con los saltos de línea.
+            console.log("Texto de Gemini (antes de post-proceso):", JSON.stringify(polishedResult));
 
-            // 1. Asegurar que "punto." seguido de múltiples saltos de línea se convierta a "punto." y UN solo salto de línea.
-            // Busca: un punto literal, cero o más espacios, un salto de línea (capturado), cero o más espacios, y uno o más saltos de línea adicionales.
-            polishedResult = polishedResult.replace(/\.\s*(\n)\s*\n+/g, '.\n');
+            // --- INICIO DEL POST-PROCESAMIENTO AGRESIVO ---
+            // Paso 1: Normalizar todos los tipos de saltos de línea a \n
+            polishedResult = polishedResult.replace(/\r\n|\r/g, '\n');
 
-            // 2. Colapsar cualquier secuencia de DOS O MÁS saltos de línea (de cualquier tipo) en UN SOLO salto de línea.
-            // Esto es para asegurar que 'nueva línea' o 'punto y aparte' no resulten en más de un \n visualmente.
-            polishedResult = polishedResult.replace(/(\r\n|\r|\n){2,}/g, '\n');
+            // Paso 2: Reemplazar ". punto y aparte" o ".punto y aparte" (con espacios variables) por ".\\n"
+            // Esto es por si Gemini no procesó bien el prompt y dejó "punto y aparte" como texto
+            polishedResult = polishedResult.replace(/\.\s*(punto y aparte|Punto y aparte|PUNTO Y APARTE)/gi, '.\n');
+            // Y si "punto y aparte" vino solo, también.
+            polishedResult = polishedResult.replace(/\b(punto y aparte|Punto y aparte|PUNTO Y APARTE)\b/gi, '\n'); // \b para límite de palabra
 
-            // 3. (Opcional, pero puede ser útil) Eliminar espacios en blanco al final de las líneas, que a veces los LLM añaden.
-            polishedResult = polishedResult.replace(/[ \t]+(\r\n|\r|\n)/g, '$1');
+            // Paso 3: Colapsar cualquier secuencia de DOS O MÁS saltos de línea en UN SOLO salto de línea.
+            // ESTA ES LA REGLA MÁS IMPORTANTE PARA TU CASO.
+            polishedResult = polishedResult.replace(/\n{2,}/g, '\n');
 
-            // 4. (Opcional) Asegurar que no haya múltiples espacios entre palabras
+            // Paso 4: Eliminar espacios en blanco al inicio de las líneas (después de un \n)
+            polishedResult = polishedResult.replace(/\n[ \t]+/g, '\n');
+
+            // Paso 5: Eliminar espacios en blanco al final de las líneas (antes de un \n)
+            polishedResult = polishedResult.replace(/[ \t]+\n/g, '\n');
+
+            // Paso 6: Asegurar que no haya múltiples espacios entre palabras
             polishedResult = polishedResult.replace(/ {2,}/g, ' ');
 
-            // --- FIN DEL POST-PROCESAMIENTO ---
-            // console.log("Texto pulido por Gemini (después de post-proceso):", JSON.stringify(polishedResult));
+            // Paso 7: Eliminar saltos de línea al principio o final del texto completo, si los hubiera.
+            polishedResult = polishedResult.trim();
+            
+            // Paso 8: Asegurar que un punto seguido de un salto de línea no tenga espacios intermedios.
+            polishedResult = polishedResult.replace(/\.\s+\n/g, '.\n');
 
+            console.log("Texto final (después de post-proceso):", JSON.stringify(polishedResult));
+            // --- FIN DEL POST-PROCESAMIENTO AGRESIVO ---
 
             polishedTextarea.value = polishedResult;
             statusDiv.textContent = 'Proceso de transcripción y pulido completado.';
-            // console.log("Pulido completado.");
         } catch (error) {
             console.error("Error durante el pulido:", error);
             polishedTextarea.value = `Error al pulir el texto: ${error.message}\n\n(Transcripción original arriba)`;
@@ -338,5 +304,5 @@ Texto a pulir (transcrito literalmente, contiene palabras clave de puntuación):
     startRecordBtn.addEventListener('click', startRecording);
     stopRecordBtn.addEventListener('click', stopRecording);
 
-    // console.log("Script inicializado y event listeners asignados.");
+    console.log("Script inicializado y event listeners asignados.");
 });
