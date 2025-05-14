@@ -1,35 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const apiKeyInput = document.getElementById('apiKey');
-    const saveApiKeyBtn = document.getElementById('saveApiKey');
     const startRecordBtn = document.getElementById('startRecordBtn');
     const stopRecordBtn = document.getElementById('stopRecordBtn');
-    const polishBtn = document.getElementById('polishBtn');
+    // const polishBtn = document.getElementById('polishBtn'); // Eliminado
     const statusDiv = document.getElementById('status');
     const originalTextarea = document.getElementById('originalText');
     const polishedTextarea = document.getElementById('polishedText');
 
     let mediaRecorder;
     let audioChunks = [];
-    let userApiKey = localStorage.getItem('geminiApiKey');
 
-    if (userApiKey) {
-        apiKeyInput.value = userApiKey;
-    }
+    // ¡¡¡IMPORTANTE!!! API Key integrada directamente.
+    // ¡¡¡RECUERDA QUITARLA ANTES DE SUBIR A GITHUB PÚBLICO!!!
+    const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // Mantén tu API Key aquí por ahora
 
-    saveApiKeyBtn.addEventListener('click', () => {
-        userApiKey = apiKeyInput.value.trim();
-        if (userApiKey) {
-            localStorage.setItem('geminiApiKey', userApiKey);
-            alert('API Key guardada localmente.');
-        } else {
-            alert('Por favor, ingresa una API Key.');
-        }
-    });
-
-    // --- Funciones de Grabación ---
     async function startRecording() {
         if (!userApiKey) {
-            alert('Por favor, guarda tu API Key de Gemini primero.');
+            alert('API Key de Gemini no está configurada en el script.');
             return;
         }
         try {
@@ -41,20 +27,22 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); // o 'audio/ogg; codecs=opus'
-                audioChunks = []; // Resetear para la próxima grabación
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                audioChunks = [];
                 statusDiv.textContent = 'Procesando audio...';
                 originalTextarea.value = '';
                 polishedTextarea.value = '';
-                polishBtn.disabled = true;
+                // polishBtn.disabled = true; // Eliminado
 
                 try {
                     const base64Audio = await blobToBase64(audioBlob);
-                    await transcribeAudio(base64Audio);
+                    // Iniciar el proceso de transcripción y luego pulido
+                    await transcribeAndPolishAudio(base64Audio);
                 } catch (error) {
                     console.error('Error procesando audio:', error);
                     statusDiv.textContent = `Error: ${error.message}`;
                     alert(`Error procesando audio: ${error.message}`);
+                    polishedTextarea.value = `Error en el proceso: ${error.message}`;
                 } finally {
                     stopRecordBtn.disabled = true;
                     startRecordBtn.disabled = false;
@@ -62,12 +50,12 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             mediaRecorder.start();
-            statusDiv.textContent = 'Grabando... Habla ahora.';
+            statusDiv.textContent = 'Grabando... Habla ahora (puedes dictar "coma", "punto", "punto y aparte").';
             startRecordBtn.disabled = true;
             stopRecordBtn.disabled = false;
             originalTextarea.value = '';
             polishedTextarea.value = '';
-            polishBtn.disabled = true;
+            // polishBtn.disabled = true; // Eliminado
 
         } catch (err) {
             console.error('Error al acceder al micrófono:', err);
@@ -79,36 +67,32 @@ document.addEventListener('DOMContentLoaded', () => {
     function stopRecording() {
         if (mediaRecorder && mediaRecorder.state === "recording") {
             mediaRecorder.stop();
-            // El procesamiento se maneja en mediaRecorder.onstop
         }
     }
 
     function blobToBase64(blob) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result.split(',')[1]); // Quita el "data:audio/webm;base64,"
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
             reader.onerror = reject;
             reader.readAsDataURL(blob);
         });
     }
 
-    // --- Funciones de Gemini ---
     async function callGeminiAPI(promptParts, isTextOnly = false) {
         if (!userApiKey) {
             alert('API Key no configurada.');
             throw new Error('API Key no configurada.');
         }
 
-        // Usaremos gemini-1.5-flash para transcripción y pulido por su multimodalidad y eficiencia
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;
 
         const body = {
             contents: [{
                 parts: promptParts
             }],
-            generationConfig: { // Opcional: ajusta según necesidad
-                temperature: isTextOnly ? 0.3 : 0.7, // Más determinista para pulir, más creativo para transcripción si es necesario
-                // maxOutputTokens: 8192, // Ajustar si se espera texto muy largo
+            generationConfig: {
+                temperature: isTextOnly ? 0.2 : 0.7, // Más determinista para pulir
             }
         };
 
@@ -138,60 +122,79 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error llamando a Gemini API:', error);
             statusDiv.textContent = `Error con Gemini: ${error.message}`;
-            throw error; // Re-lanzar para manejo superior
+            throw error;
         }
     }
 
-    async function transcribeAudio(base64Audio) {
+    async function transcribeAndPolishAudio(base64Audio) {
+        // Paso 1: Transcripción
         statusDiv.textContent = 'Transcribiendo audio con Gemini...';
+        let transcribedText = '';
         try {
-            const promptParts = [
-                { "text": "Transcribe el siguiente audio a texto. Si detectas pausas largas o ruido irrelevante, intenta omitirlo y enfocarte en las palabras habladas:" },
+            const transcriptPromptParts = [
+                { "text": "Transcribe el siguiente audio a texto. Es importante que transcribas literalmente las palabras dictadas, incluyendo si el usuario dice 'coma', 'punto', 'punto y aparte', 'signo de interrogación', 'signo de exclamación', etc.:" },
                 {
                     "inline_data": {
-                        "mime_type": "audio/webm", // Asegúrate que coincida con el blob type
+                        "mime_type": "audio/webm",
                         "data": base64Audio
                     }
                 }
             ];
-            const transcribedText = await callGeminiAPI(promptParts);
-            originalTextarea.value = transcribedText;
-            statusDiv.textContent = 'Transcripción completada. Listo para pulir.';
-            polishBtn.disabled = false;
+            transcribedText = await callGeminiAPI(transcriptPromptParts);
+            originalTextarea.value = "Transcripción original:\n" + transcribedText; // Mostrar transcripción intermedia
+            statusDiv.textContent = 'Transcripción completada. Puliendo texto...';
         } catch (error) {
             originalTextarea.value = `Error en transcripción: ${error.message}`;
+            polishedTextarea.value = `Error en transcripción: ${error.message}`;
             statusDiv.textContent = 'Error en transcripción.';
+            // polishBtn.disabled = true; // Eliminado
+            return; // Detener si la transcripción falla
         }
-    }
 
-    async function polishText() {
-        const textToPolish = originalTextarea.value;
-        if (!textToPolish.trim()) {
-            alert('No hay texto original para pulir.');
+        // Paso 2: Pulido del texto transcrito
+        if (!transcribedText.trim()) {
+            polishedTextarea.value = "No se transcribió texto para pulir.";
+            statusDiv.textContent = "Proceso completado (sin texto para pulir).";
+            // polishBtn.disabled = true; // Eliminado
             return;
         }
 
-        statusDiv.textContent = 'Puliendo texto con Gemini...';
-        polishBtn.disabled = true;
-        polishedTextarea.value = '';
-
         try {
-            const promptParts = [
-                { "text": `Por favor, revisa y pule el siguiente texto. Corrige errores gramaticales, de puntuación, y mejora la claridad y fluidez, pero manteniendo el significado original. Si el texto ya es correcto, devuélvelo tal cual. El texto es:\n\n"${textToPolish}"` }
+            const polishPromptParts = [
+                {
+                    "text": `Por favor, revisa y pule el siguiente texto.
+Instrucciones importantes:
+1.  Interpreta las siguientes palabras dictadas como signos de puntuación:
+    *   'coma' como ','
+    *   'punto' como '.'
+    *   'punto y aparte' como un nuevo párrafo (dos saltos de línea).
+    *   'nueva línea' como un salto de línea simple.
+    *   'dos puntos' como ':'
+    *   'punto y coma' como ';'
+    *   'signo de interrogación' o 'pregunta' al final de una frase como '?'
+    *   'signo de exclamación' o 'admiración' al final de una frase como '!'
+2.  Aplica estos signos de puntuación dictados.
+3.  Adicionalmente, corrige otros errores gramaticales, de ortografía y de puntuación que no hayan sido dictados explícitamente.
+4.  Mejora la claridad y la fluidez del texto.
+5.  Es crucial que mantengas el significado original del texto.
+6.  Si el texto ya parece correcto después de aplicar la puntuación dictada, solo haz las correcciones mínimas necesarias.
+
+Texto a pulir:
+"${transcribedText}"`
+                }
             ];
-            const polishedResult = await callGeminiAPI(promptParts, true); // true para indicar que es solo texto
+            const polishedResult = await callGeminiAPI(polishPromptParts, true); // true para isTextOnly
             polishedTextarea.value = polishedResult;
-            statusDiv.textContent = 'Texto pulido.';
+            statusDiv.textContent = 'Proceso de transcripción y pulido completado.';
         } catch (error) {
-            polishedTextarea.value = `Error al pulir: ${error.message}`;
+            polishedTextarea.value = `Error al pulir el texto: ${error.message}\n\n(Transcripción original arriba)`;
             statusDiv.textContent = 'Error al pulir el texto.';
-        } finally {
-            polishBtn.disabled = false; // Re-habilitar incluso si hay error para reintentar
         }
+        // polishBtn.disabled = true; // Ya no existe, pero el proceso ha terminado
     }
 
     // --- Event Listeners ---
     startRecordBtn.addEventListener('click', startRecording);
     stopRecordBtn.addEventListener('click', stopRecording);
-    polishBtn.addEventListener('click', polishText);
+    // El listener para polishBtn ha sido eliminado
 });
