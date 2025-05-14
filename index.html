@@ -18,12 +18,14 @@
             <p id="status">Estado: Esperando para grabar...</p>
         </div>
 
+        <div class="audio-playback-section">
+            <h3>Escuchar Grabación:</h3>
+            <audio id="audioPlayback" controls></audio>
+        </div>
+
         <div class="results">
             <h2>Transcripción Original (Intermedia):</h2>
             <textarea id="originalText" rows="6" readonly placeholder="Aquí aparecerá la transcripción antes del pulido..."></textarea>
-
-            <!-- Botón de pulir eliminado -->
-            <!-- <button id="polishBtn" disabled>Pulir Texto con Gemini</button> -->
 
             <h2>Texto Final Pulido:</h2>
             <textarea id="polishedText" rows="10" readonly placeholder="Aquí aparecerá el texto final transcrito y pulido..."></textarea>
