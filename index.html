@@ -8,14 +8,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>Transcripción de Voz a Texto con Gemini</h1>
+        <h1>Transcripción y Pulido Automático con Gemini</h1>
 
-        <div class="api-key-section">
-            <label for="apiKey">Tu API Key de Gemini:</label>
-            <input type="password" id="apiKey" placeholder="Pega tu API Key aquí">
-            <button id="saveApiKey">Guardar Key</button>
-            <p class="info">La API Key se guarda localmente en tu navegador. <a href="https://aistudio.google.com/app/apikey" target="_blank">Obtén una API Key aquí</a>.</p>
-        </div>
+        <p class="info"><strong>Advertencia:</strong> La API Key está integrada directamente en el código para pruebas. <a href="https://aistudio.google.com/app/apikey" target="_blank">Obtén tu propia API Key aquí</a> y gestiona su seguridad.</p>
 
         <div class="controls">
             <button id="startRecordBtn">Empezar a Grabar</button>
@@ -24,13 +19,14 @@
         </div>
 
         <div class="results">
-            <h2>Transcripción Original:</h2>
-            <textarea id="originalText" rows="8" readonly placeholder="Aquí aparecerá la transcripción..."></textarea>
+            <h2>Transcripción Original (Intermedia):</h2>
+            <textarea id="originalText" rows="6" readonly placeholder="Aquí aparecerá la transcripción antes del pulido..."></textarea>
 
-            <button id="polishBtn" disabled>Pulir Texto con Gemini</button>
+            <!-- Botón de pulir eliminado -->
+            <!-- <button id="polishBtn" disabled>Pulir Texto con Gemini</button> -->
 
-            <h2>Texto Pulido:</h2>
-            <textarea id="polishedText" rows="8" readonly placeholder="Aquí aparecerá el texto pulido..."></textarea>
+            <h2>Texto Final Pulido:</h2>
+            <textarea id="polishedText" rows="10" readonly placeholder="Aquí aparecerá el texto final transcrito y pulido..."></textarea>
         </div>
     </div>
 
