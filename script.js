@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusDiv = document.getElementById('status');
     const originalTextarea = document.getElementById('originalText');
     const polishedTextarea = document.getElementById('polishedText');
-    const audioPlayback = document.getElementById('audioPlayback'); // Elemento para reproducir audio
+    const audioPlayback = document.getElementById('audioPlayback');
 
     console.log({ startRecordBtn, stopRecordBtn, statusDiv, originalTextarea, polishedTextarea, audioPlayback });
 
@@ -20,25 +20,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let mediaRecorder;
     let audioChunks = [];
-    let currentAudioBlob = null; // Para almacenar el blob actual
+    let currentAudioBlob = null;
 
     // ¡¡¡IMPORTANTE!!! API Key integrada directamente.
-    const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // Tu API Key
+    // ¡¡¡RECUERDA QUITARLA ANTES DE SUBIR A GITHUB PÚBLICO!!!
+    const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // TU API KEY
 
     async function startRecording() {
         console.log("Solicitando permiso para grabar...");
         statusDiv.textContent = "Solicitando permiso para grabar...";
         originalTextarea.value = '';
         polishedTextarea.value = '';
-        audioChunks = []; // Limpiar chunks de grabaciones anteriores
+        audioChunks = [];
         if (audioPlayback.src) {
-            URL.revokeObjectURL(audioPlayback.src); // Liberar URL de objeto anterior
+            URL.revokeObjectURL(audioPlayback.src);
             audioPlayback.src = '';
-            audioPlayback.removeAttribute('src'); // Asegurar que se limpie
+            audioPlayback.removeAttribute('src');
             console.log("Audio playback source limpiado.");
         }
         currentAudioBlob = null;
-
 
         if (!userApiKey) {
             alert('API Key de Gemini no está configurada en el script.');
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             console.log("Permiso de micrófono concedido. Stream obtenido:", stream);
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' }); // Especificar mimeType
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
             console.log("MediaRecorder instanciado:", mediaRecorder);
 
             mediaRecorder.ondataavailable = event => {
@@ -83,13 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Configurar reproductor de audio
                 const audioURL = URL.createObjectURL(currentAudioBlob);
                 audioPlayback.src = audioURL;
                 console.log("Audio listo para reproducción en:", audioURL);
                 audioPlayback.oncanplaythrough = () => console.log("El audio se puede reproducir completamente.");
                 audioPlayback.onerror = (e) => console.error("Error al cargar audio para reproducción:", e);
-
 
                 statusDiv.textContent = 'Procesando audio...';
                 originalTextarea.value = '';
@@ -98,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     console.log("Convirtiendo Blob a Base64...");
                     const base64Audio = await blobToBase64(currentAudioBlob);
-                    if (!base64Audio || base64Audio.length < 100) { // Un audio muy corto podría ser un problema
+                    if (!base64Audio || base64Audio.length < 100) {
                         console.error("La conversión a Base64 resultó en una cadena vacía o muy corta:", base64Audio ? base64Audio.substring(0,50) + '...' : 'null');
                         throw new Error("Fallo al convertir audio a Base64 o audio demasiado corto.");
                     }
@@ -140,7 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mediaRecorder && mediaRecorder.state === "recording") {
             mediaRecorder.stop();
             console.log("MediaRecorder.stop() llamado. Estado actual:", mediaRecorder.state);
-            // El resto del procesamiento ocurre en mediaRecorder.onstop
         } else {
             console.warn("Se intentó detener la grabación, pero MediaRecorder no estaba grabando o no existía.");
             statusDiv.textContent = "Nada que detener.";
@@ -183,11 +180,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function callGeminiAPI(promptParts, isTextOnly = false) {
         console.log("Llamando a Gemini API. Es solo texto:", isTextOnly);
         if (!isTextOnly) {
-            console.log("Prompt para Gemini (con audio):", JSON.stringify(promptParts, null, 2).substring(0, 500) + "..."); // Muestra parte del prompt
+            // Para el prompt con audio, no mostrar toda la data base64 en consola.
+            const promptSummary = {
+                ...promptParts[0], // La parte de texto
+                audio_data_length: promptParts[1]?.inline_data?.data?.length // Longitud de los datos de audio
+            };
+            console.log("Prompt para Gemini (con audio - resumen):", JSON.stringify(promptSummary, null, 2));
         } else {
             console.log("Prompt para Gemini (solo texto):", JSON.stringify(promptParts, null, 2));
         }
-
 
         if (!userApiKey) {
             alert('API Key no configurada.');
@@ -201,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 parts: promptParts
             }],
             generationConfig: {
-                temperature: isTextOnly ? 0.2 : 0.7,
+                temperature: isTextOnly ? 0.2 : 0.7, // Más determinista para pulir
             }
         };
 
@@ -221,21 +222,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            console.log("Datos de respuesta de Gemini:", JSON.stringify(data, null, 2).substring(0,500) + "...");
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
-                const textResult = data.candidates[0].content.parts[0].text;
-                console.log("Texto extraído de la respuesta de Gemini:", textResult);
-                return textResult;
-            } else {
-                console.warn("Respuesta inesperada de Gemini o sin texto candidato:", data);
-                if(data.promptFeedback && data.promptFeedback.blockReason){
-                     throw new Error(`Solicitud bloqueada por Gemini: ${data.promptFeedback.blockReason}. Detalles: ${data.promptFeedback.blockReasonMessage || ''}`);
+            // No loguear toda la respuesta si es muy larga, solo partes relevantes
+            if (data.candidates && data.candidates.length > 0) {
+                console.log("Respuesta de Gemini (candidato principal):", JSON.stringify(data.candidates[0], null, 2).substring(0,500) + "...");
+                if (data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
+                    const textResult = data.candidates[0].content.parts[0].text;
+                    console.log("Texto extraído de la respuesta de Gemini:", textResult);
+                    return textResult;
                 }
-                if(data.candidates && data.candidates.length > 0 && data.candidates[0].finishReason) {
-                    throw new Error(`Gemini finalizó con razón: ${data.candidates[0].finishReason}. Esto puede indicar un problema con el prompt o el contenido.`);
-                }
-                throw new Error('No se recibió texto válido en la respuesta de Gemini.');
             }
+            // Si no se encontró texto
+            console.warn("Respuesta inesperada de Gemini o sin texto candidato:", data);
+            if(data.promptFeedback && data.promptFeedback.blockReason){
+                    throw new Error(`Solicitud bloqueada por Gemini: ${data.promptFeedback.blockReason}. Detalles: ${data.promptFeedback.blockReasonMessage || ''}`);
+            }
+            if(data.candidates && data.candidates.length > 0 && data.candidates[0].finishReason && data.candidates[0].finishReason !== "STOP") {
+                throw new Error(`Gemini finalizó con razón: ${data.candidates[0].finishReason}. Esto puede indicar un problema con el prompt o el contenido.`);
+            }
+            throw new Error('No se recibió texto válido en la respuesta de Gemini.');
+
         } catch (error) {
             console.error('Excepción al llamar a Gemini API:', error);
             statusDiv.textContent = `Error con Gemini: ${error.message}`;
@@ -245,7 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function transcribeAndPolishAudio(base64Audio) {
         console.log("Iniciando transcribeAndPolishAudio...");
-        // Paso 1: Transcripción
         statusDiv.textContent = 'Transcribiendo audio con Gemini...';
         let transcribedText = '';
         try {
@@ -253,12 +257,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 { "text": "Transcribe el siguiente audio a texto. Es importante que transcribas literalmente las palabras dictadas, incluyendo si el usuario dice 'coma', 'punto', 'punto y aparte', 'nueva línea', 'dos puntos', 'punto y coma', 'signo de interrogación', 'signo de exclamación', etc.:" },
                 {
                     "inline_data": {
-                        "mime_type": "audio/webm", // Coincide con el tipo de Blob
+                        "mime_type": "audio/webm",
                         "data": base64Audio
                     }
                 }
             ];
-            transcribedText = await callGeminiAPI(transcriptPromptParts, false); // false porque incluye audio
+            transcribedText = await callGeminiAPI(transcriptPromptParts, false);
             originalTextarea.value = "Transcripción original:\n" + transcribedText;
             statusDiv.textContent = 'Transcripción completada. Puliendo texto...';
         } catch (error) {
@@ -269,7 +273,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Paso 2: Pulido del texto transcrito
         if (!transcribedText.trim()) {
             console.log("No hay texto transcrito para pulir.");
             polishedTextarea.value = "No se transcribió texto para pulir.";
@@ -282,26 +285,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 {
                     "text": `Por favor, revisa y pule el siguiente texto.
 Instrucciones importantes:
-1.  Interpreta las siguientes palabras dictadas como signos de puntuación:
+1.  Interpreta las siguientes palabras dictadas como signos de puntuación y formato:
     *   'coma' como ','
     *   'punto' como '.'
-    *   'punto y aparte' como un nuevo párrafo (dos saltos de línea).
-    *   'nueva línea' como un salto de línea simple.
+    *   'punto y aparte' como un único salto de línea (para iniciar una nueva línea, no un nuevo párrafo espaciado).
+    *   'nueva línea' como un único salto de línea.
     *   'dos puntos' como ':'
     *   'punto y coma' como ';'
     *   'signo de interrogación' o 'pregunta' al final de una frase como '?'
     *   'signo de exclamación' o 'admiración' al final de una frase como '!'
-2.  Aplica estos signos de puntuación dictados.
+2.  Aplica estos signos y formatos dictados.
 3.  Adicionalmente, corrige otros errores gramaticales, de ortografía y de puntuación que no hayan sido dictados explícitamente.
 4.  Mejora la claridad y la fluidez del texto.
 5.  Es crucial que mantengas el significado original del texto.
-6.  Si el texto ya parece correcto después de aplicar la puntuación dictada, solo haz las correcciones mínimas necesarias.
+6.  Si el texto ya parece correcto después de aplicar la puntuación y formato dictados, solo haz las correcciones mínimas necesarias.
 
 Texto a pulir:
 "${transcribedText}"`
                 }
             ];
-            const polishedResult = await callGeminiAPI(polishPromptParts, true); // true para isTextOnly
+            const polishedResult = await callGeminiAPI(polishPromptParts, true);
             polishedTextarea.value = polishedResult;
             statusDiv.textContent = 'Proceso de transcripción y pulido completado.';
             console.log("Pulido completado.");
