@@ -1,136 +1,413 @@
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Programa de Transcripción Rx</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <title>Transcripción Simple con Gemini (Todo en Uno)</title>
+    
+    <!-- Importmap para cargar Google GenAI directamente -->
     <script type="importmap">
-        {
-            "imports": {
-                "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
-            }
+      {
+        "imports": {
+          "@google/genai": "https://esm.sh/@google/genai@^0.8.0" 
         }
+      }
     </script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #333;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 25px 35px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            width: 100%;
+            max-width: 750px;
+        }
+
+        h1 {
+            color: #1c1e21;
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        p#status {
+            color: #555;
+            min-height: 20px;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+
+        .controls button {
+            padding: 12px 20px;
+            margin: 10px 8px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #007aff;
+            color: white;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+            font-weight: 500;
+        }
+
+        .controls button:hover {
+            background-color: #005ecb;
+        }
+        .controls button:active {
+            transform: scale(0.98);
+        }
+
+        .controls button:disabled {
+            background-color: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        #recordButton.recording {
+            background-color: #ff3b30;
+        }
+
+        #recordButton.recording:hover {
+            background-color: #d92c23;
+        }
+        
+        h2 {
+            margin-top: 30px;
+            margin-bottom: 10px;
+            font-size: 20px;
+            color: #333;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        #transcriptionOutput {
+            width: 100%; /* Se ajustará por el padding del contenedor */
+            box-sizing: border-box;
+            min-height: 250px;
+            margin-top: 5px;
+            padding: 15px;
+            border: 1px solid #ccd0d5;
+            border-radius: 8px;
+            font-size: 16px;
+            line-height: 1.6;
+            text-align: left;
+            white-space: pre-wrap; 
+            background-color: #f9f9f9;
+            color: #1c1e21;
+            overflow-y: auto; /* Scroll si el contenido es muy largo */
+        }
+
+        #transcriptionOutput[placeholder]:empty:before {
+            content: attr(placeholder);
+            color: #888;
+            font-style: italic;
+        }
+
+        .error-message {
+            color: #d93025;
+            margin-top: 15px;
+            font-size: 14px;
+            min-height: 18px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <div class="theme-toggle">
-            <span class="theme-label">Modo oscuro</span>
-            <label class="theme-switch">
-                <input type="checkbox" id="themeToggle">
-                <span class="slider"></span>
-            </label>
-            <div class="joker-container">
-                <img src="joker.jpg" alt="Joker" class="theme-image dark-theme-image">
-                <img src="batmanneal.jpg" alt="Batman" class="theme-image light-theme-image">
-            </div>
+        <h1>Dictado Inteligente con Gemini</h1>
+        <p id="status">Haz clic en "Iniciar Dictado" y habla.</p>
+
+        <div class="controls">
+            <button id="recordButton">Iniciar Dictado</button>
+            <button id="copyButton" style="display:none;">Copiar Transcripción</button>
         </div>
         
-        <header>
-            <div style="display: flex; align-items: center; justify-content: center;">
-                <h1>Programa de Transcripción Rx</h1>
-            </div>
-        </header>
-        
-        <main>
-            <div class="controls">
-                <button id="startBtn" class="btn">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-                        <circle cx="12" cy="12" r="6" fill="currentColor"/>
-                    </svg>
-                    Iniciar Dictado
-                </button>
-                <button id="stopBtn" class="btn" disabled style="display:none;">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-                        <rect x="8" y="8" width="8" height="8" fill="currentColor"/>
-                    </svg>
-                    Detener
-                </button>
-                <button id="copyBtn" class="btn">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-                        <path d="M8 8h6v2h2v6h-8v-8z" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                        <path d="M10 6v2h6v6h2v-8h-8z" fill="currentColor"/>
-                    </svg>
-                    Copiar Texto
-                </button>
-                <button id="correctionBtn" class="btn">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-                        <path d="M8 12l3 3 6-6" stroke="currentColor" stroke-width="2" fill="none"/>
-                    </svg>
-                    Corregir Selección
-                </button>
-                <div class="status-indicator">
-                    <span id="status" class="status-text">Listo para dictar</span>
-                    <div class="sync-status">
-                        <span id="syncStatus">No sincronizado</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="header-controls">
-                <div class="header-textbox-container">
-                    <p class="header-label">Técnica (si procede...)</p>
-                    <div class="header-textbox" id="headerText" contenteditable="true"></div>
-                </div>
-                <div class="header-buttons-container">
-                    <div class="button-row">
-                        <div class="header-buttons-left">
-                            <button class="header-btn header-btn-red" data-header="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">TAC ABD ART y PORT</button>
-                            <button class="header-btn header-btn-red" data-header="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase portal.">TAC ABD PORT</button>
-                            <button class="header-btn header-btn-red" data-header="Se realiza exploración toracoabdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">TAC TAP ART y PORT</button>
-                            <button class="header-btn header-btn-red" data-header="Se realiza exploración sin administración endovenosa de contraste con adquisición de imágenes en reposo y durante maniobra de Valsalva.">TAC HERNIA</button>
-                            <button class="header-btn header-btn-red" data-header="Se realiza exploración sin y tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">TAC 3 FASES</button>
-                            <button class="header-btn header-btn-blue" data-header="Exploración ecográfica con sonda multifrecuencia.">ECO</button>
-                        </div>
-                    </div>
-                    <div class="button-row">
-                        <div class="header-buttons-right">
-                            <button class="header-btn header-btn-yellow" data-header="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM HEP</button>
-                            <button class="header-btn header-btn-yellow" data-header="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, estudio dinámico tras la administración endovenosa de contraste completándose la valoración con cortes radiales respecto al colédoco orientados a la valoración de la via biliar.">COLANGIO RM</button>
-                            <button class="header-btn header-btn-yellow" data-header="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa en los tres planos del espacio, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM PELVIS NEO</button>
-                            <button class="header-btn header-btn-yellow" data-header="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa y difusión.">RM PELVIS FIST</button>
-                            <button class="header-btn header-btn-yellow" data-header="Se realiza exploración abdominal con secuencias potenciadas en T2, difusión y estudio dinámico tras la administración endovenosa de contraste previa distensión de las asas intestinales. Exploración orientada a la valoración de asas de intestino delgado.">ENTERO RM</button>
-                            <button class="header-btn header-btn-clear" id="clearHeaderBtn">Limpiar encabezado</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="transcript-container">
-                <div class="transcript-text" id="transcript" contenteditable="true"></div>
-            </div>
-
-            <div class="custom-dictionary" style="display: none;">
-                <h2>Vocabulario Personalizado</h2>
-                <div class="dictionary-input">
-                    <input type="text" id="customWord" placeholder="Palabra a añadir">
-                    <button id="addWordBtn" class="btn">Añadir</button>
-                </div>
-                <div class="dictionary-list-container">
-                    <h3>Palabras añadidas:</h3>
-                    <ul id="dictionaryList" class="dictionary-list"></ul>
-                </div>
-            </div>
-
-            <div class="correction-panel">
-                <h2>Correcciones recientes</h2>
-                <ul id="correctionsList" class="corrections-list"></ul>
-            </div>
-        </main>
-
-        <div class="sync-status-container">
-            <span id="syncStatus-duplicate">No sincronizado</span>
-        </div>
-        
+        <h2>Transcripción Pulida:</h2>
+        <div id="transcriptionOutput" contenteditable="true" placeholder="La transcripción aparecerá aquí..."></div>
+        <p id="error" class="error-message"></p>
     </div>
-    
-    <script type="module" src="config.js"></script>
-    <script type="module" src="app.js"></script>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "@google/genai";
+
+        // --- CONFIGURACIÓN ---
+        // API Key proporcionada por el usuario.
+        // ADVERTENCIA: Esta clave es visible en el código fuente. No usar para aplicaciones públicas.
+        const API_KEY = "AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc"; 
+        const MODEL_NAME = "gemini-1.0-pro-latest"; // Modelo usado en la app anterior
+
+        // --- ELEMENTOS DEL DOM ---
+        const recordButton = document.getElementById('recordButton');
+        const copyButton = document.getElementById('copyButton');
+        const transcriptionOutput = document.getElementById('transcriptionOutput');
+        const statusDisplay = document.getElementById('status');
+        const errorDisplay = document.getElementById('error');
+
+        // --- ESTADO DE LA APLICACIÓN ---
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let genAI;
+
+        // --- INICIALIZACIÓN ---
+        function initializeGenAI() {
+            if (!API_KEY || API_KEY === "TU_API_KEY_DE_GOOGLE_AQUI") { // Dejo esta comprobación por si acaso la clave se borra accidentalmente
+                const errorMsg = "API Key no configurada correctamente. Por favor, verifica la constante API_KEY en el script.";
+                errorDisplay.textContent = errorMsg;
+                statusDisplay.textContent = "Error de configuración.";
+                recordButton.disabled = true;
+                console.error(errorMsg);
+                return false;
+            }
+            try {
+                genAI = new GoogleGenerativeAI(API_KEY);
+                return true;
+            } catch (error) {
+                console.error("Error inicializando GoogleGenerativeAI:", error);
+                errorDisplay.textContent = `Error inicializando API: ${error.message}`;
+                recordButton.disabled = true;
+                return false;
+            }
+        }
+
+        // --- LÓGICA DE GRABACIÓN ---
+        async function startRecording() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                errorDisplay.textContent = "La API MediaDevices no es soportada por tu navegador.";
+                statusDisplay.textContent = "Error de compatibilidad del navegador.";
+                return;
+            }
+            try {
+                errorDisplay.textContent = ""; // Limpiar errores previos
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                let options = { mimeType: 'audio/webm' };
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    console.warn(`${options.mimeType} no es soportado, intentando con audio/ogg`);
+                    options = { mimeType: 'audio/ogg; codecs=opus' };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        console.warn(`${options.mimeType} no es soportado, usando default.`);
+                        options = {}; 
+                    }
+                }
+                mediaRecorder = new MediaRecorder(stream, options);
+
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    statusDisplay.textContent = "Procesando audio...";
+                    recordButton.disabled = true;
+                    copyButton.style.display = 'none';
+
+                    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                    audioChunks = []; 
+
+                    await processAudioWithGemini(audioBlob);
+                    
+                    recordButton.disabled = false;
+                    if (transcriptionOutput.innerText.trim() !== "") {
+                        copyButton.style.display = 'inline-block';
+                    }
+
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.onerror = (event) => {
+                    console.error("Error de MediaRecorder:", event.error);
+                    errorDisplay.textContent = `Error de MediaRecorder: ${event.error.name} - ${event.error.message}`;
+                    statusDisplay.textContent = "Error durante la grabación.";
+                    isRecording = false;
+                    recordButton.textContent = "Iniciar Dictado";
+                    recordButton.classList.remove("recording");
+                    recordButton.disabled = false;
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                recordButton.textContent = "Detener Dictado";
+                recordButton.classList.add("recording");
+                statusDisplay.textContent = "Grabando... Habla ahora.";
+                transcriptionOutput.innerHTML = ""; 
+                copyButton.style.display = 'none';
+
+            } catch (error) {
+                console.error("Error al iniciar grabación:", error);
+                let userFriendlyError = `Error al iniciar grabación: ${error.message}.`;
+                if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+                    userFriendlyError = "Permiso para usar el micrófono denegado. Por favor, habilita el acceso en la configuración de tu navegador.";
+                } else if (error.name === "NotFoundError") {
+                    userFriendlyError = "No se encontró un micrófono. Por favor, conecta uno.";
+                }
+                errorDisplay.textContent = userFriendlyError;
+                statusDisplay.textContent = "Error al grabar.";
+                isRecording = false;
+                recordButton.textContent = "Iniciar Dictado";
+                recordButton.classList.remove("recording");
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+                isRecording = false;
+                recordButton.textContent = "Iniciar Dictado";
+                recordButton.classList.remove("recording");
+            }
+        }
+
+        // --- PROCESAMIENTO CON GEMINI ---
+        async function processAudioWithGemini(audioBlob) {
+            if (!genAI) {
+                errorDisplay.textContent = "Gemini AI no está inicializado. Revisa la API Key.";
+                statusDisplay.textContent = "Error de API.";
+                return;
+            }
+            if (audioBlob.size === 0) {
+                statusDisplay.textContent = "No se grabó audio. Intenta de nuevo.";
+                return;
+            }
+
+            statusDisplay.textContent = "Convirtiendo audio...";
+            const base64Audio = await blobToBase64(audioBlob);
+
+            if (!base64Audio) {
+                errorDisplay.textContent = "Error al convertir audio.";
+                statusDisplay.textContent = "Error de conversión.";
+                return;
+            }
+
+            statusDisplay.textContent = "Enviando a Gemini...";
+
+            const prompt = `
+                Por favor, transcribe el siguiente audio.
+                Luego, pule la transcripción eliminando palabras de relleno (como "um", "eh", "bueno", "o sea", "pues"), repeticiones innecesarias y falsos comienzos.
+                IMPORTANTE: Si en el dictado se mencionan explícitamente signos de puntuación como "coma", "punto", "punto y coma", "dos puntos", "signo de interrogación", "signo de exclamación", "abrir paréntesis", "cerrar paréntesis", "abrir corchetes", "cerrar corchetes", "abrir comillas", "cerrar comillas", "guion", "raya", o se indica "nueva línea", "siguiente línea", "punto y aparte" o "nuevo párrafo", por favor, aplica esos signos de puntuación o saltos de línea correspondientes en el texto final.
+                Corrige errores gramaticales menores si son obvios, pero mantén el significado y el estilo del hablante.
+                El resultado debe ser únicamente el texto pulido y formateado. No incluyas preámbulos ni comentarios sobre el proceso.
+            `;
+
+            try {
+                const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+                const generationConfig = {};
+                const safetySettings = [ 
+                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                ];
+
+                const result = await model.generateContent({
+                    contents: [
+                        { role: "user", parts: [{text: prompt}] },
+                        { role: "user", parts: [{ inlineData: { mimeType: audioBlob.type || 'audio/webm', data: base64Audio }}] }
+                    ],
+                    generationConfig,
+                    safetySettings
+                });
+                
+                const response = result.response;
+                const polishedText = response.text();
+
+                if (polishedText) {
+                    transcriptionOutput.innerText = polishedText.trim();
+                    statusDisplay.textContent = "Transcripción completada.";
+                    copyButton.style.display = 'inline-block';
+                } else {
+                    transcriptionOutput.innerHTML = "<em>No se pudo obtener la transcripción pulida. La respuesta de Gemini fue vacía.</em>";
+                    statusDisplay.textContent = "Respuesta vacía de Gemini.";
+                }
+
+            } catch (error) {
+                console.error("Error al procesar con Gemini:", error);
+                let detailedError = error.message;
+                if (error.response && error.response.promptFeedback) {
+                    detailedError += ` Feedback: ${JSON.stringify(error.response.promptFeedback)}`;
+                } else if (error.message && error.message.includes("API key not valid")) {
+                    detailedError = "La API Key proporcionada no es válida o ha caducado. Verifica tu API Key.";
+                }
+                errorDisplay.textContent = `Error con Gemini: ${detailedError}`;
+                transcriptionOutput.innerHTML = `<em>Error procesando con Gemini. Revisa la consola para más detalles.</em>`;
+                statusDisplay.textContent = "Error en el procesamiento.";
+            }
+        }
+
+        // --- UTILIDADES ---
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64data = reader.result;
+                    if (typeof base64data === 'string') {
+                        resolve(base64data.split(',')[1]);
+                    } else {
+                        reject(new Error("FileReader no devolvió una cadena."));
+                    }
+                };
+                reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function copyTranscription() {
+            const textToCopy = transcriptionOutput.innerText;
+            if (textToCopy.trim() === "") {
+                return;
+            }
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    const originalStatus = statusDisplay.textContent;
+                    statusDisplay.textContent = "¡Transcripción copiada!";
+                    setTimeout(() => {
+                        if (statusDisplay.textContent === "¡Transcripción copiada!") {
+                           statusDisplay.textContent = originalStatus;
+                        }
+                    }, 2500);
+                })
+                .catch(err => {
+                    console.error('Error al copiar texto: ', err);
+                    statusDisplay.textContent = "Error al copiar. Intenta manualmente.";
+                });
+        }
+
+        // --- MANEJADORES DE EVENTOS ---
+        recordButton.addEventListener('click', () => {
+            if (!genAI && !initializeGenAI()) {
+                return; 
+            }
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+
+        copyButton.addEventListener('click', copyTranscription);
+
+        // --- INICIO ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!initializeGenAI()) {
+                console.warn("La inicialización de GenAI falló al cargar la página.");
+            }
+        });
+    </script>
 </body>
 </html>
