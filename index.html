@@ -8,7 +8,7 @@
     <script type="importmap">
       {
         "imports": {
-          "@google/genai": "https://esm.sh/@google/genai@^0.8.0" 
+          "@google/genai-lib": "https://esm.sh/@google/genai@0.8.0" 
         }
       }
     </script>
@@ -55,8 +55,8 @@
     </div>
 
     <script type="module">
-        // Volviendo al método de importación nombrada original
-        import { GoogleGenerativeAI } from "@google/genai"; 
+        // Importar el módulo completo definido en importmap
+        import genaiModule from "@google/genai-lib"; 
 
         const API_KEY = "AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc"; 
         const MODEL_NAME = "gemini-1.0-pro-latest"; 
@@ -82,13 +82,34 @@
                 return false;
             }
             try {
-                // Usar la importación nombrada directamente
-                genAIInstance = new GoogleGenerativeAI(API_KEY);
-                console.log("GoogleGenAI inicializado correctamente usando importación nombrada.");
+                let ConstructorToUse = null;
+                // La evidencia de la consola sugiere que genaiModule.GoogleGenerativeAI debería existir
+                if (genaiModule && typeof genaiModule.GoogleGenerativeAI === 'function') {
+                    ConstructorToUse = genaiModule.GoogleGenerativeAI;
+                    console.log("Usando genaiModule.GoogleGenerativeAI");
+                } else if (genaiModule && genaiModule.default && typeof genaiModule.default.GoogleGenerativeAI === 'function') {
+                    ConstructorToUse = genaiModule.default.GoogleGenerativeAI;
+                     console.log("Usando genaiModule.default.GoogleGenerativeAI");
+                } else if (genaiModule && genaiModule.default && typeof genaiModule.default === 'function') {
+                    ConstructorToUse = genaiModule.default;
+                    console.log("Usando genaiModule.default como constructor");
+                } else {
+                     console.error("Constructor GoogleGenerativeAI no encontrado en 'genaiModule'. Módulo:", genaiModule);
+                    throw new Error("Constructor GoogleGenerativeAI no encontrado en el módulo @google/genai provisto por esm.sh.");
+                }
+                
+                if (ConstructorToUse) {
+                    genAIInstance = new ConstructorToUse(API_KEY);
+                    console.log("GoogleGenAI inicializado correctamente.");
+                } else {
+                    // Esto no debería alcanzarse si una de las condiciones anteriores es verdadera
+                    throw new Error("Falló la asignación del constructor.");
+                }
                 return true;
+
             } catch (error) {
-                console.error("Error inicializando GoogleGenerativeAI (con importación nombrada):", error);
-                errorDisplay.textContent = `Error inicializando API (importación nombrada): ${error.message}`;
+                console.error("Error inicializando GoogleGenerativeAI:", error);
+                errorDisplay.textContent = `Error inicializando API: ${error.message}`;
                 recordButton.disabled = true;
                 return false;
             }
