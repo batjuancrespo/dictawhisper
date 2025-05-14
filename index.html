@@ -8,7 +8,7 @@
     <script type="importmap">
       {
         "imports": {
-          "@google/genai-lib": "https://esm.sh/@google/genai@0.8.0" 
+          "@google/genai": "https://esm.sh/@google/genai@0.8.0" // Volvemos al nombre original en importmap
         }
       }
     </script>
@@ -55,8 +55,8 @@
     </div>
 
     <script type="module">
-        // Importar el módulo completo definido en importmap
-        import genaiModule from "@google/genai-lib"; 
+        // Usar import * as, ya que esto nos dio el objeto que pudiste inspeccionar
+        import * as genaiFullModule from "@google/genai"; 
 
         const API_KEY = "AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc"; 
         const MODEL_NAME = "gemini-1.0-pro-latest"; 
@@ -82,28 +82,14 @@
                 return false;
             }
             try {
-                let ConstructorToUse = null;
-                // La evidencia de la consola sugiere que genaiModule.GoogleGenerativeAI debería existir
-                if (genaiModule && typeof genaiModule.GoogleGenerativeAI === 'function') {
-                    ConstructorToUse = genaiModule.GoogleGenerativeAI;
-                    console.log("Usando genaiModule.GoogleGenerativeAI");
-                } else if (genaiModule && genaiModule.default && typeof genaiModule.default.GoogleGenerativeAI === 'function') {
-                    ConstructorToUse = genaiModule.default.GoogleGenerativeAI;
-                     console.log("Usando genaiModule.default.GoogleGenerativeAI");
-                } else if (genaiModule && genaiModule.default && typeof genaiModule.default === 'function') {
-                    ConstructorToUse = genaiModule.default;
-                    console.log("Usando genaiModule.default como constructor");
+                // Acceder directamente a la propiedad del módulo importado con * as
+                // Esto se basa en que tu inspección del módulo mostró la propiedad "GoogleGenAI"
+                if (genaiFullModule && typeof genaiFullModule.GoogleGenerativeAI === 'function') {
+                    genAIInstance = new genaiFullModule.GoogleGenerativeAI(API_KEY);
+                    console.log("GoogleGenAI inicializado usando genaiFullModule.GoogleGenerativeAI");
                 } else {
-                     console.error("Constructor GoogleGenerativeAI no encontrado en 'genaiModule'. Módulo:", genaiModule);
-                    throw new Error("Constructor GoogleGenerativeAI no encontrado en el módulo @google/genai provisto por esm.sh.");
-                }
-                
-                if (ConstructorToUse) {
-                    genAIInstance = new ConstructorToUse(API_KEY);
-                    console.log("GoogleGenAI inicializado correctamente.");
-                } else {
-                    // Esto no debería alcanzarse si una de las condiciones anteriores es verdadera
-                    throw new Error("Falló la asignación del constructor.");
+                    console.error("La propiedad 'GoogleGenerativeAI' no es una función o no existe en 'genaiFullModule'. Módulo:", genaiFullModule);
+                    throw new Error("Constructor GoogleGenerativeAI no encontrado como propiedad directa del módulo importado con '* as'.");
                 }
                 return true;
 
@@ -118,7 +104,6 @@
         async function startRecording() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 errorDisplay.textContent = "La API MediaDevices no es soportada por tu navegador.";
-                statusDisplay.textContent = "Error de compatibilidad del navegador.";
                 return;
             }
             try {
@@ -128,15 +113,11 @@
                 let options = { mimeType: 'audio/webm' };
                 if (!MediaRecorder.isTypeSupported(options.mimeType)) {
                     options = { mimeType: 'audio/ogg; codecs=opus' };
-                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                        options = {}; 
-                    }
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) options = {}; 
                 }
                 mediaRecorder = new MediaRecorder(stream, options);
 
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) audioChunks.push(event.data);
-                };
+                mediaRecorder.ondataavailable = (event) => { if (event.data.size > 0) audioChunks.push(event.data); };
 
                 mediaRecorder.onstop = async () => {
                     statusDisplay.textContent = "Procesando audio...";
@@ -153,12 +134,11 @@
                 mediaRecorder.onerror = (event) => {
                     console.error("Error de MediaRecorder:", event.error);
                     errorDisplay.textContent = `Error de MediaRecorder: ${event.error.name}`;
-                    statusDisplay.textContent = "Error durante la grabación.";
-                    isRecording = false;
+                    isRecording = false; // Reset state
                     recordButton.textContent = "Iniciar Dictado";
                     recordButton.classList.remove("recording");
                     recordButton.disabled = false;
-                    stream.getTracks().forEach(track => track.stop());
+                    stream.getTracks().forEach(track => track.stop()); // Ensure stream is stopped on error
                 };
 
                 mediaRecorder.start();
@@ -175,7 +155,6 @@
                 if (error.name === "NotAllowedError") userFriendlyError = "Permiso para usar el micrófono denegado.";
                 else if (error.name === "NotFoundError") userFriendlyError = "No se encontró un micrófono.";
                 errorDisplay.textContent = userFriendlyError;
-                statusDisplay.textContent = "Error al grabar.";
                 isRecording = false;
                 recordButton.textContent = "Iniciar Dictado";
                 recordButton.classList.remove("recording");
@@ -193,21 +172,16 @@
 
         async function processAudioWithGemini(audioBlob) {
             if (!genAIInstance) {
-                errorDisplay.textContent = "Gemini AI no está inicializado.";
-                statusDisplay.textContent = "Error de API.";
-                return;
+                errorDisplay.textContent = "Gemini AI no está inicializado."; return;
             }
             if (audioBlob.size === 0) {
-                statusDisplay.textContent = "No se grabó audio.";
-                return;
+                statusDisplay.textContent = "No se grabó audio."; return;
             }
 
             statusDisplay.textContent = "Convirtiendo audio...";
             const base64Audio = await blobToBase64(audioBlob);
             if (!base64Audio) {
-                errorDisplay.textContent = "Error al convertir audio.";
-                statusDisplay.textContent = "Error de conversión.";
-                return;
+                errorDisplay.textContent = "Error al convertir audio."; return;
             }
 
             statusDisplay.textContent = "Enviando a Gemini...";
@@ -236,7 +210,6 @@
                     copyButton.style.display = 'inline-block';
                 } else {
                     transcriptionOutput.innerHTML = "<em>Respuesta vacía de Gemini.</em>";
-                    statusDisplay.textContent = "Respuesta vacía de Gemini.";
                 }
             } catch (error) {
                 console.error("Error al procesar con Gemini:", error);
@@ -244,8 +217,6 @@
                 if (error.response?.promptFeedback) detailedError += ` Feedback: ${JSON.stringify(error.response.promptFeedback)}`;
                 else if (error.message?.includes("API key not valid")) detailedError = "API Key no válida.";
                 errorDisplay.textContent = `Error con Gemini: ${detailedError}`;
-                transcriptionOutput.innerHTML = `<em>Error procesando.</em>`;
-                statusDisplay.textContent = "Error en el procesamiento.";
             }
         }
 
@@ -269,14 +240,9 @@
                 .then(() => {
                     const originalStatus = statusDisplay.textContent;
                     statusDisplay.textContent = "¡Transcripción copiada!";
-                    setTimeout(() => {
-                        if (statusDisplay.textContent === "¡Transcripción copiada!") statusDisplay.textContent = originalStatus;
-                    }, 2500);
+                    setTimeout(() => { if (statusDisplay.textContent === "¡Transcripción copiada!") statusDisplay.textContent = originalStatus; }, 2500);
                 })
-                .catch(err => {
-                    console.error('Error al copiar texto: ', err);
-                    statusDisplay.textContent = "Error al copiar.";
-                });
+                .catch(err => { console.error('Error al copiar texto: ', err); statusDisplay.textContent = "Error al copiar."; });
         }
 
         recordButton.addEventListener('click', () => {
@@ -288,9 +254,7 @@
         copyButton.addEventListener('click', copyTranscription);
 
         document.addEventListener('DOMContentLoaded', () => {
-            if (!initializeGenAI()) {
-                console.warn("La inicialización de GenAI falló al cargar la página.");
-            }
+            if (!initializeGenAI()) console.warn("La inicialización de GenAI falló al cargar la página.");
         });
     </script>
 </body>
