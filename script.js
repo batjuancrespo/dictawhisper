@@ -157,6 +157,15 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error('API Key no configurada.');
         }
 
+        // Log del prompt que se envía a Gemini
+        if (isTextOnly) {
+            console.log("Prompt para Gemini (pulido):", JSON.stringify(promptParts, null, 2));
+        } else {
+            // Para no llenar la consola con el base64 del audio, solo mostrar la parte de texto
+            console.log("Prompt para Gemini (transcripción - parte texto):", JSON.stringify(promptParts[0], null, 2));
+        }
+
+
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;
 
         const body = {
@@ -169,11 +178,13 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
+            // console.log("Enviando solicitud a Gemini API...");
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
+            // console.log(`Respuesta de Gemini API recibida. Estado: ${response.status}`);
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -182,9 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
+            // console.log("Respuesta de Gemini (datos completos):", JSON.stringify(data, null, 2)); // Para depuración detallada
+
             if (data.candidates && data.candidates.length > 0) {
                 if (data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
-                    return data.candidates[0].content.parts[0].text;
+                    const textResult = data.candidates[0].content.parts[0].text;
+                    // console.log("Texto extraído de la respuesta de Gemini:", textResult);
+                    return textResult;
                 }
             }
             console.warn("Respuesta inesperada de Gemini o sin texto candidato:", data);
@@ -218,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
             transcribedText = await callGeminiAPI(transcriptPromptParts, false);
             originalTextarea.value = "Transcripción original (antes del pulido):\n" + transcribedText;
+            console.log("Texto transcrito literalmente (antes de pulir):", JSON.stringify(transcribedText)); // Log de transcripción literal
             statusDiv.textContent = 'Transcripción completada. Puliendo texto...';
         } catch (error) {
             console.error("Error durante la transcripción:", error);
@@ -256,9 +272,10 @@ Texto a pulir:
 "${transcribedText}"`
                 }
             ];
-            let polishedResult = await callGeminiAPI(polishPromptParts, true); // isTextOnly = true
+            let polishedResult = await callGeminiAPI(polishPromptParts, true); 
 
-            console.log("Texto de Gemini (antes de post-proceso):", JSON.stringify(polishedResult));
+            // Log ANTES del post-procesamiento
+            console.log("Texto de Gemini (ANTES del post-proceso):", JSON.stringify(polishedResult));
 
             // --- INICIO DEL POST-PROCESAMIENTO AGRESIVO ---
             // Paso 1: Normalizar todos los tipos de saltos de línea a \n
@@ -267,8 +284,8 @@ Texto a pulir:
             // Paso 2: Reemplazar ". punto y aparte" o ".punto y aparte" (con espacios variables) por ".\\n"
             // Esto es por si Gemini no procesó bien el prompt y dejó "punto y aparte" como texto
             polishedResult = polishedResult.replace(/\.\s*(punto y aparte|Punto y aparte|PUNTO Y APARTE)/gi, '.\n');
-            // Y si "punto y aparte" vino solo, también.
-            polishedResult = polishedResult.replace(/\b(punto y aparte|Punto y aparte|PUNTO Y APARTE)\b/gi, '\n'); // \b para límite de palabra
+            // Y si "punto y aparte" vino solo, también. \b para límite de palabra
+            polishedResult = polishedResult.replace(/\b(punto y aparte|Punto y aparte|PUNTO Y APARTE)\b/gi, '\n'); 
 
             // Paso 3: Colapsar cualquier secuencia de DOS O MÁS saltos de línea en UN SOLO salto de línea.
             // ESTA ES LA REGLA MÁS IMPORTANTE PARA TU CASO.
@@ -288,9 +305,10 @@ Texto a pulir:
             
             // Paso 8: Asegurar que un punto seguido de un salto de línea no tenga espacios intermedios.
             polishedResult = polishedResult.replace(/\.\s+\n/g, '.\n');
-
-            console.log("Texto final (después de post-proceso):", JSON.stringify(polishedResult));
             // --- FIN DEL POST-PROCESAMIENTO AGRESIVO ---
+
+            // Log DESPUÉS del post-procesamiento
+            console.log("Texto final (DESPUÉS del post-proceso):", JSON.stringify(polishedResult)); 
 
             polishedTextarea.value = polishedResult;
             statusDiv.textContent = 'Proceso de transcripción y pulido completado.';
