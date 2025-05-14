@@ -72,3 +72,19 @@ button:disabled {
     font-size: 0.9em;
     color: #666;
 }
+/* ... (tus estilos anteriores) ... */
+
+.audio-playback-section {
+    margin-bottom: 20px;
+    text-align: center; /* Opcional: centrar el reproductor */
+}
+
+.audio-playback-section h3 {
+    margin-bottom: 5px;
+}
+
+#audioPlayback {
+    width: 100%; /* Hacer que ocupe el ancho disponible */
+    max-width: 500px; /* Limitar el ancho máximo */
+    margin-top: 5px;
+}
