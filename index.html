@@ -73,38 +73,27 @@
 
         function actualInitialization() {
             console.log("Intentando actualInitialization...");
-            console.log("Tipo de genaiFullModule:", typeof genaiFullModule);
-            console.log("genaiFullModule existe:", !!genaiFullModule);
+            console.log("Módulo importado (genaiFullModule):", genaiFullModule);
 
-            if (genaiFullModule) {
-                console.log("Tipo de genaiFullModule.GoogleGenerativeAI:", typeof genaiFullModule.GoogleGenerativeAI);
-                console.log("genaiFullModule.GoogleGenerativeAI existe:", !!genaiFullModule.GoogleGenerativeAI);
-                // Para ver si es un getter que aún no ha devuelto la función:
-                try {
-                    const tempAccess = genaiFullModule.GoogleGenerativeAI;
-                    console.log("Valor de genaiFullModule.GoogleGenerativeAI (después de acceso):", tempAccess);
-                    console.log("Tipo de genaiFullModule.GoogleGenerativeAI (después de acceso):", typeof tempAccess);
-                } catch (e) {
-                    console.error("Error al acceder a genaiFullModule.GoogleGenerativeAI:", e);
-                }
-            }
+            const Constructor = genaiFullModule.GoogleGenerativeAI; 
 
-
-            if (genaiFullModule && typeof genaiFullModule.GoogleGenerativeAI === 'function') {
-                genAIInstance = new genaiFullModule.GoogleGenerativeAI(API_KEY);
-                console.log("GoogleGenAI inicializado usando genaiFullModule.GoogleGenerativeAI");
-                recordButton.disabled = false; // Habilitar botón si la inicialización es exitosa
+            if (Constructor && typeof Constructor === 'function') {
+                genAIInstance = new Constructor(API_KEY);
+                console.log("GoogleGenAI inicializado exitosamente usando genaiFullModule.GoogleGenerativeAI");
+                recordButton.disabled = false; 
+                statusDisplay.textContent = 'Listo para dictar.'; // Indicar que está listo
                 return true;
             } else {
-                console.error("La propiedad 'GoogleGenerativeAI' NO es una función o no existe en 'genaiFullModule' en el momento de la inicialización. Módulo:", genaiFullModule);
-                const errorMsg = "Error: El constructor de GoogleGenAI no está disponible como se esperaba.";
+                console.error("genaiFullModule.GoogleGenerativeAI NO es una función o es undefined.");
+                console.log("Valor de genaiFullModule.GoogleGenerativeAI (variable Constructor):", Constructor);
+                console.log("Tipo de genaiFullModule.GoogleGenerativeAI (variable Constructor):", typeof Constructor);
+                const errorMsg = "Error: El constructor de GoogleGenAI no se pudo obtener del módulo.";
                 errorDisplay.textContent = errorMsg;
                 statusDisplay.textContent = "Error crítico de API.";
                 recordButton.disabled = true;
                 return false;
             }
         }
-
 
         function initializeGenAI() {
             if (!API_KEY || API_KEY === "TU_API_KEY_DE_GOOGLE_AQUI") { 
@@ -116,46 +105,34 @@
                 return false;
             }
             
-            // Deshabilitar botón hasta que sepamos si la inicialización funciona
             recordButton.disabled = true;
+            statusDisplay.textContent = "Inicializando API..."; // Feedback al usuario
 
-            // Intentar inicializar después de un breve retraso
-            // Esto es solo para diagnóstico, NO una solución de producción
             console.log("Programando inicialización de GenAI...");
             setTimeout(() => {
                 try {
-                    if (!actualInitialization()) {
-                         console.warn("actualInitialization devolvió false.");
-                    }
+                    actualInitialization(); // No necesitamos comprobar el return aquí, ya que actualiza la UI
                 } catch (error) {
                     console.error("Error CATCH en initializeGenAI (después de setTimeout):", error);
                     errorDisplay.textContent = `Error inicializando API (catch): ${error.message}`;
-                    recordButton.disabled = true; // Mantener deshabilitado si hay error
+                    recordButton.disabled = true; 
                 }
-            }, 100); // Retraso de 100ms
+            }, 100); 
 
-            // Devuelve true optimistamente o maneja de otra forma el estado de carga.
-            // Para este ejemplo, el botón se habilita en actualInitialization si tiene éxito.
             return true; 
         }
 
         async function startRecording() {
-            if (!genAIInstance) { // Comprobar si la instancia existe
-                errorDisplay.textContent = "Gemini AI no está listo. Intenta recargar.";
-                if (!initializeGenAI()) { // Intenta reinicializar si es necesario
-                     errorDisplay.textContent = "Falló el intento de reinicializar Gemini AI.";
-                     return;
-                }
-                 // Si initializeGenAI tiene éxito, genAIInstance debería estar seteado.
-                 // Puede que necesitemos esperar a que el setTimeout de initializeGenAI termine.
-                 // Esto complica el flujo. Es mejor asegurarse que esté listo antes de llamar a startRecording.
+            if (!genAIInstance) {
+                errorDisplay.textContent = "Gemini AI no está listo. La inicialización podría estar en curso o haber fallado.";
+                statusDisplay.textContent = "API no lista. Espera o recarga.";
+                return;
             }
 
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 errorDisplay.textContent = "La API MediaDevices no es soportada por tu navegador.";
                 return;
             }
-            // ... (resto de startRecording sin cambios) ...
             try {
                 errorDisplay.textContent = ""; 
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -296,19 +273,12 @@
         }
 
         recordButton.addEventListener('click', () => {
-            // Asegurarse de que genAIInstance está lista antes de permitir grabar
             if (!genAIInstance) {
-                console.log("Intento de grabar, pero genAIInstance no está lista. Intentando inicializar de nuevo...");
-                if (!initializeGenAI()) { // Esto podría ser problemático por el setTimeout
-                    errorDisplay.textContent = "La inicialización de la API falló. No se puede grabar.";
-                    return;
-                }
-                // Si initializeGenAI ahora usa setTimeout, necesitamos una mejor manera de manejar esto.
-                // Por ahora, el usuario podría tener que esperar y hacer clic de nuevo.
-                // O mostrar un mensaje de "Inicializando..."
-                statusDisplay.textContent = "Inicializando API, por favor espera...";
-                // La inicialización real sucede en el setTimeout, el botón debería estar deshabilitado
-                // hasta que actualInitialization() lo habilite.
+                 errorDisplay.textContent = "La API aún se está inicializando o falló. Por favor, espera o recarga.";
+                 statusDisplay.textContent = "Inicializando...";
+                // Re-intentar la inicialización podría ser una opción, pero puede complicar el estado.
+                // Por ahora, se espera que el usuario espere si ve este mensaje.
+                // Si la inicialización ya falló, el botón de grabar estará deshabilitado.
                 return;
             }
             if (isRecording) stopRecording();
@@ -318,9 +288,7 @@
         copyButton.addEventListener('click', copyTranscription);
 
         document.addEventListener('DOMContentLoaded', () => {
-            // La inicialización ahora es asíncrona debido al setTimeout
             initializeGenAI(); 
-            // El botón de grabar se habilita en actualInitialization si todo va bien
         });
     </script>
 </body>
