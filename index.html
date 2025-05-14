@@ -141,13 +141,12 @@
     </div>
 
     <script type="module">
-        import { GoogleGenerativeAI } from "@google/genai";
+        // SOLUCIÓN 1: Importar todo el módulo bajo un alias
+        import * as genai from "@google/genai";
 
         // --- CONFIGURACIÓN ---
-        // API Key proporcionada por el usuario.
-        // ADVERTENCIA: Esta clave es visible en el código fuente. No usar para aplicaciones públicas.
-        const API_KEY = "AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc"; 
-        const MODEL_NAME = "gemini-1.0-pro-latest"; // Modelo usado en la app anterior
+        const API_KEY = "AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc"; // API Key proporcionada
+        const MODEL_NAME = "gemini-1.0-pro-latest"; 
 
         // --- ELEMENTOS DEL DOM ---
         const recordButton = document.getElementById('recordButton');
@@ -160,11 +159,11 @@
         let mediaRecorder;
         let audioChunks = [];
         let isRecording = false;
-        let genAI;
+        let genAIInstance; // Renombrado para evitar confusión con el módulo importado
 
         // --- INICIALIZACIÓN ---
         function initializeGenAI() {
-            if (!API_KEY || API_KEY === "TU_API_KEY_DE_GOOGLE_AQUI") { // Dejo esta comprobación por si acaso la clave se borra accidentalmente
+            if (!API_KEY || API_KEY === "TU_API_KEY_DE_GOOGLE_AQUI") { 
                 const errorMsg = "API Key no configurada correctamente. Por favor, verifica la constante API_KEY en el script.";
                 errorDisplay.textContent = errorMsg;
                 statusDisplay.textContent = "Error de configuración.";
@@ -173,7 +172,8 @@
                 return false;
             }
             try {
-                genAI = new GoogleGenerativeAI(API_KEY);
+                // Usar el alias del módulo importado
+                genAIInstance = new genai.GoogleGenerativeAI(API_KEY);
                 return true;
             } catch (error) {
                 console.error("Error inicializando GoogleGenerativeAI:", error);
@@ -191,7 +191,7 @@
                 return;
             }
             try {
-                errorDisplay.textContent = ""; // Limpiar errores previos
+                errorDisplay.textContent = ""; 
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 
                 let options = { mimeType: 'audio/webm' };
@@ -276,7 +276,7 @@
 
         // --- PROCESAMIENTO CON GEMINI ---
         async function processAudioWithGemini(audioBlob) {
-            if (!genAI) {
+            if (!genAIInstance) { // Comprobar la instancia
                 errorDisplay.textContent = "Gemini AI no está inicializado. Revisa la API Key.";
                 statusDisplay.textContent = "Error de API.";
                 return;
@@ -306,7 +306,7 @@
             `;
 
             try {
-                const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+                const model = genAIInstance.getGenerativeModel({ model: MODEL_NAME }); // Usar la instancia
                 const generationConfig = {};
                 const safetySettings = [ 
                     { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -390,7 +390,7 @@
 
         // --- MANEJADORES DE EVENTOS ---
         recordButton.addEventListener('click', () => {
-            if (!genAI && !initializeGenAI()) {
+            if (!genAIInstance && !initializeGenAI()) { // Comprobar la instancia
                 return; 
             }
             if (isRecording) {
