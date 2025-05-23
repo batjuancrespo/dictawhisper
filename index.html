@@ -25,12 +25,13 @@
 
         <div class="controls">
             <div class="buttons-group">
-                <button id="startRecordBtn">Empezar a Grabar</button>
-                <button id="pauseResumeBtn" class="secondary" disabled>Pausar</button>
-                <button id="stopRecordBtn" disabled>Detener Grabación</button>
-                <button id="retryProcessBtn" class="secondary" disabled>Reintentar Procesamiento</button>
+                <button id="startRecordBtn" class="btn-record">Empezar a Grabar</button>
+                <button id="pauseResumeBtn" class="btn-pause" disabled>Pausar</button>
+                <button id="stopRecordBtn" class="btn-stop" disabled>Detener</button>
+                <button id="retryProcessBtn" class="btn-retry" disabled>Reintentar</button>
+                <button id="copyPolishedTextBtn" class="btn-copy" title="Copiar texto pulido" disabled>Copiar Texto</button>
             </div>
-            <p id="recordingTimeDisplay"></p> <!-- Aquí se mostrará el tiempo -->
+            <p id="recordingTimeDisplay"></p>
             <p id="status" class="status-idle">Estado: Esperando para grabar...</p>
         </div>
 
@@ -42,18 +43,12 @@
         </div>
 
         <div class="audio-playback-section">
-            <h3>Escuchar Grabación:</h3>
+            <h3>Escuchar Grabación Original:</h3>
             <audio id="audioPlayback" controls></audio>
         </div>
 
         <div class="results">
-            <h2>Transcripción Original:</h2>
-            <textarea id="originalText" rows="6" readonly placeholder="Aquí aparecerá la transcripción antes del pulido..."></textarea>
-
-            <div class="polished-text-header">
-                 <h2>Texto Final Pulido (Editable):</h2>
-                 <button id="copyPolishedTextBtn" class="copy-btn" title="Copiar texto pulido">Copiar Texto</button>
-            </div>
+            <h2>Texto Final Pulido (Editable):</h2>
             <textarea id="polishedText" rows="10" placeholder="Aquí aparecerá el texto final transcrito y pulido..."></textarea>
         </div>
     </div>
