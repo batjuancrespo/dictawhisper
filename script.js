@@ -5,17 +5,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const pauseResumeBtn = document.getElementById('pauseResumeBtn');
     const stopRecordBtn = document.getElementById('stopRecordBtn');
     const retryProcessBtn = document.getElementById('retryProcessBtn');
+    const copyPolishedTextBtn = document.getElementById('copyPolishedTextBtn'); 
     const statusDiv = document.getElementById('status');
-    const originalTextarea = document.getElementById('originalText');
+    // const originalTextarea = document.getElementById('originalText'); // Eliminado
     const polishedTextarea = document.getElementById('polishedText');
     const audioPlayback = document.getElementById('audioPlayback');
     const themeSwitch = document.getElementById('themeSwitch');
     const volumeMeterBar = document.getElementById('volumeMeterBar');
-    const recordingTimeDisplay = document.getElementById('recordingTimeDisplay'); // Nuevo
-    const copyPolishedTextBtn = document.getElementById('copyPolishedTextBtn'); // Nuevo
+    const recordingTimeDisplay = document.getElementById('recordingTimeDisplay'); 
 
 
-    if (!originalTextarea || !polishedTextarea || !statusDiv || !startRecordBtn || !pauseResumeBtn || !stopRecordBtn || !retryProcessBtn || !audioPlayback || !themeSwitch || !volumeMeterBar || !recordingTimeDisplay || !copyPolishedTextBtn) {
+    if (/*!originalTextarea ||*/ !polishedTextarea || !statusDiv || !startRecordBtn || !pauseResumeBtn || !stopRecordBtn || !retryProcessBtn || !copyPolishedTextBtn || !audioPlayback || !themeSwitch || !volumeMeterBar || !recordingTimeDisplay) {
         const errorMessage = "Error crítico: Uno o más elementos HTML no se encontraron. Revisa los IDs.";
         alert(errorMessage);
         if (statusDiv) setStatus("Error: Elementos HTML no encontrados.", "error");
@@ -31,12 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let microphoneSource;
     let animationFrameId;
     let isPaused = false;
-    let recordingTimerInterval; // Nuevo para el temporizador
-    let recordingSeconds = 0;   // Nuevo para el temporizador
+    let recordingTimerInterval; 
+    let recordingSeconds = 0;  
 
-
-    // ¡¡¡IMPORTANTE!!! API Key integrada directamente.
-    const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // TU API KEY AQUÍ
+    const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; 
 
     // --- Theme Switcher Logic ---
     function applyTheme(theme) {
@@ -78,12 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
             case "idle": default: statusDiv.classList.add('status-idle'); break;
         }
         console.log(`Status updated: ${message} (type: ${type})`);
-
         if (duration > 0) {
             setTimeout(() => {
-                // Solo limpia si el mensaje sigue siendo el mismo (para evitar sobrescribir mensajes nuevos)
                 if (statusDiv.textContent === message) {
-                    setStatus("Estado: Esperando para grabar...", "idle"); 
+                    updateButtonStates("initial"); // Volver a estado inicial de botones y mensaje
                 }
             }, duration);
         }
@@ -91,30 +87,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Recording Timer Logic ---
     function startRecordingTimer() {
-        stopRecordingTimer(); // Asegura que no haya timers duplicados
-        recordingSeconds = 0;
-        updateRecordingTimeDisplay(); // Mostrar 00:00 inmediatamente
+        stopRecordingTimer(); 
+        // recordingSeconds se mantiene si se reanuda, se resetea si es nueva grabación (manejado en startRecording)
+        updateRecordingTimeDisplay(); 
         recordingTimerInterval = setInterval(() => {
-            recordingSeconds++;
-            updateRecordingTimeDisplay();
+            if (!isPaused) { // Solo incrementar si no está pausado
+                 recordingSeconds++;
+                 updateRecordingTimeDisplay();
+            }
         }, 1000);
     }
-
-    function stopRecordingTimer() {
-        clearInterval(recordingTimerInterval);
-    }
-
+    function stopRecordingTimer() { clearInterval(recordingTimerInterval); }
     function updateRecordingTimeDisplay() {
         const minutes = Math.floor(recordingSeconds / 60);
         const seconds = recordingSeconds % 60;
         const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         recordingTimeDisplay.textContent = `Tiempo: ${formattedTime}`;
     }
-
     function resetRecordingTimerDisplay() {
-        recordingTimeDisplay.textContent = ""; // O "Tiempo: 00:00" si se prefiere
+        recordingTimeDisplay.textContent = ""; 
+        recordingSeconds = 0; // También resetear el contador
     }
-
 
     // --- Volume Meter Logic ---
     function setupVolumeMeter(stream) {
@@ -124,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         analyser = audioContext.createAnalyser();
         microphoneSource = audioContext.createMediaStreamSource(stream);
         microphoneSource.connect(analyser);
-        analyser.fftSize = 256;
+        analyser.fftSize = 256; 
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
 
@@ -138,9 +131,28 @@ document.addEventListener('DOMContentLoaded', () => {
             let sum = 0;
             for(let i = 0; i < bufferLength; i++) sum += dataArray[i];
             let average = sum / bufferLength;
-            let volumePercent = Math.min(100, (average / 128) * 100 * 1.5);
+            
+            // Ajuste de sensibilidad: el promedio de dataArray (0-255)
+            // Hacemos que la barra reaccione más en el rango audible sin saturar rápido
+            let volumePercent = 0;
+            if (average > 0) { // Evitar log(0)
+                 // Escala logarítmica para mejor percepción visual, ajusta el divisor para sensibilidad
+                 // Un valor más alto en el divisor hace que necesite más volumen para llenar la barra.
+                 volumePercent = (Math.log10(average + 1) / Math.log10(128 + 1)) * 100; // 128 como "medio-alto"
+                 volumePercent = Math.min(100, Math.max(0, volumePercent * 1.2)); // Pequeño boost y clamp
+            }
+
             volumeMeterBar.style.width = volumePercent + '%';
             volumeMeterBar.classList.remove('paused');
+
+            // Cambiar color de la barra según el nivel
+            if (volumePercent > 85) { // Rojo para muy alto
+                volumeMeterBar.style.backgroundColor = 'var(--volume-bar-high)';
+            } else if (volumePercent > 50) { // Amarillo para medio-alto
+                volumeMeterBar.style.backgroundColor = 'var(--volume-bar-medium)';
+            } else { // Verde para bajo/medio
+                volumeMeterBar.style.backgroundColor = 'var(--volume-bar-low)';
+            }
         }
         drawVolume();
     }
@@ -153,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         volumeMeterBar.style.width = '0%';
         volumeMeterBar.classList.remove('paused');
+        volumeMeterBar.style.backgroundColor = 'var(--volume-bar-low)'; // Reset color
     }
     
     // --- Recording and Processing Logic ---
@@ -160,10 +173,11 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Solicitando permiso para grabar...");
         setStatus("Solicitando permiso para grabar...", "processing");
         isPaused = false;
-        originalTextarea.value = '';
+        // originalTextarea.value = ''; // Eliminado
         polishedTextarea.value = '';
         audioChunks = [];
         currentAudioBlob = null;
+        recordingSeconds = 0; // Resetear segundos para nueva grabación
         
         if (audioPlayback.src) {
             URL.revokeObjectURL(audioPlayback.src);
@@ -174,97 +188,75 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!userApiKey) {
             alert('API Key de Gemini no está configurada en el script.');
             setStatus("Error: API Key no configurada.", "error");
+            updateButtonStates("initial");
             return;
         }
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             setupVolumeMeter(stream); 
-            startRecordingTimer(); // Iniciar temporizador
+            startRecordingTimer(); 
 
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-
-            mediaRecorder.ondataavailable = event => {
-                if (event.data.size > 0) audioChunks.push(event.data);
-            };
-
+            mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
             mediaRecorder.onpause = () => {
                 console.log("MediaRecorder paused");
                 setStatus('Grabación pausada. Presiona "Reanudar" para continuar.', 'idle');
                 isPaused = true;
-                stopRecordingTimer(); // Pausar el contador
+                // stopRecordingTimer(); // El timer ya chequea isPaused
                 volumeMeterBar.classList.add('paused');
+                volumeMeterBar.style.backgroundColor = 'var(--button-default-bg)'; // Color gris al pausar
             };
-
             mediaRecorder.onresume = () => {
                 console.log("MediaRecorder resumed");
                 setStatus('Grabando... (Reanudado)', 'processing');
                 isPaused = false;
-                startRecordingTimer(); // Reanudar el contador (continúa desde donde se quedó)
-                volumeMeterBar.classList.remove('paused');
+                // startRecordingTimer(); // El timer ya está corriendo, solo necesita isPaused=false
+                volumeMeterBar.classList.remove('paused'); 
             };
-
             mediaRecorder.onstop = async () => {
                 stopVolumeMeter(); 
-                stopRecordingTimer(); // Detener temporizador final
+                stopRecordingTimer(); 
                 console.log("MediaRecorder.onstop - Grabación detenida.");
                 setStatus('Grabación detenida. Procesando audio...', 'processing');
                 isPaused = false;
 
                 if (audioChunks.length === 0) {
-                    setStatus("Error: No se grabó audio. Revisa permisos/micrófono.", "error");
-                    alert("No se detectó audio.");
+                    setStatus("Error: No se grabó audio.", "error", 3000);
                     updateButtonStates("stopped_error");
-                    resetRecordingTimerDisplay();
                     return;
                 }
-
                 currentAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                console.log(`Blob de audio creado. Tamaño: ${currentAudioBlob.size} bytes.`);
-
                 if (currentAudioBlob.size === 0) {
-                    setStatus("Error: El audio grabado está vacío.", "error");
-                    alert("El audio grabado parece estar vacío.");
+                    setStatus("Error: El audio grabado está vacío.", "error", 3000);
                     updateButtonStates("stopped_error");
-                    resetRecordingTimerDisplay();
                     return;
                 }
-
                 const audioURL = URL.createObjectURL(currentAudioBlob);
                 audioPlayback.src = audioURL;
-                updateButtonStates("stopped_success"); // Antes de processAudioBlob
+                updateButtonStates("stopped_success"); 
                 await processAudioBlob(currentAudioBlob);
             };
-
             mediaRecorder.onerror = (event) => {
-                stopVolumeMeter();
-                stopRecordingTimer();
-                resetRecordingTimerDisplay();
-                isPaused = false;
+                stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay(); isPaused = false;
                 console.error("MediaRecorder error:", event.error);
-                setStatus(`Error de MediaRecorder: ${event.error.name}`, "error");
-                alert(`Ocurrió un error con el grabador de audio: ${event.error.message}`);
+                setStatus(`Error de MediaRecorder: ${event.error.name}`, "error", 4000);
                 updateButtonStates("error");
             };
 
             mediaRecorder.start();
             setStatus('Grabando... Habla ahora.', "processing");
             updateButtonStates("recording");
-
         } catch (err) {
-            isPaused = false;
-            stopRecordingTimer(); // Asegurarse que se detiene si hay error
-            resetRecordingTimerDisplay();
+            isPaused = false; stopRecordingTimer(); resetRecordingTimerDisplay();
             console.error('Error al acceder al micrófono:', err);
-            setStatus(`Error al acceder al micrófono: ${err.message}.`, "error");
-            alert(`No se pudo acceder al micrófono: ${err.message}.`);
+            setStatus(`Error al acceder al micrófono: ${err.message}.`, "error", 4000);
             updateButtonStates("initial");
         }
     }
 
     function handlePauseResume() {
         if (!mediaRecorder) return;
-
         if (mediaRecorder.state === "recording") {
             mediaRecorder.pause(); 
             updateButtonStates("paused");
@@ -279,16 +271,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) {
             mediaRecorder.stop(); 
             setStatus("Deteniendo grabación...", "processing");
-            // No resetear el timer display aquí, se hace en onstop o si hay error antes
         } else {
-            setStatus("Nada que detener.", "idle");
-            updateButtonStates("initial");
-            resetRecordingTimerDisplay();
+            updateButtonStates("initial"); // Resetea si no hay nada que detener
         }
     }
     
     async function processAudioBlob(audioBlob) {
-        originalTextarea.value = '';
+        // originalTextarea.value = ''; // Eliminado
         polishedTextarea.value = '';
         setStatus('Preparando audio para enviar...', 'processing');
         updateButtonStates("processing_audio");
@@ -298,18 +287,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!base64Audio || base64Audio.length < 100) {
                 throw new Error("Fallo al convertir audio a Base64 o audio demasiado corto.");
             }
-            await transcribeAndPolishAudio(base64Audio);
+            const polishedResult = await transcribeAndPolishAudio(base64Audio); // Ahora devuelve directamente el pulido
+            
+            polishedTextarea.value = polishedResult;
+            setStatus('Proceso de transcripción y pulido completado.', 'success', 3000);
+            updateButtonStates("success_processing");
+
         } catch (error) {
             console.error('Error procesando audio:', error);
-            setStatus(`Error: ${error.message}`, "error");
-            polishedTextarea.value = `Error en el proceso: ${error.message}`;
+            setStatus(`Error en procesamiento: ${error.message}`, "error", 4000);
+            polishedTextarea.value = `Error en el proceso: ${error.message}`; // Aún mostrar error aquí
             updateButtonStates("error_processing"); 
-        } finally {
-            if (!statusDiv.classList.contains('status-error') && !statusDiv.classList.contains('status-success')) {
-                 setStatus("Listo. Puedes grabar de nuevo o reintentar el procesamiento.", "idle");
-            }
-             // Habilitar botón de copiar si hay texto pulido
-            copyPolishedTextBtn.disabled = polishedTextarea.value.trim() === '';
         }
     }
 
@@ -319,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pauseResumeBtn.textContent = "Pausar";
         stopRecordBtn.disabled = true;
         retryProcessBtn.disabled = true;
-        copyPolishedTextBtn.disabled = polishedTextarea.value.trim() === ''; // Default a deshabilitado
+        copyPolishedTextBtn.disabled = true; 
 
         switch (state) {
             case "initial":
@@ -335,11 +323,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 pauseResumeBtn.disabled = false;
                 pauseResumeBtn.textContent = "Reanudar";
                 stopRecordBtn.disabled = false; 
+                // El timer y el display se manejan por separado
                 break;
             case "stopped_success": 
                 startRecordBtn.disabled = false;
                 retryProcessBtn.disabled = !currentAudioBlob;
-                // El timer display se queda con el tiempo final
                 break;
             case "stopped_error": 
                  startRecordBtn.disabled = false;
@@ -358,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 retryProcessBtn.disabled = !currentAudioBlob; 
                 copyPolishedTextBtn.disabled = polishedTextarea.value.trim() === '';
                 break;
-             case "error": 
+             case "error": // MediaRecorder error or similar before blob
                 startRecordBtn.disabled = false; 
                 resetRecordingTimerDisplay();
                 break;
@@ -375,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
             processAudioBlob(currentAudioBlob); 
         } else {
             alert("No hay audio grabado para reintentar.");
-            setStatus("No hay audio para reintentar.", "error");
+            setStatus("No hay audio para reintentar.", "error", 3000);
         }
     });
 
@@ -386,40 +374,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         try {
             await navigator.clipboard.writeText(polishedTextarea.value);
-            setStatus("¡Texto pulido copiado al portapapeles!", "success", 3000);
+            setStatus("¡Texto pulido copiado!", "success", 3000);
         } catch (err) {
             console.error('Error al copiar texto: ', err);
             setStatus("Error al copiar texto. Inténtalo manualmente.", "error", 3000);
-            // Fallback por si navigator.clipboard no está disponible o falla (raro en HTTPS)
-            try {
-                polishedTextarea.select();
-                document.execCommand('copy');
-                setStatus("¡Texto pulido copiado! (Fallback)", "success", 3000);
-            } catch (fallbackErr) {
-                console.error('Error en fallback de copia: ', fallbackErr);
-                alert("No se pudo copiar el texto. Por favor, cópialo manualmente.");
-            }
         }
     });
 
-
     function blobToBase64(blob) {
-        // ... (sin cambios)
         return new Promise((resolve, reject) => {
-            if (!blob || blob.size === 0) {
-                return reject(new Error("Blob nulo o vacío proporcionado a blobToBase64"));
-            }
+            if (!blob || blob.size === 0) return reject(new Error("Blob nulo o vacío"));
             const reader = new FileReader();
             reader.onloadend = () => {
                 if (reader.result) {
                     const base64String = reader.result.toString().split(',')[1];
-                    if (!base64String) {
-                         return reject(new Error("Fallo al extraer cadena Base64."));
-                    }
+                    if (!base64String) return reject(new Error("Fallo al extraer Base64."));
                     resolve(base64String);
-                } else {
-                    reject(new Error("FileReader no produjo un resultado."));
-                }
+                } else reject(new Error("FileReader no produjo resultado."));
             };
             reader.onerror = (error) => reject(error);
             reader.readAsDataURL(blob);
@@ -427,101 +398,82 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function callGeminiAPI(promptParts, isTextOnly = false) {
-        // ... (sin cambios)
         if (!userApiKey) throw new Error('API Key no configurada.');
-
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;
-        const body = {
-            contents: [{ parts: promptParts }],
-            generationConfig: { temperature: isTextOnly ? 0.2 : 0.7 }
-        };
-
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-
+        const body = { contents: [{ parts: promptParts }], generationConfig: { temperature: isTextOnly ? 0.2 : 0.4 } }; // Bajé un poco temp para pulido de audio
+        const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(`Error API Gemini: ${errorData.error?.message || response.statusText} (Código: ${response.status})`);
         }
-
         const data = await response.json();
-        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-            return data.candidates[0].content.parts[0].text;
-        } else {
-            if(data.promptFeedback?.blockReason) {
-                throw new Error(`Bloqueado por Gemini: ${data.promptFeedback.blockReason}. ${data.promptFeedback.blockReasonMessage || ''}`);
-            }
-            if(data.candidates?.[0]?.finishReason) {
-                throw new Error(`Gemini finalizó con razón: ${data.candidates[0].finishReason}.`);
-            }
-            throw new Error('Respuesta de Gemini inesperada o sin texto.');
-        }
+        if (data.candidates?.[0]?.content?.parts?.[0]?.text) return data.candidates[0].content.parts[0].text;
+        if(data.promptFeedback?.blockReason) throw new Error(`Bloqueado por Gemini: ${data.promptFeedback.blockReason}. ${data.promptFeedback.blockReasonMessage || ''}`);
+        if(data.candidates?.[0]?.finishReason) throw new Error(`Gemini finalizó con razón: ${data.candidates[0].finishReason}.`);
+        throw new Error('Respuesta de Gemini inesperada o sin texto.');
     }
 
     async function transcribeAndPolishAudio(base64Audio) {
-        // ... (sin cambios significativos, solo asegurarse que updateButtonStates se llama correctamente)
+        // Ya no hay transcripción original separada. Gemini hará transcripción + pulido en un paso si es posible,
+        // o mantendremos 2 pasos internos si es mejor, pero el usuario solo ve el resultado final.
+        // Para este modelo, es mejor 2 pasos para control.
+        
         let transcribedText = '';
         try {
-            setStatus('Transcribiendo audio con Gemini... (puede tardar)', 'processing');
-            updateButtonStates("processing_audio");
-            const transcriptPromptParts = [ /* ... */ ]; // Mismo prompt
-             transcriptPromptParts[0] = { "text": "Transcribe el siguiente audio a texto. Es importante que transcribas literalmente las palabras dictadas, incluyendo si el usuario dice 'coma', 'punto', 'punto y aparte', 'nueva línea', 'dos puntos', 'punto y coma', 'signo de interrogación', 'signo de exclamación', etc.:" };
-             transcriptPromptParts[1] = { "inline_data": { "mime_type": "audio/webm", "data": base64Audio } };
+            setStatus('Transcribiendo audio...', 'processing');
+            const transcriptPromptParts = [
+                { "text": "Transcribe el siguiente audio a texto de forma literal, incluyendo pausas como '...' si son evidentes, y palabras como 'coma', 'punto', etc.:" },
+                { "inline_data": { "mime_type": "audio/webm", "data": base64Audio } }
+            ];
             transcribedText = await callGeminiAPI(transcriptPromptParts, false);
-            originalTextarea.value = "Transcripción original:\n" + transcribedText;
+            // No se muestra transcribedText al usuario
         } catch (error) {
-            originalTextarea.value = `Error en transcripción: ${error.message}`;
-            polishedTextarea.value = `Error en transcripción: ${error.message}`;
-            updateButtonStates("error_processing");
-            throw error; 
+            console.error("Error durante la transcripción interna:", error);
+            throw new Error(`Fallo en transcripción interna: ${error.message}`); 
         }
 
         if (!transcribedText.trim()) {
-            polishedTextarea.value = "No se transcribió texto para pulir.";
-            setStatus("Proceso completado (sin texto para pulir).", "success");
-            updateButtonStates("success_processing");
-            return;
+            throw new Error("La transcripción interna no produjo texto.");
         }
         
         try {
-            setStatus('Puliendo texto con Gemini...', 'processing');
-            updateButtonStates("processing_audio");
-            const polishPromptParts = [ /* ... */ ]; // Mismo prompt
-            polishPromptParts[0] = { "text": `Por favor, revisa y pule el siguiente texto.
+            setStatus('Puliendo texto transcrito...', 'processing');
+            const polishPromptParts = [
+                {
+                    "text": `Por favor, revisa y pule el siguiente texto.
 Instrucciones importantes:
 1.  Interpreta las siguientes palabras dictadas como signos de puntuación y formato:
     *   'coma' como ','
     *   'punto' como '.'
     *   'punto y aparte' como un punto (.) seguido de UN ÚNICO SALTO DE LÍNEA (NO dejes una línea en blanco).
-    *   'nueva línea' como un único salto de línea.
+    *   'nueva línea' o 'siguiente línea' como un único salto de línea.
     *   'dos puntos' como ':'
     *   'punto y coma' como ';'
-    *   'signo de interrogación' o 'pregunta' al final de una frase como '?'
-    *   'signo de exclamación' o 'admiración' al final de una frase como '!'
+    *   'signo de interrogación', 'interrogación' o 'pregunta' al final de una frase como '?'
+    *   'signo de exclamación', 'exclamación' o 'admiración' al final de una frase como '!'
 2.  Aplica estos signos.
-3.  Adicionalmente, corrige gramática, ortografía y puntuación.
-4.  Mejora claridad y fluidez, manteniendo el significado original.
+3.  Adicionalmente, corrige gramática, ortografía y puntuación. Elimina titubeos o repeticiones innecesarias (ej. "ehh", "umm") a menos que parezcan intencionales para dar énfasis.
+4.  Mejora claridad y fluidez, manteniendo el significado original y el tono del hablante.
 5.  Si el texto ya parece correcto, haz correcciones mínimas.
 
 Texto a pulir:
-"${transcribedText}"`};
-
+"${transcribedText}"`
+                }
+            ];
             let polishedResult = await callGeminiAPI(polishPromptParts, true);
             
-            setStatus('Texto pulido recibido. Ajustes finales...', 'processing');
-            let postProcessedText = polishedResult.replace(/\.\s*\n\s*\n/g, '.\n');
-            postProcessedText = postProcessedText.replace(/\n\s*\n/g, '\n');
+            // Post-procesado
+            let postProcessedText = polishedResult.replace(/\.\s*\n\s*\n/g, '.\n'); // Punto y aparte doble a sencillo
+            postProcessedText = postProcessedText.replace(/\n\s*\n/g, '\n');       // Doble salto de linea general a sencillo
+            return postProcessedText;
 
-            polishedTextarea.value = postProcessedText;
-            setStatus('Proceso de transcripción y pulido completado.', 'success');
-            updateButtonStates("success_processing");
         } catch (error) {
-            polishedTextarea.value = `Error al pulir: ${error.message}\n\n(Transcripción original arriba)`;
-            updateButtonStates("error_processing");
-            throw error;
+            console.error("Error durante el pulido:", error);
+            // Devolver el texto transcrito si el pulido falla, para no perder todo.
+            // Opcional: podrías añadir un mensaje indicando que el pulido falló.
+            setStatus(`Pulido falló: ${error.message}. Mostrando transcripción cruda.`, "error", 4000);
+            return transcribedText; // Devolver el texto transcrito crudo como fallback
+            // throw new Error(`Fallo en pulido: ${error.message}`); // O lanzar error y que el usuario reintente
         }
     }
 
