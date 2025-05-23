@@ -3,17 +3,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const startRecordBtn = document.getElementById('startRecordBtn');
     const stopRecordBtn = document.getElementById('stopRecordBtn');
+    const retryProcessBtn = document.getElementById('retryProcessBtn');
     const statusDiv = document.getElementById('status');
     const originalTextarea = document.getElementById('originalText');
     const polishedTextarea = document.getElementById('polishedText');
-    const audioPlayback = document.getElementById('audioPlayback'); // Elemento para reproducir audio
+    const audioPlayback = document.getElementById('audioPlayback');
+    const themeSwitch = document.getElementById('themeSwitch');
+    const volumeMeterBar = document.getElementById('volumeMeterBar');
 
-    console.log({ startRecordBtn, stopRecordBtn, statusDiv, originalTextarea, polishedTextarea, audioPlayback });
+    console.log({ startRecordBtn, stopRecordBtn, retryProcessBtn, statusDiv, originalTextarea, polishedTextarea, audioPlayback, themeSwitch, volumeMeterBar });
 
-    if (!originalTextarea || !polishedTextarea || !statusDiv || !startRecordBtn || !stopRecordBtn || !audioPlayback) {
-        const errorMessage = "Error crítico: Uno o más elementos HTML no se encontraron. Revisa los IDs en index.html y script.js.";
+    if (!originalTextarea || !polishedTextarea || !statusDiv || !startRecordBtn || !stopRecordBtn || !retryProcessBtn || !audioPlayback || !themeSwitch || !volumeMeterBar) {
+        const errorMessage = "Error crítico: Uno o más elementos HTML no se encontraron. Revisa los IDs.";
         alert(errorMessage);
-        if (statusDiv) statusDiv.textContent = "Error: Elementos HTML no encontrados.";
+        if (statusDiv) setStatus("Error: Elementos HTML no encontrados.", "error");
         else console.error(errorMessage);
         return;
     }
@@ -21,63 +24,145 @@ document.addEventListener('DOMContentLoaded', () => {
     let mediaRecorder;
     let audioChunks = [];
     let currentAudioBlob = null;
+    let audioContext;
+    let analyser;
+    let microphoneSource;
+    let animationFrameId;
 
     // ¡¡¡IMPORTANTE!!! API Key integrada directamente.
-    // ¡¡¡RECUERDA QUITARLA ANTES DE SUBIR A GITHUB PÚBLICO!!!
     const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // TU API KEY AQUÍ
 
+    // --- Theme Switcher Logic ---
+    function applyTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        themeSwitch.checked = theme === 'dark';
+    }
+
+    themeSwitch.addEventListener('change', () => {
+        applyTheme(themeSwitch.checked ? 'dark' : 'light');
+    });
+
+    const preferredTheme = localStorage.getItem('theme') || 
+                           (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme(preferredTheme);
+    // Establecer el estado --accent-color-rgb para el box-shadow de focus
+    function setAccentRGB() {
+        const accentColor = getComputedStyle(document.body).getPropertyValue('--accent-color').trim();
+        if (accentColor.startsWith('#')) {
+            const r = parseInt(accentColor.slice(1, 3), 16);
+            const g = parseInt(accentColor.slice(3, 5), 16);
+            const b = parseInt(accentColor.slice(5, 7), 16);
+            document.documentElement.style.setProperty('--accent-color-rgb', `${r},${g},${b}`);
+        } else if (accentColor.startsWith('rgb')) { // rgb(r, g, b)
+            const parts = accentColor.match(/[\d.]+/g);
+            if (parts && parts.length >=3) {
+                 document.documentElement.style.setProperty('--accent-color-rgb', `${parts[0]},${parts[1]},${parts[2]}`);
+            }
+        }
+    }
+    setAccentRGB(); // Inicial
+    new MutationObserver(setAccentRGB).observe(document.body, { attributes: true, attributeFilter: ['data-theme']});
+
+
+    // --- Status Update Function ---
+    function setStatus(message, type = "idle") {
+        statusDiv.textContent = message;
+        statusDiv.className = ''; // Reset classes
+        switch (type) {
+            case "processing": statusDiv.classList.add('status-processing'); break;
+            case "success": statusDiv.classList.add('status-success'); break;
+            case "error": statusDiv.classList.add('status-error'); break;
+            case "idle": default: statusDiv.classList.add('status-idle'); break;
+        }
+        console.log(`Status updated: ${message} (type: ${type})`);
+    }
+
+    // --- Volume Meter Logic ---
+    function setupVolumeMeter(stream) {
+        if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        microphoneSource = audioContext.createMediaStreamSource(stream);
+        microphoneSource.connect(analyser);
+        analyser.fftSize = 256; // Smaller FFT size for faster response
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        function drawVolume() {
+            animationFrameId = requestAnimationFrame(drawVolume);
+            analyser.getByteFrequencyData(dataArray); // or getByteTimeDomainData
+            
+            let sum = 0;
+            for(let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i];
+            }
+            let average = sum / bufferLength;
+            // Scale a bit differently for better visual feedback. Max average is 255.
+            // Let's say anything above 100 is "loud". Max bar width is 100%.
+            let volumePercent = Math.min(100, (average / 128) * 100 * 1.5); // Scale up for sensitivity
+            volumeMeterBar.style.width = volumePercent + '%';
+        }
+        drawVolume();
+    }
+
+    function stopVolumeMeter() {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        if (microphoneSource) microphoneSource.disconnect();
+        // analyser can be reused or closed if audioContext is closed
+        volumeMeterBar.style.width = '0%';
+    }
+    
+    // --- Recording and Processing Logic ---
     async function startRecording() {
         console.log("Solicitando permiso para grabar...");
-        statusDiv.textContent = "Solicitando permiso para grabar...";
+        setStatus("Solicitando permiso para grabar...", "processing");
         originalTextarea.value = '';
         polishedTextarea.value = '';
         audioChunks = [];
+        currentAudioBlob = null;
+        retryProcessBtn.disabled = true;
+
         if (audioPlayback.src) {
             URL.revokeObjectURL(audioPlayback.src);
             audioPlayback.src = '';
             audioPlayback.removeAttribute('src');
-            console.log("Audio playback source limpiado.");
         }
-        currentAudioBlob = null;
-
+        
         if (!userApiKey) {
             alert('API Key de Gemini no está configurada en el script.');
-            statusDiv.textContent = "Error: API Key no configurada.";
+            setStatus("Error: API Key no configurada.", "error");
             return;
         }
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("Permiso de micrófono concedido. Stream obtenido:", stream);
+            setupVolumeMeter(stream); // Start volume meter
+
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            console.log("MediaRecorder instanciado:", mediaRecorder);
 
             mediaRecorder.ondataavailable = event => {
-                if (event.data.size > 0) {
-                    audioChunks.push(event.data);
-                    console.log(`Chunk de audio recibido. Tamaño: ${event.data.size} bytes. Total chunks: ${audioChunks.length}`);
-                } else {
-                    console.log("Chunk de audio vacío recibido.");
-                }
+                if (event.data.size > 0) audioChunks.push(event.data);
             };
 
             mediaRecorder.onstop = async () => {
+                stopVolumeMeter(); // Stop volume meter
                 console.log("MediaRecorder.onstop - Grabación detenida.");
+                setStatus('Grabación detenida. Procesando audio...', 'processing');
+
                 if (audioChunks.length === 0) {
-                    console.error("No se grabaron chunks de audio.");
-                    statusDiv.textContent = "Error: No se grabó audio. Revisa los permisos del micrófono o si hay algún problema con el dispositivo de entrada.";
-                    alert("No se detectó audio. Por favor, asegúrate de que tu micrófono funciona y has concedido los permisos.");
+                    setStatus("Error: No se grabó audio. Revisa permisos/micrófono.", "error");
+                    alert("No se detectó audio.");
                     stopRecordBtn.disabled = true;
                     startRecordBtn.disabled = false;
                     return;
                 }
 
                 currentAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                console.log(`Blob de audio creado. Tamaño: ${currentAudioBlob.size} bytes. Tipo: ${currentAudioBlob.type}`);
+                console.log(`Blob de audio creado. Tamaño: ${currentAudioBlob.size} bytes.`);
 
                 if (currentAudioBlob.size === 0) {
-                    console.error("El Blob de audio está vacío después de la grabación.");
-                    statusDiv.textContent = "Error: El audio grabado está vacío.";
-                    alert("El audio grabado parece estar vacío. Inténtalo de nuevo.");
+                    setStatus("Error: El audio grabado está vacío.", "error");
+                    alert("El audio grabado parece estar vacío.");
                     stopRecordBtn.disabled = true;
                     startRecordBtn.disabled = false;
                     return;
@@ -85,72 +170,92 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const audioURL = URL.createObjectURL(currentAudioBlob);
                 audioPlayback.src = audioURL;
-                console.log("Audio listo para reproducción en:", audioURL);
-                audioPlayback.oncanplaythrough = () => console.log("El audio se puede reproducir completamente.");
-                audioPlayback.onerror = (e) => console.error("Error al cargar audio para reproducción:", e);
+                retryProcessBtn.disabled = false; // Enable retry now that we have a blob
 
-                statusDiv.textContent = 'Procesando audio...';
-                originalTextarea.value = '';
-                polishedTextarea.value = '';
-
-                try {
-                    console.log("Convirtiendo Blob a Base64...");
-                    const base64Audio = await blobToBase64(currentAudioBlob);
-                    if (!base64Audio || base64Audio.length < 100) {
-                        console.error("La conversión a Base64 resultó en una cadena vacía o muy corta:", base64Audio ? base64Audio.substring(0,50) + '...' : 'null');
-                        throw new Error("Fallo al convertir audio a Base64 o audio demasiado corto.");
-                    }
-                    console.log(`Audio convertido a Base64. Longitud (aprox): ${base64Audio.length} caracteres. Primeros 50: ${base64Audio.substring(0,50)}...`);
-                    await transcribeAndPolishAudio(base64Audio);
-                } catch (error) {
-                    console.error('Error procesando audio (onstop):', error);
-                    statusDiv.textContent = `Error: ${error.message}`;
-                    polishedTextarea.value = `Error en el proceso: ${error.message}`;
-                } finally {
-                    stopRecordBtn.disabled = true;
-                    startRecordBtn.disabled = false;
-                }
+                await processAudioBlob(currentAudioBlob); // Extracted processing logic
             };
 
             mediaRecorder.onerror = (event) => {
+                stopVolumeMeter();
                 console.error("MediaRecorder error:", event.error);
-                statusDiv.textContent = `Error de MediaRecorder: ${event.error.name} - ${event.error.message}`;
+                setStatus(`Error de MediaRecorder: ${event.error.name}`, "error");
                 alert(`Ocurrió un error con el grabador de audio: ${event.error.message}`);
                 stopRecordBtn.disabled = true;
                 startRecordBtn.disabled = false;
+                retryProcessBtn.disabled = !!currentAudioBlob; // Enable if blob exists
             };
 
             mediaRecorder.start();
-            console.log("MediaRecorder.start() llamado. Estado:", mediaRecorder.state);
-            statusDiv.textContent = 'Grabando... Habla ahora (puedes dictar "coma", "punto", "punto y aparte").';
+            setStatus('Grabando... Habla ahora.', "processing");
             startRecordBtn.disabled = true;
             stopRecordBtn.disabled = false;
+            retryProcessBtn.disabled = true;
 
         } catch (err) {
-            console.error('Error al acceder al micrófono o iniciar MediaRecorder:', err);
-            statusDiv.textContent = `Error al acceder al micrófono: ${err.message}. Asegúrate de dar permiso.`;
-            alert(`No se pudo acceder al micrófono: ${err.message}. Por favor, verifica los permisos.`);
+            console.error('Error al acceder al micrófono:', err);
+            setStatus(`Error al acceder al micrófono: ${err.message}.`, "error");
+            alert(`No se pudo acceder al micrófono: ${err.message}.`);
+            startRecordBtn.disabled = false;
+            stopRecordBtn.disabled = true;
         }
     }
 
     function stopRecording() {
         console.log("Botón Detener Grabación presionado.");
         if (mediaRecorder && mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
-            console.log("MediaRecorder.stop() llamado. Estado actual:", mediaRecorder.state);
+            mediaRecorder.stop(); // This will trigger onstop
+            setStatus("Deteniendo grabación...", "processing");
+            stopRecordBtn.disabled = true;
         } else {
-            console.warn("Se intentó detener la grabación, pero MediaRecorder no estaba grabando o no existía.");
-            statusDiv.textContent = "Nada que detener.";
+            setStatus("Nada que detener.", "idle");
             stopRecordBtn.disabled = true;
             startRecordBtn.disabled = false;
         }
     }
 
+    // New function to handle processing, can be called by onstop or retry
+    async function processAudioBlob(audioBlob) {
+        originalTextarea.value = '';
+        polishedTextarea.value = '';
+        setStatus('Preparando audio para enviar...', 'processing');
+        
+        try {
+            console.log("Convirtiendo Blob a Base64...");
+            const base64Audio = await blobToBase64(audioBlob);
+            if (!base64Audio || base64Audio.length < 100) {
+                throw new Error("Fallo al convertir audio a Base64 o audio demasiado corto.");
+            }
+            await transcribeAndPolishAudio(base64Audio);
+        } catch (error) {
+            console.error('Error procesando audio:', error);
+            setStatus(`Error: ${error.message}`, "error");
+            polishedTextarea.value = `Error en el proceso: ${error.message}`;
+        } finally {
+            // Enable start button for new recording, retry button remains enabled if blob exists
+            startRecordBtn.disabled = false;
+            stopRecordBtn.disabled = true; // Stop should be disabled after processing
+            retryProcessBtn.disabled = !currentAudioBlob; // Keep enabled if there's a blob
+             if (!statusDiv.classList.contains('status-error') && !statusDiv.classList.contains('status-success')) {
+                setStatus("Listo para una nueva grabación o reintentar.", "idle");
+            }
+        }
+    }
+
+    retryProcessBtn.addEventListener('click', () => {
+        if (currentAudioBlob) {
+            console.log("Reintentando procesamiento con audio existente.");
+            setStatus("Reintentando procesamiento...", "processing");
+            processAudioBlob(currentAudioBlob);
+        } else {
+            alert("No hay audio grabado para reintentar.");
+            setStatus("No hay audio para reintentar.", "error");
+        }
+    });
+
+
     function blobToBase64(blob) {
-        console.log("Iniciando blobToBase64 para blob de tamaño:", blob.size);
         return new Promise((resolve, reject) => {
             if (!blob || blob.size === 0) {
-                console.error("blobToBase64: Blob nulo o vacío proporcionado.");
                 return reject(new Error("Blob nulo o vacío proporcionado a blobToBase64"));
             }
             const reader = new FileReader();
@@ -158,121 +263,77 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (reader.result) {
                     const base64String = reader.result.toString().split(',')[1];
                     if (!base64String) {
-                         console.error("blobToBase64: La cadena Base64 es nula o indefinida después del split.");
-                         return reject(new Error("Fallo al extraer cadena Base64 del resultado del FileReader."));
+                         return reject(new Error("Fallo al extraer cadena Base64."));
                     }
-                    console.log(`blobToBase64: Conversión completada. Longitud de cadena Base64: ${base64String.length}`);
                     resolve(base64String);
                 } else {
-                    console.error("blobToBase64: reader.result es nulo o indefinido.");
                     reject(new Error("FileReader no produjo un resultado."));
                 }
             };
-            reader.onerror = (error) => {
-                console.error("blobToBase64: Error de FileReader:", error);
-                reject(error);
-            };
+            reader.onerror = (error) => reject(error);
             reader.readAsDataURL(blob);
-            console.log("blobToBase64: readAsDataURL llamado.");
         });
     }
 
     async function callGeminiAPI(promptParts, isTextOnly = false) {
-        console.log("Llamando a Gemini API. Es solo texto:", isTextOnly);
-        if (!isTextOnly) {
-            console.log("Prompt para Gemini (con audio):", JSON.stringify(promptParts, null, 2).substring(0, 500) + "...");
-        } else {
-            console.log("Prompt para Gemini (solo texto):", JSON.stringify(promptParts, null, 2));
-        }
-
-        if (!userApiKey) {
-            alert('API Key no configurada.');
-            throw new Error('API Key no configurada.');
-        }
+        if (!userApiKey) throw new Error('API Key no configurada.');
 
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;
-
         const body = {
-            contents: [{
-                parts: promptParts
-            }],
-            generationConfig: {
-                temperature: isTextOnly ? 0.2 : 0.7,
-            }
+            contents: [{ parts: promptParts }],
+            generationConfig: { temperature: isTextOnly ? 0.2 : 0.7 }
         };
 
-        try {
-            console.log("Enviando solicitud a Gemini API...");
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            console.log(`Respuesta de Gemini API recibida. Estado: ${response.status}`);
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Error API Gemini (datos):', errorData);
-                throw new Error(`Error de API Gemini: ${errorData.error?.message || response.statusText} (Código: ${response.status})`);
-            }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Error API Gemini: ${errorData.error?.message || response.statusText} (Código: ${response.status})`);
+        }
 
-            const data = await response.json();
-            console.log("Datos de respuesta de Gemini:", JSON.stringify(data, null, 2).substring(0,500) + "...");
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
-                const textResult = data.candidates[0].content.parts[0].text;
-                console.log("Texto extraído de la respuesta de Gemini:", textResult);
-                return textResult;
-            } else {
-                console.warn("Respuesta inesperada de Gemini o sin texto candidato:", data);
-                if(data.promptFeedback && data.promptFeedback.blockReason){
-                     throw new Error(`Solicitud bloqueada por Gemini: ${data.promptFeedback.blockReason}. Detalles: ${data.promptFeedback.blockReasonMessage || ''}`);
-                }
-                if(data.candidates && data.candidates.length > 0 && data.candidates[0].finishReason) {
-                    throw new Error(`Gemini finalizó con razón: ${data.candidates[0].finishReason}. Esto puede indicar un problema con el prompt o el contenido.`);
-                }
-                throw new Error('No se recibió texto válido en la respuesta de Gemini.');
+        const data = await response.json();
+        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+            return data.candidates[0].content.parts[0].text;
+        } else {
+            if(data.promptFeedback?.blockReason) {
+                throw new Error(`Bloqueado por Gemini: ${data.promptFeedback.blockReason}. ${data.promptFeedback.blockReasonMessage || ''}`);
             }
-        } catch (error) {
-            console.error('Excepción al llamar a Gemini API:', error);
-            statusDiv.textContent = `Error con Gemini: ${error.message}`;
-            throw error;
+            if(data.candidates?.[0]?.finishReason) {
+                throw new Error(`Gemini finalizó con razón: ${data.candidates[0].finishReason}.`);
+            }
+            throw new Error('Respuesta de Gemini inesperada o sin texto.');
         }
     }
 
     async function transcribeAndPolishAudio(base64Audio) {
-        console.log("Iniciando transcribeAndPolishAudio...");
-        // Paso 1: Transcripción
-        statusDiv.textContent = 'Transcribiendo audio con Gemini...';
         let transcribedText = '';
         try {
+            setStatus('Transcribiendo audio con Gemini... (puede tardar)', 'processing');
             const transcriptPromptParts = [
                 { "text": "Transcribe el siguiente audio a texto. Es importante que transcribas literalmente las palabras dictadas, incluyendo si el usuario dice 'coma', 'punto', 'punto y aparte', 'nueva línea', 'dos puntos', 'punto y coma', 'signo de interrogación', 'signo de exclamación', etc.:" },
-                {
-                    "inline_data": {
-                        "mime_type": "audio/webm",
-                        "data": base64Audio
-                    }
-                }
+                { "inline_data": { "mime_type": "audio/webm", "data": base64Audio } }
             ];
             transcribedText = await callGeminiAPI(transcriptPromptParts, false);
             originalTextarea.value = "Transcripción original:\n" + transcribedText;
-            statusDiv.textContent = 'Transcripción completada. Puliendo texto...';
         } catch (error) {
-            console.error("Error durante la transcripción:", error);
             originalTextarea.value = `Error en transcripción: ${error.message}`;
             polishedTextarea.value = `Error en transcripción: ${error.message}`;
-            statusDiv.textContent = 'Error en transcripción.';
-            return;
+            // No cambiamos estado aquí, se hará en el 'finally' de processAudioBlob o el catch allí
+            throw error; // Re-throw para que processAudioBlob lo capture
         }
 
         if (!transcribedText.trim()) {
-            console.log("No hay texto transcrito para pulir.");
             polishedTextarea.value = "No se transcribió texto para pulir.";
-            statusDiv.textContent = "Proceso completado (sin texto para pulir).";
+            setStatus("Proceso completado (sin texto para pulir).", "success");
             return;
         }
-        console.log("Iniciando pulido de texto...");
+        
         try {
+            setStatus('Puliendo texto con Gemini...', 'processing');
             const polishPromptParts = [
                 {
                     "text": `Por favor, revisa y pule el siguiente texto.
@@ -280,52 +341,39 @@ Instrucciones importantes:
 1.  Interpreta las siguientes palabras dictadas como signos de puntuación y formato:
     *   'coma' como ','
     *   'punto' como '.'
-    *   'punto y aparte' como un punto (.) seguido de UN ÚNICO SALTO DE LÍNEA para continuar en la línea inmediatamente siguiente (NO dejes una línea en blanco).
+    *   'punto y aparte' como un punto (.) seguido de UN ÚNICO SALTO DE LÍNEA (NO dejes una línea en blanco).
     *   'nueva línea' como un único salto de línea.
     *   'dos puntos' como ':'
     *   'punto y coma' como ';'
     *   'signo de interrogación' o 'pregunta' al final de una frase como '?'
     *   'signo de exclamación' o 'admiración' al final de una frase como '!'
-2.  Aplica estos signos de puntuación y formato dictados.
-3.  Adicionalmente, corrige otros errores gramaticales, de ortografía y de puntuación que no hayan sido dictados explícitamente.
-4.  Mejora la claridad y la fluidez del texto.
-5.  Es crucial que mantengas el significado original del texto.
-6.  Si el texto ya parece correcto después de aplicar la puntuación y formato dictados, solo haz las correcciones mínimas necesarias.
+2.  Aplica estos signos.
+3.  Adicionalmente, corrige gramática, ortografía y puntuación.
+4.  Mejora claridad y fluidez, manteniendo el significado original.
+5.  Si el texto ya parece correcto, haz correcciones mínimas.
 
 Texto a pulir:
 "${transcribedText}"`
                 }
             ];
             let polishedResult = await callGeminiAPI(polishPromptParts, true);
-            console.log("Texto pulido por Gemini (antes del postprocesado):", JSON.stringify(polishedResult));
-
-            // --- INICIO DEL POSTPROCESADO ---
-            // Reemplaza un punto seguido de espacios opcionales, un salto de línea,
-            // más espacios opcionales y otro salto de línea, por un punto y un solo salto de línea.
-            let postProcessedText = polishedResult.replace(/\.\s*\n\s*\n/g, '.\n');
             
-            // Limpieza adicional: si después del postprocesado anterior aún quedan dobles saltos de línea
-            // (por ejemplo, si Gemini puso "punto\n\n" directamente sin que nuestro regex anterior lo atrapara),
-            // los reducimos a uno solo.
-            // Esto asegura que no haya líneas en blanco.
+            setStatus('Texto pulido recibido. Ajustes finales...', 'processing');
+            let postProcessedText = polishedResult.replace(/\.\s*\n\s*\n/g, '.\n');
             postProcessedText = postProcessedText.replace(/\n\s*\n/g, '\n');
 
-
-            console.log("Texto después del postprocesado:", JSON.stringify(postProcessedText));
-            // --- FIN DEL POSTPROCESADO ---
-
             polishedTextarea.value = postProcessedText;
-            statusDiv.textContent = 'Proceso de transcripción y pulido completado.';
-            console.log("Pulido y postprocesado completado.");
+            setStatus('Proceso de transcripción y pulido completado.', 'success');
         } catch (error) {
-            console.error("Error durante el pulido o postprocesado:", error);
-            polishedTextarea.value = `Error al pulir el texto: ${error.message}\n\n(Transcripción original arriba)`;
-            statusDiv.textContent = 'Error al pulir el texto.';
+            polishedTextarea.value = `Error al pulir: ${error.message}\n\n(Transcripción original arriba)`;
+            // No cambiamos estado aquí, se hará en el 'finally' de processAudioBlob o el catch allí
+            throw error; // Re-throw
         }
     }
 
     startRecordBtn.addEventListener('click', startRecording);
     stopRecordBtn.addEventListener('click', stopRecording);
 
+    setStatus("Estado: Esperando para grabar...", "idle"); // Estado inicial
     console.log("Script inicializado y event listeners asignados.");
 });
