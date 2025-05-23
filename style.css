@@ -6,6 +6,10 @@
     --shadow-soft: 0 4px 6px rgba(0,0,0,0.1);
     --transition-fast: 0.2s ease-in-out;
     --transition-medium: 0.3s ease;
+
+    /* Colores base de botones (se sobreescribirán por clases específicas) */
+    --button-default-bg: #6c757d; 
+    --button-default-bg-hover: #5a6268;
 }
 
 /* Tema Claro (Default) */
@@ -15,13 +19,26 @@ body[data-theme="light"] {
     --text-primary: #212529;
     --text-secondary: #495057;
     --border-color: #dee2e6;
-    --accent-color: #007bff;
-    --accent-color-hover: #0056b3;
+    --accent-color: #007bff; /* Usado para :focus y otros acentos */
     --accent-text-color: #ffffff;
-    --button-secondary-bg: #6c757d;
-    --button-secondary-bg-hover: #5a6268;
-    --button-copy-bg: #28a745; /* Verde para copiar */
-    --button-copy-bg-hover: #218838;
+
+    /* Colores específicos de botones - Tema Claro */
+    --btn-record-bg: #28a745;         /* Verde */
+    --btn-record-bg-hover: #218838;
+    --btn-pause-bg: #ffc107;          /* Amarillo */
+    --btn-pause-bg-hover: #e0a800;
+    --btn-pause-text: #212529;        /* Texto oscuro para amarillo */
+    --btn-stop-bg: #dc3545;           /* Rojo */
+    --btn-stop-bg-hover: #c82333;
+    --btn-retry-bg: #17a2b8;          /* Cyan/Info */
+    --btn-retry-bg-hover: #138496;
+    --btn-copy-bg: #007bff;           /* Azul (Principal) */
+    --btn-copy-bg-hover: #0056b3;
+
+    --volume-bar-low: #28a745;        /* Verde */
+    --volume-bar-medium: #ffc107;     /* Amarillo */
+    --volume-bar-high: #dc3545;       /* Rojo */
+    
     --success-bg: #d4edda;
     --success-text: #155724;
     --error-bg: #f8d7da;
@@ -41,12 +58,25 @@ body[data-theme="dark"] {
     --text-secondary: #adb5bd;
     --border-color: #495057;
     --accent-color: #0d6efd; 
-    --accent-color-hover: #0a58ca;
     --accent-text-color: #ffffff;
-    --button-secondary-bg: #5a6268;
-    --button-secondary-bg-hover: #495057;
-    --button-copy-bg: #208335; /* Verde más oscuro para tema oscuro */
-    --button-copy-bg-hover: #1c7430;
+
+    /* Colores específicos de botones - Tema Oscuro */
+    --btn-record-bg: #1db954;         /* Spotify Green */
+    --btn-record-bg-hover: #1aa34a;
+    --btn-pause-bg: #ffc107;          /* Mantenemos Amarillo */
+    --btn-pause-bg-hover: #e0a800;
+    --btn-pause-text: #212529;        /* Texto oscuro para amarillo */
+    --btn-stop-bg: #f44336;           /* Material Red */
+    --btn-stop-bg-hover: #d32f2f;
+    --btn-retry-bg: #00bcd4;          /* Material Cyan */
+    --btn-retry-bg-hover: #0097a7;
+    --btn-copy-bg: #2196F3;           /* Material Blue */
+    --btn-copy-bg-hover: #1976D2;
+
+    --volume-bar-low: #1db954;
+    --volume-bar-medium: #ffc107;
+    --volume-bar-high: #f44336;
+
     --success-bg: #14301c; 
     --success-text: #a3cfbb;
     --error-bg: #3b1518;   
@@ -96,16 +126,16 @@ h3 { font-size: 1.1em; color: var(--text-secondary); }
     flex-wrap: wrap;
     gap: 10px;
     justify-content: center;
-    margin-bottom: 15px; /* Espacio antes del temporizador y estado */
+    margin-bottom: 15px;
 }
 
 #recordingTimeDisplay {
     text-align: center;
     font-size: 1.2em;
     font-weight: bold;
-    color: var(--accent-color);
+    color: var(--text-primary); /* Cambio a text-primary para mejor visibilidad */
     margin-bottom: 10px;
-    min-height: 1.5em; /* Para evitar saltos de layout cuando aparece/desaparece */
+    min-height: 1.5em; 
 }
 
 label {
@@ -115,7 +145,7 @@ label {
     color: var(--text-secondary);
 }
 
-input[type="password"], textarea {
+textarea {
     width: calc(100% - 24px); 
     padding: 12px;
     margin-bottom: 12px;
@@ -126,7 +156,7 @@ input[type="password"], textarea {
     color: var(--text-primary);
     transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
 }
-textarea:focus, input[type="password"]:focus {
+textarea:focus {
     outline: none;
     border-color: var(--accent-color);
     box-shadow: 0 0 0 0.2rem rgba(var(--accent-color-rgb, 0,123,255), 0.25); 
@@ -134,11 +164,11 @@ textarea:focus, input[type="password"]:focus {
 
 textarea {
     resize: vertical;
-    min-height: 100px;
+    min-height: 150px; /* Un poco más alto por defecto */
 }
 
 button {
-    background-color: var(--accent-color);
+    /* background-color: var(--button-default-bg); Eliminado, se define por clase */
     color: var(--accent-text-color);
     border: none;
     padding: 10px 18px;
@@ -146,33 +176,27 @@ button {
     cursor: pointer;
     font-weight: 500;
     font-size: 0.95em;
-    transition: background-color var(--transition-medium);
+    transition: background-color var(--transition-medium), color var(--transition-medium);
     flex-grow: 1; 
-    min-width: 120px; 
+    min-width: 110px; /* Ajustado ligeramente */
 }
 
-button.secondary {
-    background-color: var(--button-secondary-bg);
-}
-button.secondary:hover:not(:disabled) {
-    background-color: var(--button-secondary-bg-hover);
-}
+/* Botones con colores específicos */
+.btn-record { background-color: var(--btn-record-bg); }
+.btn-record:hover:not(:disabled) { background-color: var(--btn-record-bg-hover); }
 
-button.copy-btn {
-    background-color: var(--button-copy-bg);
-    min-width: auto; /* Permitir que sea más pequeño si es necesario */
-    flex-grow: 0; /* No crecer tanto como otros botones */
-    padding: 8px 12px;
-    font-size: 0.9em;
-}
-button.copy-btn:hover:not(:disabled) {
-    background-color: var(--button-copy-bg-hover);
-}
+.btn-pause { background-color: var(--btn-pause-bg); color: var(--btn-pause-text); }
+.btn-pause:hover:not(:disabled) { background-color: var(--btn-pause-bg-hover); }
 
+.btn-stop { background-color: var(--btn-stop-bg); }
+.btn-stop:hover:not(:disabled) { background-color: var(--btn-stop-bg-hover); }
 
-button:hover:not(:disabled) {
-    background-color: var(--accent-color-hover);
-}
+.btn-retry { background-color: var(--btn-retry-bg); }
+.btn-retry:hover:not(:disabled) { background-color: var(--btn-retry-bg-hover); }
+
+.btn-copy { background-color: var(--btn-copy-bg); }
+.btn-copy:hover:not(:disabled) { background-color: var(--btn-copy-bg-hover); }
+
 
 button:disabled {
     background-color: var(--button-disabled-bg);
@@ -181,7 +205,7 @@ button:disabled {
 }
 
 #status {
-    margin-top: 10px; /* Reducido un poco ya que el timer está arriba */
+    margin-top: 10px;
     padding: 10px 12px;
     border-radius: var(--border-radius-small);
     font-weight: 600;
@@ -212,8 +236,15 @@ body[data-theme="dark"] #audioPlayback { filter: invert(1) hue-rotate(180deg); }
 
 .volume-meter-section { text-align: center; }
 #volumeMeterContainer { width: 80%; max-width: 300px; height: 20px; background-color: var(--idle-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius-small); margin: 10px auto; overflow: hidden; }
-#volumeMeterBar { width: 0%; height: 100%; background-color: var(--accent-color); transition: width 0.05s linear; }
-#volumeMeterBar.paused { background-color: var(--button-secondary-bg); }
+#volumeMeterBar { 
+    width: 0%; 
+    height: 100%; 
+    background-color: var(--volume-bar-low); /* Default a bajo */
+    transition: width 0.05s linear, background-color 0.1s linear; 
+}
+#volumeMeterBar.paused { 
+    background-color: var(--button-default-bg); /* Gris cuando pausado */
+}
 
 .theme-switcher-section { position: fixed; top: 15px; right: 20px; z-index: 1000; }
 .theme-switch-wrapper { display: flex; align-items: center; }
@@ -222,19 +253,10 @@ body[data-theme="dark"] #audioPlayback { filter: invert(1) hue-rotate(180deg); }
 .theme-switch input { display:none; }
 .slider { background-color: #ccc; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 24px; }
 .slider:before { background-color: white; bottom: 3px; content: ""; height: 18px; left: 3px; position: absolute; transition: .4s; width: 18px; border-radius: 50%; }
-input:checked + .slider { background-color: var(--accent-color); }
+input:checked + .slider { background-color: var(--accent-color); } /* Usa accent-color para el slider activado */
 input:checked + .slider:before { transform: translateX(20px); }
 body[data-theme="light"] .slider { background-color: #ccc; }
 body[data-theme="dark"] .slider { background-color: #555; } 
 body[data-theme="dark"] input:checked + .slider { background-color: var(--accent-color); }
 
-.polished-text-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5em; /* Ajustar según sea necesario */
-}
-.polished-text-header h2 {
-    margin-bottom: 0; /* Quitar margen inferior del h2 */
-    text-align: left; /* Alinear a la izquierda si es necesario */
-}
+/* No necesitamos .polished-text-header ahora que el botón copiar está con los demás */
