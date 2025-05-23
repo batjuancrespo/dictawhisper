@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const retryProcessBtn = document.getElementById('retryProcessBtn');
     const copyPolishedTextBtn = document.getElementById('copyPolishedTextBtn'); 
     const statusDiv = document.getElementById('status');
-    // const originalTextarea = document.getElementById('originalText'); // Eliminado
     const polishedTextarea = document.getElementById('polishedText');
     const audioPlayback = document.getElementById('audioPlayback');
     const themeSwitch = document.getElementById('themeSwitch');
@@ -15,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const recordingTimeDisplay = document.getElementById('recordingTimeDisplay'); 
 
 
-    if (/*!originalTextarea ||*/ !polishedTextarea || !statusDiv || !startRecordBtn || !pauseResumeBtn || !stopRecordBtn || !retryProcessBtn || !copyPolishedTextBtn || !audioPlayback || !themeSwitch || !volumeMeterBar || !recordingTimeDisplay) {
+    if (!polishedTextarea || !statusDiv || !startRecordBtn || !pauseResumeBtn || !stopRecordBtn || !retryProcessBtn || !copyPolishedTextBtn || !audioPlayback || !themeSwitch || !volumeMeterBar || !recordingTimeDisplay) {
         const errorMessage = "Error crítico: Uno o más elementos HTML no se encontraron. Revisa los IDs.";
         alert(errorMessage);
         if (statusDiv) setStatus("Error: Elementos HTML no encontrados.", "error");
@@ -79,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (duration > 0) {
             setTimeout(() => {
                 if (statusDiv.textContent === message) {
-                    updateButtonStates("initial"); // Volver a estado inicial de botones y mensaje
+                    updateButtonStates("initial"); 
                 }
             }, duration);
         }
@@ -88,10 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Recording Timer Logic ---
     function startRecordingTimer() {
         stopRecordingTimer(); 
-        // recordingSeconds se mantiene si se reanuda, se resetea si es nueva grabación (manejado en startRecording)
         updateRecordingTimeDisplay(); 
         recordingTimerInterval = setInterval(() => {
-            if (!isPaused) { // Solo incrementar si no está pausado
+            if (!isPaused) { 
                  recordingSeconds++;
                  updateRecordingTimeDisplay();
             }
@@ -106,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function resetRecordingTimerDisplay() {
         recordingTimeDisplay.textContent = ""; 
-        recordingSeconds = 0; // También resetear el contador
+        recordingSeconds = 0; 
     }
 
     // --- Volume Meter Logic ---
@@ -117,7 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
         analyser = audioContext.createAnalyser();
         microphoneSource = audioContext.createMediaStreamSource(stream);
         microphoneSource.connect(analyser);
-        analyser.fftSize = 256; 
+        analyser.fftSize = 512; // Aumentar un poco para promediar más, puede suavizar
+        analyser.smoothingTimeConstant = 0.5; // Suavizado de AnalyserNode
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
 
@@ -127,30 +126,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             animationFrameId = requestAnimationFrame(drawVolume);
-            analyser.getByteFrequencyData(dataArray);
-            let sum = 0;
-            for(let i = 0; i < bufferLength; i++) sum += dataArray[i];
-            let average = sum / bufferLength;
+            analyser.getByteFrequencyData(dataArray); // Usar getByteFrequencyData para una representación más estable del "volumen" general
             
-            // Ajuste de sensibilidad: el promedio de dataArray (0-255)
-            // Hacemos que la barra reaccione más en el rango audible sin saturar rápido
-            let volumePercent = 0;
-            if (average > 0) { // Evitar log(0)
-                 // Escala logarítmica para mejor percepción visual, ajusta el divisor para sensibilidad
-                 // Un valor más alto en el divisor hace que necesite más volumen para llenar la barra.
-                 volumePercent = (Math.log10(average + 1) / Math.log10(128 + 1)) * 100; // 128 como "medio-alto"
-                 volumePercent = Math.min(100, Math.max(0, volumePercent * 1.2)); // Pequeño boost y clamp
+            let sum = 0;
+            for(let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i];
             }
+            let average = sum / bufferLength; // average es de 0-255
+            
+            // Ajuste de sensibilidad: Escala lineal, pero ajustamos el divisor
+            // Un divisor más grande hará que se necesite más volumen para llenar la barra.
+            // Y un umbral mínimo para empezar a mostrar algo.
+            let volumePercent = 0;
+            const sensitivityDivisor = 1.8; // AUMENTA este valor para MENOR sensibilidad (ej. 2.0, 2.2)
+                                           // DISMINUYE para MAYOR sensibilidad (ej. 1.5, 1.2)
+            const minThreshold = 5; // No mostrar nada si el promedio es muy bajo (ruido de fondo)
+
+            if (average > minThreshold) {
+                 volumePercent = (average / 255) * 100 / sensitivityDivisor;
+            }
+            volumePercent = Math.min(100, Math.max(0, volumePercent));
+
 
             volumeMeterBar.style.width = volumePercent + '%';
             volumeMeterBar.classList.remove('paused');
 
-            // Cambiar color de la barra según el nivel
-            if (volumePercent > 85) { // Rojo para muy alto
+            if (volumePercent > 80) { 
                 volumeMeterBar.style.backgroundColor = 'var(--volume-bar-high)';
-            } else if (volumePercent > 50) { // Amarillo para medio-alto
+            } else if (volumePercent > 45) { 
                 volumeMeterBar.style.backgroundColor = 'var(--volume-bar-medium)';
-            } else { // Verde para bajo/medio
+            } else { 
                 volumeMeterBar.style.backgroundColor = 'var(--volume-bar-low)';
             }
         }
@@ -165,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         volumeMeterBar.style.width = '0%';
         volumeMeterBar.classList.remove('paused');
-        volumeMeterBar.style.backgroundColor = 'var(--volume-bar-low)'; // Reset color
+        volumeMeterBar.style.backgroundColor = 'var(--volume-bar-low)'; 
     }
     
     // --- Recording and Processing Logic ---
@@ -173,11 +178,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Solicitando permiso para grabar...");
         setStatus("Solicitando permiso para grabar...", "processing");
         isPaused = false;
-        // originalTextarea.value = ''; // Eliminado
         polishedTextarea.value = '';
         audioChunks = [];
         currentAudioBlob = null;
-        recordingSeconds = 0; // Resetear segundos para nueva grabación
+        recordingSeconds = 0; 
         
         if (audioPlayback.src) {
             URL.revokeObjectURL(audioPlayback.src);
@@ -203,15 +207,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("MediaRecorder paused");
                 setStatus('Grabación pausada. Presiona "Reanudar" para continuar.', 'idle');
                 isPaused = true;
-                // stopRecordingTimer(); // El timer ya chequea isPaused
                 volumeMeterBar.classList.add('paused');
-                volumeMeterBar.style.backgroundColor = 'var(--button-default-bg)'; // Color gris al pausar
+                volumeMeterBar.style.backgroundColor = 'var(--button-default-bg)'; 
             };
             mediaRecorder.onresume = () => {
                 console.log("MediaRecorder resumed");
                 setStatus('Grabando... (Reanudado)', 'processing');
                 isPaused = false;
-                // startRecordingTimer(); // El timer ya está corriendo, solo necesita isPaused=false
                 volumeMeterBar.classList.remove('paused'); 
             };
             mediaRecorder.onstop = async () => {
@@ -272,12 +274,11 @@ document.addEventListener('DOMContentLoaded', () => {
             mediaRecorder.stop(); 
             setStatus("Deteniendo grabación...", "processing");
         } else {
-            updateButtonStates("initial"); // Resetea si no hay nada que detener
+            updateButtonStates("initial"); 
         }
     }
     
     async function processAudioBlob(audioBlob) {
-        // originalTextarea.value = ''; // Eliminado
         polishedTextarea.value = '';
         setStatus('Preparando audio para enviar...', 'processing');
         updateButtonStates("processing_audio");
@@ -287,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!base64Audio || base64Audio.length < 100) {
                 throw new Error("Fallo al convertir audio a Base64 o audio demasiado corto.");
             }
-            const polishedResult = await transcribeAndPolishAudio(base64Audio); // Ahora devuelve directamente el pulido
+            const polishedResult = await transcribeAndPolishAudio(base64Audio); 
             
             polishedTextarea.value = polishedResult;
             setStatus('Proceso de transcripción y pulido completado.', 'success', 3000);
@@ -296,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error procesando audio:', error);
             setStatus(`Error en procesamiento: ${error.message}`, "error", 4000);
-            polishedTextarea.value = `Error en el proceso: ${error.message}`; // Aún mostrar error aquí
+            polishedTextarea.value = `Error en el proceso: ${error.message}`; 
             updateButtonStates("error_processing"); 
         }
     }
@@ -307,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pauseResumeBtn.textContent = "Pausar";
         stopRecordBtn.disabled = true;
         retryProcessBtn.disabled = true;
-        copyPolishedTextBtn.disabled = true; 
+        copyPolishedTextBtn.disabled = false; // Botón de copiar SIEMPRE ACTIVO
 
         switch (state) {
             case "initial":
@@ -323,7 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 pauseResumeBtn.disabled = false;
                 pauseResumeBtn.textContent = "Reanudar";
                 stopRecordBtn.disabled = false; 
-                // El timer y el display se manejan por separado
                 break;
             case "stopped_success": 
                 startRecordBtn.disabled = false;
@@ -339,14 +339,12 @@ document.addEventListener('DOMContentLoaded', () => {
             case "error_processing": 
                 startRecordBtn.disabled = false; 
                 retryProcessBtn.disabled = !currentAudioBlob; 
-                copyPolishedTextBtn.disabled = polishedTextarea.value.trim() === '';
                 break;
             case "success_processing": 
                 startRecordBtn.disabled = false;
                 retryProcessBtn.disabled = !currentAudioBlob; 
-                copyPolishedTextBtn.disabled = polishedTextarea.value.trim() === '';
                 break;
-             case "error": // MediaRecorder error or similar before blob
+             case "error": 
                 startRecordBtn.disabled = false; 
                 resetRecordingTimerDisplay();
                 break;
@@ -362,6 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("Reintentando procesamiento con audio existente.");
             processAudioBlob(currentAudioBlob); 
         } else {
+            // Aunque el botón de copiar esté activo, aquí sí validamos para el reintento
             alert("No hay audio grabado para reintentar.");
             setStatus("No hay audio para reintentar.", "error", 3000);
         }
@@ -369,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     copyPolishedTextBtn.addEventListener('click', async () => {
         if (polishedTextarea.value.trim() === '') {
-            setStatus("Nada que copiar.", "idle", 2000);
+            setStatus("Nada que copiar. El área de texto está vacía.", "idle", 3000);
             return;
         }
         try {
@@ -400,13 +399,20 @@ document.addEventListener('DOMContentLoaded', () => {
     async function callGeminiAPI(promptParts, isTextOnly = false) {
         if (!userApiKey) throw new Error('API Key no configurada.');
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;
-        const body = { contents: [{ parts: promptParts }], generationConfig: { temperature: isTextOnly ? 0.2 : 0.4 } }; // Bajé un poco temp para pulido de audio
+        // Ajustamos temperatura para el pulido si es solo texto, más alta para la transcripción con audio.
+        const temperature = isTextOnly ? 0.2 : 0.5; // 0.5 para transcripción con audio, 0.2 para pulido de texto
+        const body = { contents: [{ parts: promptParts }], generationConfig: { temperature: temperature } }; 
+        
+        console.log(`Llamando a Gemini API (isTextOnly: ${isTextOnly}, temp: ${temperature}). Prompt:`, JSON.stringify(promptParts).substring(0, 300) + "...");
+
         const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!response.ok) {
             const errorData = await response.json();
+            console.error("Error data de Gemini API:", errorData);
             throw new Error(`Error API Gemini: ${errorData.error?.message || response.statusText} (Código: ${response.status})`);
         }
         const data = await response.json();
+        console.log("Respuesta de Gemini API (parcial):", JSON.stringify(data).substring(0, 300) + "...");
         if (data.candidates?.[0]?.content?.parts?.[0]?.text) return data.candidates[0].content.parts[0].text;
         if(data.promptFeedback?.blockReason) throw new Error(`Bloqueado por Gemini: ${data.promptFeedback.blockReason}. ${data.promptFeedback.blockReasonMessage || ''}`);
         if(data.candidates?.[0]?.finishReason) throw new Error(`Gemini finalizó con razón: ${data.candidates[0].finishReason}.`);
@@ -414,26 +420,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function transcribeAndPolishAudio(base64Audio) {
-        // Ya no hay transcripción original separada. Gemini hará transcripción + pulido en un paso si es posible,
-        // o mantendremos 2 pasos internos si es mejor, pero el usuario solo ve el resultado final.
-        // Para este modelo, es mejor 2 pasos para control.
-        
         let transcribedText = '';
         try {
             setStatus('Transcribiendo audio...', 'processing');
             const transcriptPromptParts = [
-                { "text": "Transcribe el siguiente audio a texto de forma literal, incluyendo pausas como '...' si son evidentes, y palabras como 'coma', 'punto', etc.:" },
+                { "text": "Transcribe el siguiente audio a texto de forma literal, incluyendo pausas evidentes (representadas como '...'), y palabras explícitas de puntuación como 'coma', 'punto', 'nueva línea', etc.:" },
                 { "inline_data": { "mime_type": "audio/webm", "data": base64Audio } }
             ];
-            transcribedText = await callGeminiAPI(transcriptPromptParts, false);
-            // No se muestra transcribedText al usuario
+            transcribedText = await callGeminiAPI(transcriptPromptParts, false); // isTextOnly = false
+            
+            // Mostrar transcripción original en la consola
+            console.log("--- Transcripción Original (Consola) ---");
+            console.log(transcribedText);
+            console.log("---------------------------------------");
+
         } catch (error) {
             console.error("Error durante la transcripción interna:", error);
             throw new Error(`Fallo en transcripción interna: ${error.message}`); 
         }
 
-        if (!transcribedText.trim()) {
-            throw new Error("La transcripción interna no produjo texto.");
+        if (!transcribedText || transcribedText.trim() === "") { // Chequear también por string vacío
+            throw new Error("La transcripción interna no produjo texto o está vacía.");
         }
         
         try {
@@ -452,28 +459,24 @@ Instrucciones importantes:
     *   'signo de interrogación', 'interrogación' o 'pregunta' al final de una frase como '?'
     *   'signo de exclamación', 'exclamación' o 'admiración' al final de una frase como '!'
 2.  Aplica estos signos.
-3.  Adicionalmente, corrige gramática, ortografía y puntuación. Elimina titubeos o repeticiones innecesarias (ej. "ehh", "umm") a menos que parezcan intencionales para dar énfasis.
-4.  Mejora claridad y fluidez, manteniendo el significado original y el tono del hablante.
-5.  Si el texto ya parece correcto, haz correcciones mínimas.
+3.  Adicionalmente, corrige errores gramaticales, de ortografía y de puntuación. Elimina titubeos o repeticiones innecesarias (ej. "ehh", "umm", "este...") a menos que parezcan intencionales para dar énfasis.
+4.  Mejora la claridad y la fluidez del texto, manteniendo el significado original y el tono del hablante.
+5.  Si el texto ya parece correcto, haz solo las correcciones mínimas necesarias.
 
 Texto a pulir:
 "${transcribedText}"`
                 }
             ];
-            let polishedResult = await callGeminiAPI(polishPromptParts, true);
+            let polishedResult = await callGeminiAPI(polishPromptParts, true); // isTextOnly = true
             
-            // Post-procesado
-            let postProcessedText = polishedResult.replace(/\.\s*\n\s*\n/g, '.\n'); // Punto y aparte doble a sencillo
-            postProcessedText = postProcessedText.replace(/\n\s*\n/g, '\n');       // Doble salto de linea general a sencillo
+            let postProcessedText = polishedResult.replace(/\.\s*\n\s*\n/g, '.\n'); 
+            postProcessedText = postProcessedText.replace(/\n\s*\n/g, '\n');      
             return postProcessedText;
 
         } catch (error) {
             console.error("Error durante el pulido:", error);
-            // Devolver el texto transcrito si el pulido falla, para no perder todo.
-            // Opcional: podrías añadir un mensaje indicando que el pulido falló.
             setStatus(`Pulido falló: ${error.message}. Mostrando transcripción cruda.`, "error", 4000);
-            return transcribedText; // Devolver el texto transcrito crudo como fallback
-            // throw new Error(`Fallo en pulido: ${error.message}`); // O lanzar error y que el usuario reintente
+            return transcribedText; 
         }
     }
 
