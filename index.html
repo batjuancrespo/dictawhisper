@@ -30,6 +30,7 @@
                 <button id="stopRecordBtn" disabled>Detener Grabación</button>
                 <button id="retryProcessBtn" class="secondary" disabled>Reintentar Procesamiento</button>
             </div>
+            <p id="recordingTimeDisplay"></p> <!-- Aquí se mostrará el tiempo -->
             <p id="status" class="status-idle">Estado: Esperando para grabar...</p>
         </div>
 
@@ -49,7 +50,10 @@
             <h2>Transcripción Original:</h2>
             <textarea id="originalText" rows="6" readonly placeholder="Aquí aparecerá la transcripción antes del pulido..."></textarea>
 
-            <h2>Texto Final Pulido (Editable):</h2>
+            <div class="polished-text-header">
+                 <h2>Texto Final Pulido (Editable):</h2>
+                 <button id="copyPolishedTextBtn" class="copy-btn" title="Copiar texto pulido">Copiar Texto</button>
+            </div>
             <textarea id="polishedText" rows="10" placeholder="Aquí aparecerá el texto final transcrito y pulido..."></textarea>
         </div>
     </div>
