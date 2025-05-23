@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM completamente cargado y parseado.");
 
     const startRecordBtn = document.getElementById('startRecordBtn');
+    const pauseResumeBtn = document.getElementById('pauseResumeBtn');
     const stopRecordBtn = document.getElementById('stopRecordBtn');
     const retryProcessBtn = document.getElementById('retryProcessBtn');
     const statusDiv = document.getElementById('status');
@@ -11,9 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeSwitch = document.getElementById('themeSwitch');
     const volumeMeterBar = document.getElementById('volumeMeterBar');
 
-    console.log({ startRecordBtn, stopRecordBtn, retryProcessBtn, statusDiv, originalTextarea, polishedTextarea, audioPlayback, themeSwitch, volumeMeterBar });
-
-    if (!originalTextarea || !polishedTextarea || !statusDiv || !startRecordBtn || !stopRecordBtn || !retryProcessBtn || !audioPlayback || !themeSwitch || !volumeMeterBar) {
+    if (!originalTextarea || !polishedTextarea || !statusDiv || !startRecordBtn || !pauseResumeBtn || !stopRecordBtn || !retryProcessBtn || !audioPlayback || !themeSwitch || !volumeMeterBar) {
         const errorMessage = "Error crítico: Uno o más elementos HTML no se encontraron. Revisa los IDs.";
         alert(errorMessage);
         if (statusDiv) setStatus("Error: Elementos HTML no encontrados.", "error");
@@ -28,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let analyser;
     let microphoneSource;
     let animationFrameId;
+    let isPaused = false; // Nuevo estado para la pausa
 
     // ¡¡¡IMPORTANTE!!! API Key integrada directamente.
     const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // TU API KEY AQUÍ
@@ -38,15 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('theme', theme);
         themeSwitch.checked = theme === 'dark';
     }
-
     themeSwitch.addEventListener('change', () => {
         applyTheme(themeSwitch.checked ? 'dark' : 'light');
     });
-
     const preferredTheme = localStorage.getItem('theme') || 
                            (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     applyTheme(preferredTheme);
-    // Establecer el estado --accent-color-rgb para el box-shadow de focus
     function setAccentRGB() {
         const accentColor = getComputedStyle(document.body).getPropertyValue('--accent-color').trim();
         if (accentColor.startsWith('#')) {
@@ -54,21 +51,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const g = parseInt(accentColor.slice(3, 5), 16);
             const b = parseInt(accentColor.slice(5, 7), 16);
             document.documentElement.style.setProperty('--accent-color-rgb', `${r},${g},${b}`);
-        } else if (accentColor.startsWith('rgb')) { // rgb(r, g, b)
+        } else if (accentColor.startsWith('rgb')) {
             const parts = accentColor.match(/[\d.]+/g);
             if (parts && parts.length >=3) {
                  document.documentElement.style.setProperty('--accent-color-rgb', `${parts[0]},${parts[1]},${parts[2]}`);
             }
         }
     }
-    setAccentRGB(); // Inicial
+    setAccentRGB(); 
     new MutationObserver(setAccentRGB).observe(document.body, { attributes: true, attributeFilter: ['data-theme']});
-
 
     // --- Status Update Function ---
     function setStatus(message, type = "idle") {
         statusDiv.textContent = message;
-        statusDiv.className = ''; // Reset classes
+        statusDiv.className = ''; 
         switch (type) {
             case "processing": statusDiv.classList.add('status-processing'); break;
             case "success": statusDiv.classList.add('status-success'); break;
@@ -81,47 +77,54 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Volume Meter Logic ---
     function setupVolumeMeter(stream) {
         if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') audioContext.resume(); // Ensure context is running
+        
         analyser = audioContext.createAnalyser();
         microphoneSource = audioContext.createMediaStreamSource(stream);
         microphoneSource.connect(analyser);
-        analyser.fftSize = 256; // Smaller FFT size for faster response
+        analyser.fftSize = 256;
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
 
         function drawVolume() {
-            animationFrameId = requestAnimationFrame(drawVolume);
-            analyser.getByteFrequencyData(dataArray); // or getByteTimeDomainData
-            
-            let sum = 0;
-            for(let i = 0; i < bufferLength; i++) {
-                sum += dataArray[i];
+            if (isPaused) { // No dibujar si está pausado
+                animationFrameId = requestAnimationFrame(drawVolume); // Sigue pidiendo frame para poder reanudar
+                return;
             }
+            animationFrameId = requestAnimationFrame(drawVolume);
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for(let i = 0; i < bufferLength; i++) sum += dataArray[i];
             let average = sum / bufferLength;
-            // Scale a bit differently for better visual feedback. Max average is 255.
-            // Let's say anything above 100 is "loud". Max bar width is 100%.
-            let volumePercent = Math.min(100, (average / 128) * 100 * 1.5); // Scale up for sensitivity
+            let volumePercent = Math.min(100, (average / 128) * 100 * 1.5);
             volumeMeterBar.style.width = volumePercent + '%';
+            volumeMeterBar.classList.remove('paused');
         }
         drawVolume();
     }
 
     function stopVolumeMeter() {
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
-        if (microphoneSource) microphoneSource.disconnect();
-        // analyser can be reused or closed if audioContext is closed
+        if (microphoneSource) {
+            microphoneSource.disconnect();
+            microphoneSource = null; // Limpiar para evitar reconexiones accidentales
+        }
+        // analyser se puede reutilizar, pero es bueno limpiarlo si no se usa
+        // if (analyser) analyser.disconnect(); // Opcional, depende si se recrea siempre
         volumeMeterBar.style.width = '0%';
+        volumeMeterBar.classList.remove('paused');
     }
     
     // --- Recording and Processing Logic ---
     async function startRecording() {
         console.log("Solicitando permiso para grabar...");
         setStatus("Solicitando permiso para grabar...", "processing");
+        isPaused = false;
         originalTextarea.value = '';
         polishedTextarea.value = '';
         audioChunks = [];
         currentAudioBlob = null;
-        retryProcessBtn.disabled = true;
-
+        
         if (audioPlayback.src) {
             URL.revokeObjectURL(audioPlayback.src);
             audioPlayback.src = '';
@@ -136,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            setupVolumeMeter(stream); // Start volume meter
+            setupVolumeMeter(stream); 
 
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
@@ -144,16 +147,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (event.data.size > 0) audioChunks.push(event.data);
             };
 
+            mediaRecorder.onpause = () => {
+                console.log("MediaRecorder paused");
+                setStatus('Grabación pausada. Presiona "Reanudar" para continuar.', 'idle');
+                isPaused = true;
+                volumeMeterBar.classList.add('paused');
+            };
+
+            mediaRecorder.onresume = () => {
+                console.log("MediaRecorder resumed");
+                setStatus('Grabando... (Reanudado)', 'processing');
+                isPaused = false;
+                volumeMeterBar.classList.remove('paused');
+                // El loop de drawVolume ya se está ejecutando, solo necesita isPaused = false
+            };
+
             mediaRecorder.onstop = async () => {
-                stopVolumeMeter(); // Stop volume meter
+                stopVolumeMeter(); 
                 console.log("MediaRecorder.onstop - Grabación detenida.");
                 setStatus('Grabación detenida. Procesando audio...', 'processing');
+                isPaused = false;
 
                 if (audioChunks.length === 0) {
                     setStatus("Error: No se grabó audio. Revisa permisos/micrófono.", "error");
                     alert("No se detectó audio.");
-                    stopRecordBtn.disabled = true;
-                    startRecordBtn.disabled = false;
+                    updateButtonStates("stopped_error");
                     return;
                 }
 
@@ -163,89 +181,146 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (currentAudioBlob.size === 0) {
                     setStatus("Error: El audio grabado está vacío.", "error");
                     alert("El audio grabado parece estar vacío.");
-                    stopRecordBtn.disabled = true;
-                    startRecordBtn.disabled = false;
+                    updateButtonStates("stopped_error");
                     return;
                 }
 
                 const audioURL = URL.createObjectURL(currentAudioBlob);
                 audioPlayback.src = audioURL;
-                retryProcessBtn.disabled = false; // Enable retry now that we have a blob
-
-                await processAudioBlob(currentAudioBlob); // Extracted processing logic
+                updateButtonStates("stopped_success");
+                await processAudioBlob(currentAudioBlob);
             };
 
             mediaRecorder.onerror = (event) => {
                 stopVolumeMeter();
+                isPaused = false;
                 console.error("MediaRecorder error:", event.error);
                 setStatus(`Error de MediaRecorder: ${event.error.name}`, "error");
                 alert(`Ocurrió un error con el grabador de audio: ${event.error.message}`);
-                stopRecordBtn.disabled = true;
-                startRecordBtn.disabled = false;
-                retryProcessBtn.disabled = !!currentAudioBlob; // Enable if blob exists
+                updateButtonStates("error");
             };
 
             mediaRecorder.start();
             setStatus('Grabando... Habla ahora.', "processing");
-            startRecordBtn.disabled = true;
-            stopRecordBtn.disabled = false;
-            retryProcessBtn.disabled = true;
+            updateButtonStates("recording");
 
         } catch (err) {
+            isPaused = false;
             console.error('Error al acceder al micrófono:', err);
             setStatus(`Error al acceder al micrófono: ${err.message}.`, "error");
             alert(`No se pudo acceder al micrófono: ${err.message}.`);
-            startRecordBtn.disabled = false;
-            stopRecordBtn.disabled = true;
+            updateButtonStates("initial");
+        }
+    }
+
+    function handlePauseResume() {
+        if (!mediaRecorder) return;
+
+        if (mediaRecorder.state === "recording") {
+            mediaRecorder.pause(); // Disparará mediaRecorder.onpause
+            updateButtonStates("paused");
+        } else if (mediaRecorder.state === "paused") {
+            mediaRecorder.resume(); // Disparará mediaRecorder.onresume
+            updateButtonStates("recording"); // O un estado "resumed" si quieres diferenciar
         }
     }
 
     function stopRecording() {
         console.log("Botón Detener Grabación presionado.");
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-            mediaRecorder.stop(); // This will trigger onstop
+        if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) {
+            mediaRecorder.stop(); // Esto disparará onstop
+            // El estado de los botones y el status se manejan en onstop
             setStatus("Deteniendo grabación...", "processing");
-            stopRecordBtn.disabled = true;
         } else {
             setStatus("Nada que detener.", "idle");
-            stopRecordBtn.disabled = true;
-            startRecordBtn.disabled = false;
+            updateButtonStates("initial");
         }
     }
-
-    // New function to handle processing, can be called by onstop or retry
+    
     async function processAudioBlob(audioBlob) {
         originalTextarea.value = '';
         polishedTextarea.value = '';
         setStatus('Preparando audio para enviar...', 'processing');
+        updateButtonStates("processing_audio");
         
         try {
-            console.log("Convirtiendo Blob a Base64...");
             const base64Audio = await blobToBase64(audioBlob);
             if (!base64Audio || base64Audio.length < 100) {
                 throw new Error("Fallo al convertir audio a Base64 o audio demasiado corto.");
             }
             await transcribeAndPolishAudio(base64Audio);
+            // El estado final (success/error) se establece dentro de transcribeAndPolishAudio
+            // o en el catch de aquí abajo.
+            // Los botones se actualizan según el resultado de transcribeAndPolishAudio.
         } catch (error) {
             console.error('Error procesando audio:', error);
             setStatus(`Error: ${error.message}`, "error");
             polishedTextarea.value = `Error en el proceso: ${error.message}`;
+            updateButtonStates("error_processing"); // Un estado que permita reintentar
         } finally {
-            // Enable start button for new recording, retry button remains enabled if blob exists
-            startRecordBtn.disabled = false;
-            stopRecordBtn.disabled = true; // Stop should be disabled after processing
-            retryProcessBtn.disabled = !currentAudioBlob; // Keep enabled if there's a blob
-             if (!statusDiv.classList.contains('status-error') && !statusDiv.classList.contains('status-success')) {
-                setStatus("Listo para una nueva grabación o reintentar.", "idle");
+            // El estado de los botones ya se maneja en updateButtonStates o al final de transcribeAndPolishAudio
+            // Solo asegurar que si no hay estado final, se ponga uno.
+            if (!statusDiv.classList.contains('status-error') && !statusDiv.classList.contains('status-success')) {
+                 setStatus("Listo. Puedes grabar de nuevo o reintentar el procesamiento.", "idle");
             }
         }
     }
 
+    function updateButtonStates(state) {
+        startRecordBtn.disabled = true;
+        pauseResumeBtn.disabled = true;
+        pauseResumeBtn.textContent = "Pausar";
+        stopRecordBtn.disabled = true;
+        retryProcessBtn.disabled = true;
+
+        switch (state) {
+            case "initial":
+                startRecordBtn.disabled = false;
+                setStatus("Estado: Esperando para grabar...", "idle");
+                break;
+            case "recording":
+                pauseResumeBtn.disabled = false;
+                stopRecordBtn.disabled = false;
+                break;
+            case "paused":
+                pauseResumeBtn.disabled = false;
+                pauseResumeBtn.textContent = "Reanudar";
+                stopRecordBtn.disabled = false; // Aún se puede detener desde pausa
+                break;
+            case "stopped_success": // Después de detener y tener blob
+                startRecordBtn.disabled = false;
+                retryProcessBtn.disabled = !currentAudioBlob;
+                break;
+            case "stopped_error": // Error al detener (ej. no audio)
+                 startRecordBtn.disabled = false;
+                break;
+            case "processing_audio": // Cuando se está procesando activamente con la API
+                // Todos los botones de grabación deshabilitados, reintentar podría estar activo si es un reintento
+                retryProcessBtn.disabled = !currentAudioBlob; // Mantener activo si es reintento
+                break;
+            case "error_processing": // Error durante el procesamiento, pero el blob existe
+                startRecordBtn.disabled = false; // Puede grabar de nuevo
+                retryProcessBtn.disabled = !currentAudioBlob; // Puede reintentar
+                break;
+            case "success_processing": // Procesamiento exitoso
+                startRecordBtn.disabled = false;
+                retryProcessBtn.disabled = !currentAudioBlob; // Aún puede querer re-procesar
+                break;
+             case "error": // Error genérico, ej. MediaRecorder
+                startRecordBtn.disabled = false; // Permitir reintentar grabación
+                break;
+
+            default: // Por si acaso
+                startRecordBtn.disabled = false;
+                break;
+        }
+    }
+
+
     retryProcessBtn.addEventListener('click', () => {
         if (currentAudioBlob) {
             console.log("Reintentando procesamiento con audio existente.");
-            setStatus("Reintentando procesamiento...", "processing");
-            processAudioBlob(currentAudioBlob);
+            processAudioBlob(currentAudioBlob); // processAudioBlob manejará estados de UI
         } else {
             alert("No hay audio grabado para reintentar.");
             setStatus("No hay audio para reintentar.", "error");
@@ -276,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function callGeminiAPI(promptParts, isTextOnly = false) {
+        // ... (sin cambios, igual que antes)
         if (!userApiKey) throw new Error('API Key no configurada.');
 
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;
@@ -310,9 +386,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function transcribeAndPolishAudio(base64Audio) {
+        // ... (transcription part, same as before)
         let transcribedText = '';
         try {
             setStatus('Transcribiendo audio con Gemini... (puede tardar)', 'processing');
+            updateButtonStates("processing_audio");
             const transcriptPromptParts = [
                 { "text": "Transcribe el siguiente audio a texto. Es importante que transcribas literalmente las palabras dictadas, incluyendo si el usuario dice 'coma', 'punto', 'punto y aparte', 'nueva línea', 'dos puntos', 'punto y coma', 'signo de interrogación', 'signo de exclamación', etc.:" },
                 { "inline_data": { "mime_type": "audio/webm", "data": base64Audio } }
@@ -322,18 +400,21 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             originalTextarea.value = `Error en transcripción: ${error.message}`;
             polishedTextarea.value = `Error en transcripción: ${error.message}`;
-            // No cambiamos estado aquí, se hará en el 'finally' de processAudioBlob o el catch allí
-            throw error; // Re-throw para que processAudioBlob lo capture
+            updateButtonStates("error_processing");
+            throw error; 
         }
 
         if (!transcribedText.trim()) {
             polishedTextarea.value = "No se transcribió texto para pulir.";
             setStatus("Proceso completado (sin texto para pulir).", "success");
+            updateButtonStates("success_processing");
             return;
         }
         
+        // ... (polishing part, same as before)
         try {
             setStatus('Puliendo texto con Gemini...', 'processing');
+            updateButtonStates("processing_audio"); // Sigue procesando
             const polishPromptParts = [
                 {
                     "text": `Por favor, revisa y pule el siguiente texto.
@@ -364,16 +445,18 @@ Texto a pulir:
 
             polishedTextarea.value = postProcessedText;
             setStatus('Proceso de transcripción y pulido completado.', 'success');
+            updateButtonStates("success_processing");
         } catch (error) {
             polishedTextarea.value = `Error al pulir: ${error.message}\n\n(Transcripción original arriba)`;
-            // No cambiamos estado aquí, se hará en el 'finally' de processAudioBlob o el catch allí
-            throw error; // Re-throw
+            updateButtonStates("error_processing");
+            throw error;
         }
     }
 
     startRecordBtn.addEventListener('click', startRecording);
+    pauseResumeBtn.addEventListener('click', handlePauseResume);
     stopRecordBtn.addEventListener('click', stopRecording);
-
-    setStatus("Estado: Esperando para grabar...", "idle"); // Estado inicial
+    
+    updateButtonStates("initial"); // Estado inicial de los botones
     console.log("Script inicializado y event listeners asignados.");
 });
