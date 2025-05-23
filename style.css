@@ -18,6 +18,8 @@ body[data-theme="light"] {
     --accent-color: #007bff;
     --accent-color-hover: #0056b3;
     --accent-text-color: #ffffff;
+    --button-secondary-bg: #6c757d;
+    --button-secondary-bg-hover: #5a6268;
     --success-bg: #d4edda;
     --success-text: #155724;
     --error-bg: #f8d7da;
@@ -36,14 +38,16 @@ body[data-theme="dark"] {
     --text-primary: #f8f9fa;
     --text-secondary: #adb5bd;
     --border-color: #495057;
-    --accent-color: #0d6efd; /* Un azul ligeramente más brillante para tema oscuro */
+    --accent-color: #0d6efd; 
     --accent-color-hover: #0a58ca;
     --accent-text-color: #ffffff;
-    --success-bg: #14301c; /* Más oscuro */
+    --button-secondary-bg: #5a6268;
+    --button-secondary-bg-hover: #495057;
+    --success-bg: #14301c; 
     --success-text: #a3cfbb;
-    --error-bg: #3b1518;   /* Más oscuro */
+    --error-bg: #3b1518;   
     --error-text: #f1b0b7;
-    --processing-bg: #002752; /* Más oscuro */
+    --processing-bg: #002752; 
     --processing-text: #b8d4fe;
     --idle-bg: #3e444a;
     --idle-text: #ced4da;
@@ -83,6 +87,13 @@ h3 { font-size: 1.1em; color: var(--text-secondary); }
 .controls, .audio-playback-section, .results, .theme-switcher-section, .volume-meter-section {
     margin-bottom: 25px;
 }
+.controls .buttons-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* Espacio entre botones */
+    justify-content: center; /* Centrar grupo de botones */
+}
+
 
 label {
     display: block;
@@ -92,7 +103,7 @@ label {
 }
 
 input[type="password"], textarea {
-    width: calc(100% - 24px); /* Adjusted for padding */
+    width: calc(100% - 24px); 
     padding: 12px;
     margin-bottom: 12px;
     border: 1px solid var(--border-color);
@@ -105,7 +116,7 @@ input[type="password"], textarea {
 textarea:focus, input[type="password"]:focus {
     outline: none;
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 0.2rem rgba(var(--accent-color-rgb, 0,123,255), 0.25); /* Needs --accent-color-rgb variable */
+    box-shadow: 0 0 0 0.2rem rgba(var(--accent-color-rgb, 0,123,255), 0.25); 
 }
 
 textarea {
@@ -120,14 +131,24 @@ button {
     padding: 10px 18px;
     border-radius: var(--border-radius-small);
     cursor: pointer;
-    margin-right: 10px;
+    /* margin-right: 10px; Reemplazado por gap en .buttons-group */
     font-weight: 500;
     font-size: 0.95em;
     transition: background-color var(--transition-medium);
+    flex-grow: 1; /* Para que los botones se distribuyan mejor si son pocos */
+    min-width: 120px; /* Ancho mínimo para que no se vean muy pequeños */
 }
-button:last-child {
+/* button:last-child {
     margin-right: 0;
+} */
+
+button.secondary {
+    background-color: var(--button-secondary-bg);
 }
+button.secondary:hover:not(:disabled) {
+    background-color: var(--button-secondary-bg-hover);
+}
+
 
 button:hover:not(:disabled) {
     background-color: var(--accent-color-hover);
@@ -173,6 +194,7 @@ button:disabled {
     padding: 10px;
     border-radius: var(--border-radius-small);
     border-left: 4px solid var(--accent-color);
+    margin-bottom: 20px; /* Añadido margen inferior */
 }
 .info a {
     color: var(--accent-color);
@@ -190,9 +212,9 @@ button:disabled {
     max-width: 500px;
     margin-top: 10px;
 }
-/* Estilos para el reproductor de audio en tema oscuro (si el navegador lo permite con color-scheme) */
+
 body[data-theme="dark"] #audioPlayback {
-    filter: invert(1) hue-rotate(180deg); /* Intento simple de invertir colores */
+    filter: invert(1) hue-rotate(180deg); 
 }
 
 
@@ -208,14 +230,18 @@ body[data-theme="dark"] #audioPlayback {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-small);
     margin: 10px auto;
-    overflow: hidden; /* Para contener la barra de volumen */
+    overflow: hidden; 
 }
 #volumeMeterBar {
     width: 0%;
     height: 100%;
     background-color: var(--accent-color);
-    transition: width 0.05s linear; /* Transición suave para la barra */
+    transition: width 0.05s linear; 
 }
+#volumeMeterBar.paused {
+    background-color: var(--button-secondary-bg); /* Color diferente cuando está pausado */
+}
+
 
 /* Theme Switcher */
 .theme-switcher-section {
@@ -243,7 +269,7 @@ body[data-theme="dark"] #audioPlayback {
     display:none;
 }
 .slider {
-    background-color: #ccc; /* Color base del slider */
+    background-color: #ccc; 
     bottom: 0;
     cursor: pointer;
     left: 0;
@@ -255,21 +281,21 @@ body[data-theme="dark"] #audioPlayback {
 }
 .slider:before {
     background-color: white;
-    bottom: 3px; /* Ajustar para centrar el círculo */
+    bottom: 3px; 
     content: "";
-    height: 18px; /* Tamaño del círculo */
-    left: 3px;  /* Ajustar para centrar el círculo */
+    height: 18px; 
+    left: 3px;  
     position: absolute;
     transition: .4s;
-    width: 18px; /* Tamaño del círculo */
+    width: 18px; 
     border-radius: 50%;
 }
 input:checked + .slider {
     background-color: var(--accent-color);
 }
 input:checked + .slider:before {
-    transform: translateX(20px); /* Mover el círculo */
+    transform: translateX(20px); 
 }
 body[data-theme="light"] .slider { background-color: #ccc; }
-body[data-theme="dark"] .slider { background-color: #555; } /* Slider un poco más oscuro en tema oscuro */
+body[data-theme="dark"] .slider { background-color: #555; } 
 body[data-theme="dark"] input:checked + .slider { background-color: var(--accent-color); }
