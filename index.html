@@ -3,19 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transcripción y Pulido con Gemini</title>
+    <title>Transcripción Avanzada con Gemini</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="container">
-        <h1>Transcripción y Pulido Automático con Gemini</h1>
+<body data-theme="light"> <!-- El tema se establecerá por JS -->
 
-        <p class="info"><strong>Advertencia:</strong> La API Key está integrada directamente en el código para pruebas. <a href="https://aistudio.google.com/app/apikey" target="_blank">Obtén tu propia API Key aquí</a> y gestiona su seguridad.</p>
+    <div class="theme-switcher-section">
+        <div class="theme-switch-wrapper">
+            <label class="theme-switch-label" for="themeSwitch">Modo Oscuro</label>
+            <label class="theme-switch">
+                <input type="checkbox" id="themeSwitch">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Transcripción y Pulido con IA</h1>
+        
+        <p class="info"><strong>Advertencia:</strong> La API Key está integrada directamente en el código para pruebas. Para producción, considera un backend. <a href="https://aistudio.google.com/app/apikey" target="_blank">Obtén tu API Key aquí</a>.</p>
 
         <div class="controls">
             <button id="startRecordBtn">Empezar a Grabar</button>
             <button id="stopRecordBtn" disabled>Detener Grabación</button>
-            <p id="status">Estado: Esperando para grabar...</p>
+            <button id="retryProcessBtn" disabled>Reintentar Procesamiento</button>
+            <p id="status" class="status-idle">Estado: Esperando para grabar...</p>
+        </div>
+
+        <div class="volume-meter-section">
+            <h3>Nivel de Entrada de Audio:</h3>
+            <div id="volumeMeterContainer">
+                <div id="volumeMeterBar"></div>
+            </div>
         </div>
 
         <div class="audio-playback-section">
@@ -24,11 +43,11 @@
         </div>
 
         <div class="results">
-            <h2>Transcripción Original (Intermedia):</h2>
+            <h2>Transcripción Original:</h2>
             <textarea id="originalText" rows="6" readonly placeholder="Aquí aparecerá la transcripción antes del pulido..."></textarea>
 
             <h2>Texto Final Pulido (Editable):</h2>
-            <textarea id="polishedText" rows="10" placeholder="Aquí aparecerá el texto final transcrito y pulido..."></textarea> <!-- QUITAMOS 'readonly' -->
+            <textarea id="polishedText" rows="10" placeholder="Aquí aparecerá el texto final transcrito y pulido..."></textarea>
         </div>
     </div>
 
