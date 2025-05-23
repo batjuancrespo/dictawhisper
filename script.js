@@ -11,8 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const audioPlayback = document.getElementById('audioPlayback');
     const themeSwitch = document.getElementById('themeSwitch');
     const volumeMeterBar = document.getElementById('volumeMeterBar');
+    const recordingTimeDisplay = document.getElementById('recordingTimeDisplay'); // Nuevo
+    const copyPolishedTextBtn = document.getElementById('copyPolishedTextBtn'); // Nuevo
 
-    if (!originalTextarea || !polishedTextarea || !statusDiv || !startRecordBtn || !pauseResumeBtn || !stopRecordBtn || !retryProcessBtn || !audioPlayback || !themeSwitch || !volumeMeterBar) {
+
+    if (!originalTextarea || !polishedTextarea || !statusDiv || !startRecordBtn || !pauseResumeBtn || !stopRecordBtn || !retryProcessBtn || !audioPlayback || !themeSwitch || !volumeMeterBar || !recordingTimeDisplay || !copyPolishedTextBtn) {
         const errorMessage = "Error crítico: Uno o más elementos HTML no se encontraron. Revisa los IDs.";
         alert(errorMessage);
         if (statusDiv) setStatus("Error: Elementos HTML no encontrados.", "error");
@@ -27,7 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let analyser;
     let microphoneSource;
     let animationFrameId;
-    let isPaused = false; // Nuevo estado para la pausa
+    let isPaused = false;
+    let recordingTimerInterval; // Nuevo para el temporizador
+    let recordingSeconds = 0;   // Nuevo para el temporizador
+
 
     // ¡¡¡IMPORTANTE!!! API Key integrada directamente.
     const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // TU API KEY AQUÍ
@@ -62,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     new MutationObserver(setAccentRGB).observe(document.body, { attributes: true, attributeFilter: ['data-theme']});
 
     // --- Status Update Function ---
-    function setStatus(message, type = "idle") {
+    function setStatus(message, type = "idle", duration = 0) {
         statusDiv.textContent = message;
         statusDiv.className = ''; 
         switch (type) {
@@ -72,12 +78,48 @@ document.addEventListener('DOMContentLoaded', () => {
             case "idle": default: statusDiv.classList.add('status-idle'); break;
         }
         console.log(`Status updated: ${message} (type: ${type})`);
+
+        if (duration > 0) {
+            setTimeout(() => {
+                // Solo limpia si el mensaje sigue siendo el mismo (para evitar sobrescribir mensajes nuevos)
+                if (statusDiv.textContent === message) {
+                    setStatus("Estado: Esperando para grabar...", "idle"); 
+                }
+            }, duration);
+        }
     }
+
+    // --- Recording Timer Logic ---
+    function startRecordingTimer() {
+        stopRecordingTimer(); // Asegura que no haya timers duplicados
+        recordingSeconds = 0;
+        updateRecordingTimeDisplay(); // Mostrar 00:00 inmediatamente
+        recordingTimerInterval = setInterval(() => {
+            recordingSeconds++;
+            updateRecordingTimeDisplay();
+        }, 1000);
+    }
+
+    function stopRecordingTimer() {
+        clearInterval(recordingTimerInterval);
+    }
+
+    function updateRecordingTimeDisplay() {
+        const minutes = Math.floor(recordingSeconds / 60);
+        const seconds = recordingSeconds % 60;
+        const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        recordingTimeDisplay.textContent = `Tiempo: ${formattedTime}`;
+    }
+
+    function resetRecordingTimerDisplay() {
+        recordingTimeDisplay.textContent = ""; // O "Tiempo: 00:00" si se prefiere
+    }
+
 
     // --- Volume Meter Logic ---
     function setupVolumeMeter(stream) {
         if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioContext.state === 'suspended') audioContext.resume(); // Ensure context is running
+        if (audioContext.state === 'suspended') audioContext.resume(); 
         
         analyser = audioContext.createAnalyser();
         microphoneSource = audioContext.createMediaStreamSource(stream);
@@ -87,8 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const dataArray = new Uint8Array(bufferLength);
 
         function drawVolume() {
-            if (isPaused) { // No dibujar si está pausado
-                animationFrameId = requestAnimationFrame(drawVolume); // Sigue pidiendo frame para poder reanudar
+            if (isPaused) { 
+                animationFrameId = requestAnimationFrame(drawVolume); 
                 return;
             }
             animationFrameId = requestAnimationFrame(drawVolume);
@@ -107,10 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
         if (microphoneSource) {
             microphoneSource.disconnect();
-            microphoneSource = null; // Limpiar para evitar reconexiones accidentales
+            microphoneSource = null; 
         }
-        // analyser se puede reutilizar, pero es bueno limpiarlo si no se usa
-        // if (analyser) analyser.disconnect(); // Opcional, depende si se recrea siempre
         volumeMeterBar.style.width = '0%';
         volumeMeterBar.classList.remove('paused');
     }
@@ -140,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             setupVolumeMeter(stream); 
+            startRecordingTimer(); // Iniciar temporizador
 
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
@@ -151,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("MediaRecorder paused");
                 setStatus('Grabación pausada. Presiona "Reanudar" para continuar.', 'idle');
                 isPaused = true;
+                stopRecordingTimer(); // Pausar el contador
                 volumeMeterBar.classList.add('paused');
             };
 
@@ -158,12 +200,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("MediaRecorder resumed");
                 setStatus('Grabando... (Reanudado)', 'processing');
                 isPaused = false;
+                startRecordingTimer(); // Reanudar el contador (continúa desde donde se quedó)
                 volumeMeterBar.classList.remove('paused');
-                // El loop de drawVolume ya se está ejecutando, solo necesita isPaused = false
             };
 
             mediaRecorder.onstop = async () => {
                 stopVolumeMeter(); 
+                stopRecordingTimer(); // Detener temporizador final
                 console.log("MediaRecorder.onstop - Grabación detenida.");
                 setStatus('Grabación detenida. Procesando audio...', 'processing');
                 isPaused = false;
@@ -172,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     setStatus("Error: No se grabó audio. Revisa permisos/micrófono.", "error");
                     alert("No se detectó audio.");
                     updateButtonStates("stopped_error");
+                    resetRecordingTimerDisplay();
                     return;
                 }
 
@@ -182,17 +226,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     setStatus("Error: El audio grabado está vacío.", "error");
                     alert("El audio grabado parece estar vacío.");
                     updateButtonStates("stopped_error");
+                    resetRecordingTimerDisplay();
                     return;
                 }
 
                 const audioURL = URL.createObjectURL(currentAudioBlob);
                 audioPlayback.src = audioURL;
-                updateButtonStates("stopped_success");
+                updateButtonStates("stopped_success"); // Antes de processAudioBlob
                 await processAudioBlob(currentAudioBlob);
             };
 
             mediaRecorder.onerror = (event) => {
                 stopVolumeMeter();
+                stopRecordingTimer();
+                resetRecordingTimerDisplay();
                 isPaused = false;
                 console.error("MediaRecorder error:", event.error);
                 setStatus(`Error de MediaRecorder: ${event.error.name}`, "error");
@@ -206,6 +253,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             isPaused = false;
+            stopRecordingTimer(); // Asegurarse que se detiene si hay error
+            resetRecordingTimerDisplay();
             console.error('Error al acceder al micrófono:', err);
             setStatus(`Error al acceder al micrófono: ${err.message}.`, "error");
             alert(`No se pudo acceder al micrófono: ${err.message}.`);
@@ -217,23 +266,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!mediaRecorder) return;
 
         if (mediaRecorder.state === "recording") {
-            mediaRecorder.pause(); // Disparará mediaRecorder.onpause
+            mediaRecorder.pause(); 
             updateButtonStates("paused");
         } else if (mediaRecorder.state === "paused") {
-            mediaRecorder.resume(); // Disparará mediaRecorder.onresume
-            updateButtonStates("recording"); // O un estado "resumed" si quieres diferenciar
+            mediaRecorder.resume(); 
+            updateButtonStates("recording"); 
         }
     }
 
     function stopRecording() {
         console.log("Botón Detener Grabación presionado.");
         if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) {
-            mediaRecorder.stop(); // Esto disparará onstop
-            // El estado de los botones y el status se manejan en onstop
+            mediaRecorder.stop(); 
             setStatus("Deteniendo grabación...", "processing");
+            // No resetear el timer display aquí, se hace en onstop o si hay error antes
         } else {
             setStatus("Nada que detener.", "idle");
             updateButtonStates("initial");
+            resetRecordingTimerDisplay();
         }
     }
     
@@ -249,20 +299,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error("Fallo al convertir audio a Base64 o audio demasiado corto.");
             }
             await transcribeAndPolishAudio(base64Audio);
-            // El estado final (success/error) se establece dentro de transcribeAndPolishAudio
-            // o en el catch de aquí abajo.
-            // Los botones se actualizan según el resultado de transcribeAndPolishAudio.
         } catch (error) {
             console.error('Error procesando audio:', error);
             setStatus(`Error: ${error.message}`, "error");
             polishedTextarea.value = `Error en el proceso: ${error.message}`;
-            updateButtonStates("error_processing"); // Un estado que permita reintentar
+            updateButtonStates("error_processing"); 
         } finally {
-            // El estado de los botones ya se maneja en updateButtonStates o al final de transcribeAndPolishAudio
-            // Solo asegurar que si no hay estado final, se ponga uno.
             if (!statusDiv.classList.contains('status-error') && !statusDiv.classList.contains('status-success')) {
                  setStatus("Listo. Puedes grabar de nuevo o reintentar el procesamiento.", "idle");
             }
+             // Habilitar botón de copiar si hay texto pulido
+            copyPolishedTextBtn.disabled = polishedTextarea.value.trim() === '';
         }
     }
 
@@ -272,11 +319,13 @@ document.addEventListener('DOMContentLoaded', () => {
         pauseResumeBtn.textContent = "Pausar";
         stopRecordBtn.disabled = true;
         retryProcessBtn.disabled = true;
+        copyPolishedTextBtn.disabled = polishedTextarea.value.trim() === ''; // Default a deshabilitado
 
         switch (state) {
             case "initial":
                 startRecordBtn.disabled = false;
                 setStatus("Estado: Esperando para grabar...", "idle");
+                resetRecordingTimerDisplay();
                 break;
             case "recording":
                 pauseResumeBtn.disabled = false;
@@ -285,50 +334,77 @@ document.addEventListener('DOMContentLoaded', () => {
             case "paused":
                 pauseResumeBtn.disabled = false;
                 pauseResumeBtn.textContent = "Reanudar";
-                stopRecordBtn.disabled = false; // Aún se puede detener desde pausa
+                stopRecordBtn.disabled = false; 
                 break;
-            case "stopped_success": // Después de detener y tener blob
+            case "stopped_success": 
                 startRecordBtn.disabled = false;
                 retryProcessBtn.disabled = !currentAudioBlob;
+                // El timer display se queda con el tiempo final
                 break;
-            case "stopped_error": // Error al detener (ej. no audio)
+            case "stopped_error": 
                  startRecordBtn.disabled = false;
+                 resetRecordingTimerDisplay();
                 break;
-            case "processing_audio": // Cuando se está procesando activamente con la API
-                // Todos los botones de grabación deshabilitados, reintentar podría estar activo si es un reintento
-                retryProcessBtn.disabled = !currentAudioBlob; // Mantener activo si es reintento
+            case "processing_audio": 
+                retryProcessBtn.disabled = !currentAudioBlob; 
                 break;
-            case "error_processing": // Error durante el procesamiento, pero el blob existe
-                startRecordBtn.disabled = false; // Puede grabar de nuevo
-                retryProcessBtn.disabled = !currentAudioBlob; // Puede reintentar
+            case "error_processing": 
+                startRecordBtn.disabled = false; 
+                retryProcessBtn.disabled = !currentAudioBlob; 
+                copyPolishedTextBtn.disabled = polishedTextarea.value.trim() === '';
                 break;
-            case "success_processing": // Procesamiento exitoso
+            case "success_processing": 
                 startRecordBtn.disabled = false;
-                retryProcessBtn.disabled = !currentAudioBlob; // Aún puede querer re-procesar
+                retryProcessBtn.disabled = !currentAudioBlob; 
+                copyPolishedTextBtn.disabled = polishedTextarea.value.trim() === '';
                 break;
-             case "error": // Error genérico, ej. MediaRecorder
-                startRecordBtn.disabled = false; // Permitir reintentar grabación
+             case "error": 
+                startRecordBtn.disabled = false; 
+                resetRecordingTimerDisplay();
                 break;
-
-            default: // Por si acaso
+            default: 
                 startRecordBtn.disabled = false;
+                resetRecordingTimerDisplay();
                 break;
         }
     }
 
-
     retryProcessBtn.addEventListener('click', () => {
         if (currentAudioBlob) {
             console.log("Reintentando procesamiento con audio existente.");
-            processAudioBlob(currentAudioBlob); // processAudioBlob manejará estados de UI
+            processAudioBlob(currentAudioBlob); 
         } else {
             alert("No hay audio grabado para reintentar.");
             setStatus("No hay audio para reintentar.", "error");
         }
     });
 
+    copyPolishedTextBtn.addEventListener('click', async () => {
+        if (polishedTextarea.value.trim() === '') {
+            setStatus("Nada que copiar.", "idle", 2000);
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(polishedTextarea.value);
+            setStatus("¡Texto pulido copiado al portapapeles!", "success", 3000);
+        } catch (err) {
+            console.error('Error al copiar texto: ', err);
+            setStatus("Error al copiar texto. Inténtalo manualmente.", "error", 3000);
+            // Fallback por si navigator.clipboard no está disponible o falla (raro en HTTPS)
+            try {
+                polishedTextarea.select();
+                document.execCommand('copy');
+                setStatus("¡Texto pulido copiado! (Fallback)", "success", 3000);
+            } catch (fallbackErr) {
+                console.error('Error en fallback de copia: ', fallbackErr);
+                alert("No se pudo copiar el texto. Por favor, cópialo manualmente.");
+            }
+        }
+    });
+
 
     function blobToBase64(blob) {
+        // ... (sin cambios)
         return new Promise((resolve, reject) => {
             if (!blob || blob.size === 0) {
                 return reject(new Error("Blob nulo o vacío proporcionado a blobToBase64"));
@@ -351,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function callGeminiAPI(promptParts, isTextOnly = false) {
-        // ... (sin cambios, igual que antes)
+        // ... (sin cambios)
         if (!userApiKey) throw new Error('API Key no configurada.');
 
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;
@@ -386,15 +462,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function transcribeAndPolishAudio(base64Audio) {
-        // ... (transcription part, same as before)
+        // ... (sin cambios significativos, solo asegurarse que updateButtonStates se llama correctamente)
         let transcribedText = '';
         try {
             setStatus('Transcribiendo audio con Gemini... (puede tardar)', 'processing');
             updateButtonStates("processing_audio");
-            const transcriptPromptParts = [
-                { "text": "Transcribe el siguiente audio a texto. Es importante que transcribas literalmente las palabras dictadas, incluyendo si el usuario dice 'coma', 'punto', 'punto y aparte', 'nueva línea', 'dos puntos', 'punto y coma', 'signo de interrogación', 'signo de exclamación', etc.:" },
-                { "inline_data": { "mime_type": "audio/webm", "data": base64Audio } }
-            ];
+            const transcriptPromptParts = [ /* ... */ ]; // Mismo prompt
+             transcriptPromptParts[0] = { "text": "Transcribe el siguiente audio a texto. Es importante que transcribas literalmente las palabras dictadas, incluyendo si el usuario dice 'coma', 'punto', 'punto y aparte', 'nueva línea', 'dos puntos', 'punto y coma', 'signo de interrogación', 'signo de exclamación', etc.:" };
+             transcriptPromptParts[1] = { "inline_data": { "mime_type": "audio/webm", "data": base64Audio } };
             transcribedText = await callGeminiAPI(transcriptPromptParts, false);
             originalTextarea.value = "Transcripción original:\n" + transcribedText;
         } catch (error) {
@@ -411,13 +486,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // ... (polishing part, same as before)
         try {
             setStatus('Puliendo texto con Gemini...', 'processing');
-            updateButtonStates("processing_audio"); // Sigue procesando
-            const polishPromptParts = [
-                {
-                    "text": `Por favor, revisa y pule el siguiente texto.
+            updateButtonStates("processing_audio");
+            const polishPromptParts = [ /* ... */ ]; // Mismo prompt
+            polishPromptParts[0] = { "text": `Por favor, revisa y pule el siguiente texto.
 Instrucciones importantes:
 1.  Interpreta las siguientes palabras dictadas como signos de puntuación y formato:
     *   'coma' como ','
@@ -434,9 +507,8 @@ Instrucciones importantes:
 5.  Si el texto ya parece correcto, haz correcciones mínimas.
 
 Texto a pulir:
-"${transcribedText}"`
-                }
-            ];
+"${transcribedText}"`};
+
             let polishedResult = await callGeminiAPI(polishPromptParts, true);
             
             setStatus('Texto pulido recibido. Ajustes finales...', 'processing');
@@ -457,6 +529,6 @@ Texto a pulir:
     pauseResumeBtn.addEventListener('click', handlePauseResume);
     stopRecordBtn.addEventListener('click', stopRecording);
     
-    updateButtonStates("initial"); // Estado inicial de los botones
+    updateButtonStates("initial"); 
     console.log("Script inicializado y event listeners asignados.");
 });
