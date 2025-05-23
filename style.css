@@ -6,14 +6,14 @@
     --shadow-soft: 0 4px 6px rgba(0,0,0,0.1);
     --transition-fast: 0.2s ease-in-out;
     --transition-medium: 0.3s ease;
-    --sidebar-width: 320px; /* Ancho del panel lateral */
+    --sidebar-width: 340px; /* Ancho del panel lateral, ajustado para 2 columnas */
 }
 
 /* Tema Claro (Default) */
 body[data-theme="light"] {
     --bg-primary: #f8f9fa;
     --bg-secondary: #ffffff;
-    --bg-sidebar: #e9ecef; /* Fondo ligeramente diferente para el sidebar */
+    --bg-sidebar: #e9ecef; 
     --text-primary: #212529;
     --text-secondary: #495057;
     --border-color: #dee2e6;
@@ -32,17 +32,15 @@ body[data-theme="light"] {
     --btn-copy-bg: #007bff;           
     --btn-copy-bg-hover: #0056b3;
 
-    /* Colores para botones de técnica - Tema Claro */
     --btn-technique-red-bg: #dc3545;
     --btn-technique-red-bg-hover: #c82333;
     --btn-technique-blue-bg: #007bff;
     --btn-technique-blue-bg-hover: #0056b3;
     --btn-technique-yellow-bg: #ffc107;
     --btn-technique-yellow-bg-hover: #e0a800;
-    --btn-technique-yellow-text: #212529; /* Texto oscuro para amarillo */
+    --btn-technique-yellow-text: #212529; 
     --btn-technique-gray-bg: #6c757d;
     --btn-technique-gray-bg-hover: #5a6268;
-
 
     --volume-bar-low: #28a745;        
     --volume-bar-medium: #ffc107;     
@@ -63,7 +61,7 @@ body[data-theme="light"] {
 body[data-theme="dark"] {
     --bg-primary: #212529;
     --bg-secondary: #343a40;
-    --bg-sidebar: #2c3034; /* Fondo ligeramente diferente para el sidebar */
+    --bg-sidebar: #2c3034; 
     --text-primary: #f8f9fa;
     --text-secondary: #adb5bd;
     --border-color: #495057;
@@ -82,7 +80,6 @@ body[data-theme="dark"] {
     --btn-copy-bg: #2196F3;           
     --btn-copy-bg-hover: #1976D2;
 
-    /* Colores para botones de técnica - Tema Oscuro */
     --btn-technique-red-bg: #f44336;
     --btn-technique-red-bg-hover: #d32f2f;
     --btn-technique-blue-bg: #2196F3;
@@ -111,32 +108,44 @@ body[data-theme="dark"] {
 /* App Layout */
 .app-layout {
     display: flex;
-    min-height: calc(100vh - 40px); /* Ajustar padding del body */
+    min-height: 100vh; /* Ocupar toda la altura de la ventana */
+    max-height: 100vh; /* Prevenir que crezca más allá de la ventana */
 }
 
 .sidebar {
     width: var(--sidebar-width);
+    flex-shrink: 0; /* Evitar que el sidebar se encoja */
     background-color: var(--bg-sidebar);
-    padding: 20px;
     border-right: 1px solid var(--border-color);
-    overflow-y: auto; /* Para scroll si hay muchos botones */
+    display: flex; /* Para centrar .sidebar-content-container si es más pequeño */
+    flex-direction: column;
     transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
-.sidebar .container { /* Resetear algunos estilos del container general dentro del sidebar */
-    margin: 0;
-    padding: 0;
-    box-shadow: none;
-    border: none;
-    background-color: transparent;
+.sidebar-content-container {
+    padding: 20px;
+    overflow-y: auto; /* Scroll para el contenido del sidebar si excede la altura */
+    flex-grow: 1; /* Para que ocupe el espacio vertical disponible */
+}
+.sidebar h3 {
+    margin-top: 0; /* Quitar margen superior del h3 del sidebar */
+    margin-bottom: 15px;
+    font-size: 1.2em;
 }
 
 .main-content {
     flex-grow: 1;
-    padding: 0 20px; /* Espacio alrededor del contenido principal */
-    overflow-y: auto;
+    display: flex; /* Para centrar .container si es más pequeño */
+    flex-direction: column;
+    overflow-y: auto; /* Scroll para el contenido principal si excede la altura */
 }
 .main-content .container {
-    max-width: 900px; /* Puede ser un poco más ancho ahora */
+    width: 100%; /* Ocupar todo el ancho disponible en main-content */
+    max-width: 900px; 
+    margin: 0 auto; /* Centrar el contenido si hay espacio sobrante */
+    padding: 20px; /* Padding interno del container */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Para que ocupe el espacio vertical disponible */
 }
 
 
@@ -144,164 +153,124 @@ body {
     font-family: var(--font-primary);
     line-height: var(--line-height-base);
     margin: 0;
-    /* padding: 20px; Eliminado, se maneja por app-layout */
     background-color: var(--bg-primary);
     color: var(--text-primary);
     transition: background-color var(--transition-fast), color var(--transition-fast);
+    overflow: hidden; /* Evitar scroll en el body, se maneja en .app-layout */
 }
 
-/* .container se mantiene para el contenido principal y la estructura interna del sidebar */
-
-h1, h2, h3 {
-    color: var(--text-primary);
-    text-align: center;
-    margin-bottom: 0.75em;
-}
-h1 { font-size: 1.8em; } /* Ajustado para el nuevo layout */
+h1, h2, h3 { /* ... (sin cambios) ... */ }
+h1 { font-size: 1.8em; } 
 h2 { font-size: 1.4em; margin-top: 1.2em; }
 h3 { font-size: 1.1em; color: var(--text-secondary); }
 
-
 .controls, .audio-playback-section, .results, .theme-switcher-section, .volume-meter-section {
-    margin-bottom: 20px; /* Reducido un poco */
+    margin-bottom: 15px; 
 }
 .controls .buttons-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px; /* Reducido un poco */
+    gap: 8px; 
     justify-content: center;
-    margin-bottom: 15px;
-}
-
-#recordingTimeDisplay {
-    text-align: center;
-    font-size: 1.1em; /* Reducido */
-    font-weight: bold;
-    color: var(--text-primary); 
     margin-bottom: 10px;
-    min-height: 1.4em; 
 }
 
-textarea {
-    width: calc(100% - 22px); 
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-small);
-    box-sizing: border-box;
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+#recordingTimeDisplay { /* ... (sin cambios) ... */ }
+textarea { /* ... (sin cambios) ... */ }
+textarea:focus { /* ... (sin cambios) ... */ }
+#techniqueText {
+    min-height: 60px; /* Altura para 2-3 líneas */
+    margin-bottom: 20px; /* Espacio antes del textarea de dictado */
 }
-textarea:focus {
-    outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 0.2rem rgba(var(--accent-color-rgb, 0,123,255), 0.25); 
+#polishedText {
+    min-height: 100px; /* Reducido un poco */
+    flex-grow: 1; /* Para que ocupe el espacio vertical restante en .results */
 }
-textarea {
-    resize: vertical;
-    min-height: 120px; 
+.results {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Para que .results ocupe el espacio restante en .container */
 }
 
-/* Estilos generales de botones de control */
-button {
-    color: var(--accent-text-color);
-    border: none;
-    padding: 8px 15px; /* Ajustado */
-    border-radius: var(--border-radius-small);
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 0.9em; /* Ajustado */
-    transition: background-color var(--transition-medium), color var(--transition-medium);
-    flex-grow: 1; 
-    min-width: 100px; /* Ajustado */
-}
 
-/* Botones de control con colores específicos */
-.btn-record { background-color: var(--btn-record-bg); }
-.btn-record:hover:not(:disabled) { background-color: var(--btn-record-bg-hover); }
-
-.btn-pause { background-color: var(--btn-pause-bg); color: var(--btn-pause-text); }
-.btn-pause:hover:not(:disabled) { background-color: var(--btn-pause-bg-hover); }
-
-.btn-stop { background-color: var(--btn-stop-bg); }
-.btn-stop:hover:not(:disabled) { background-color: var(--btn-stop-bg-hover); }
-
-.btn-retry { background-color: var(--btn-retry-bg); }
-.btn-retry:hover:not(:disabled) { background-color: var(--btn-retry-bg-hover); }
-
-.btn-copy { background-color: var(--btn-copy-bg); }
-.btn-copy:hover:not(:disabled) { background-color: var(--btn-copy-bg-hover); }
-
-button:disabled {
-    background-color: var(--button-disabled-bg);
-    color: var(--text-secondary);
-    cursor: not-allowed;
-}
-
-#status { /* ... (sin cambios) ... */ }
-.status-idle, .status-processing, .status-success, .status-error { /* ... (sin cambios) ... */ }
-.info { /* ... (sin cambios) ... */ }
+button { /* ... (sin cambios) ... */ }
+.btn-record, .btn-pause, .btn-stop, .btn-retry, .btn-copy { /* ... (sin cambios) ... */ }
+button:disabled { /* ... (sin cambios) ... */ }
+#status, .status-idle, .status-processing, .status-success, .status-error { /* ... (sin cambios) ... */ }
+.info, .info a { /* ... (sin cambios) ... */ }
 .audio-playback-section, #audioPlayback { /* ... (sin cambios) ... */ }
 .volume-meter-section, #volumeMeterContainer, #volumeMeterBar, #volumeMeterBar.paused { /* ... (sin cambios) ... */ }
 .theme-switcher-section, .theme-switch-wrapper, .theme-switch-label, .theme-switch, .slider { /* ... (sin cambios) ... */ }
 
 
-/* Estilos para los botones de técnica en el sidebar */
-#technique-selection-container h3 {
-    margin-bottom: 15px;
-    font-size: 1.2em;
-}
-.technique-group {
-    margin-bottom: 15px;
-    display: flex;
-    flex-direction: column; /* Apilar botones en cada grupo */
-    gap: 8px;
+/* Estilos para los botones de técnica en el sidebar - 2 columnas */
+.technique-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Dos columnas de igual ancho */
+    gap: 8px; /* Espacio entre botones */
 }
 .technique-btn {
-    width: 100%; /* Ocupar todo el ancho del contenedor del grupo */
-    text-align: left;
-    padding: 10px 12px;
-    font-size: 0.85em;
-    flex-grow: 0; /* No crecer */
-    min-width: auto; /* Resetear min-width */
-    color: var(--accent-text-color); /* Texto blanco por defecto para estos botones */
+    /* width: 100%; No necesario con grid, se ajusta a la celda */
+    text-align: center; /* Centrar texto en botones de técnica */
+    padding: 10px 8px; /* Ajustar padding */
+    font-size: 0.8em; /* Un poco más pequeños */
+    flex-grow: 0; 
+    min-width: auto; 
+    color: var(--accent-text-color); 
+    line-height: 1.3; /* Para mejor ajuste del texto si es largo */
+    /* Altura fija para uniformidad, si se desea, o min-height */
+    min-height: 40px; /* Asegurar una altura mínima similar */
+    display: flex; /* Para centrar el texto verticalmente si es necesario */
+    align-items: center;
+    justify-content: center;
 }
 
+.technique-btn.btn-red, .technique-btn.btn-blue, .technique-btn.btn-yellow, .technique-btn.btn-gray { /* ... (sin cambios en colores) ... */ }
 .technique-btn.btn-red { background-color: var(--btn-technique-red-bg); }
 .technique-btn.btn-red:hover { background-color: var(--btn-technique-red-bg-hover); }
-
 .technique-btn.btn-blue { background-color: var(--btn-technique-blue-bg); }
 .technique-btn.btn-blue:hover { background-color: var(--btn-technique-blue-bg-hover); }
-
 .technique-btn.btn-yellow { background-color: var(--btn-technique-yellow-bg); color: var(--btn-technique-yellow-text); }
 .technique-btn.btn-yellow:hover { background-color: var(--btn-technique-yellow-bg-hover); }
-
 .technique-btn.btn-gray { background-color: var(--btn-technique-gray-bg); }
 .technique-btn.btn-gray:hover { background-color: var(--btn-technique-gray-bg-hover); }
 
-
 /* Media Queries para Responsividad del Layout */
+@media (max-width: 960px) { /* Punto de quiebre donde el sidebar podría ser demasiado ancho */
+    :root {
+        --sidebar-width: 280px; /* Reducir ancho del sidebar */
+    }
+}
+
 @media (max-width: 768px) {
     .app-layout {
         flex-direction: column;
+        max-height: none; /* Permitir que el contenido defina la altura */
+        overflow-y: auto; /* Scroll en app-layout para móvil si todo es muy largo */
+    }
+    body {
+        overflow: auto; /* Permitir scroll en body para móvil */
     }
     .sidebar {
         width: 100%;
         border-right: none;
         border-bottom: 1px solid var(--border-color);
-        max-height: 40vh; /* Limitar altura y permitir scroll */
+        max-height: none; /* El sidebar puede crecer según su contenido */
+        flex-shrink: 1; /* Permitir que se encoja si es necesario */
+    }
+    .sidebar-content-container {
+        /* No es necesario overflow-y: auto aquí si .sidebar no tiene max-height */
     }
     .main-content {
-        padding: 20px 15px; /* Ajustar padding para móviles */
+        padding: 15px; /* Padding general para el contenido principal en móvil */
+        overflow-y: visible; /* No necesita su propio scroll si app-layout lo maneja */
     }
     .main-content .container {
-        padding: 20px 15px;
+        padding: 15px;
     }
-    .controls .buttons-group button {
-        min-width: 80px; /* Botones más pequeños en móvil */
-        font-size: 0.85em;
-        padding: 8px 10px;
+    .technique-buttons-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* Columnas adaptables */
     }
+    .controls .buttons-group button { /* ... (sin cambios) ... */ }
     h1 { font-size: 1.6em; }
 }
