@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transcripción Avanzada con Gemini</title>
+    <title>Dictado y Transcripción Avanzada con Gemini</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body data-theme="light"> <!-- El tema se establecerá por JS -->
+<body data-theme="light">
 
     <div class="theme-switcher-section">
         <div class="theme-switch-wrapper">
@@ -19,14 +19,17 @@
     </div>
 
     <div class="container">
-        <h1>Transcripción y Pulido con IA</h1>
+        <h1>Dictado y Transcripción con IA</h1>
         
         <p class="info"><strong>Advertencia:</strong> La API Key está integrada directamente en el código para pruebas. Para producción, considera un backend. <a href="https://aistudio.google.com/app/apikey" target="_blank">Obtén tu API Key aquí</a>.</p>
 
         <div class="controls">
-            <button id="startRecordBtn">Empezar a Grabar</button>
-            <button id="stopRecordBtn" disabled>Detener Grabación</button>
-            <button id="retryProcessBtn" disabled>Reintentar Procesamiento</button>
+            <div class="buttons-group">
+                <button id="startRecordBtn">Empezar a Grabar</button>
+                <button id="pauseResumeBtn" class="secondary" disabled>Pausar</button>
+                <button id="stopRecordBtn" disabled>Detener Grabación</button>
+                <button id="retryProcessBtn" class="secondary" disabled>Reintentar Procesamiento</button>
+            </div>
             <p id="status" class="status-idle">Estado: Esperando para grabar...</p>
         </div>
 
