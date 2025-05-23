@@ -20,6 +20,8 @@ body[data-theme="light"] {
     --accent-text-color: #ffffff;
     --button-secondary-bg: #6c757d;
     --button-secondary-bg-hover: #5a6268;
+    --button-copy-bg: #28a745; /* Verde para copiar */
+    --button-copy-bg-hover: #218838;
     --success-bg: #d4edda;
     --success-text: #155724;
     --error-bg: #f8d7da;
@@ -43,6 +45,8 @@ body[data-theme="dark"] {
     --accent-text-color: #ffffff;
     --button-secondary-bg: #5a6268;
     --button-secondary-bg-hover: #495057;
+    --button-copy-bg: #208335; /* Verde más oscuro para tema oscuro */
+    --button-copy-bg-hover: #1c7430;
     --success-bg: #14301c; 
     --success-text: #a3cfbb;
     --error-bg: #3b1518;   
@@ -90,10 +94,19 @@ h3 { font-size: 1.1em; color: var(--text-secondary); }
 .controls .buttons-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px; /* Espacio entre botones */
-    justify-content: center; /* Centrar grupo de botones */
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 15px; /* Espacio antes del temporizador y estado */
 }
 
+#recordingTimeDisplay {
+    text-align: center;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: var(--accent-color);
+    margin-bottom: 10px;
+    min-height: 1.5em; /* Para evitar saltos de layout cuando aparece/desaparece */
+}
 
 label {
     display: block;
@@ -131,22 +144,29 @@ button {
     padding: 10px 18px;
     border-radius: var(--border-radius-small);
     cursor: pointer;
-    /* margin-right: 10px; Reemplazado por gap en .buttons-group */
     font-weight: 500;
     font-size: 0.95em;
     transition: background-color var(--transition-medium);
-    flex-grow: 1; /* Para que los botones se distribuyan mejor si son pocos */
-    min-width: 120px; /* Ancho mínimo para que no se vean muy pequeños */
+    flex-grow: 1; 
+    min-width: 120px; 
 }
-/* button:last-child {
-    margin-right: 0;
-} */
 
 button.secondary {
     background-color: var(--button-secondary-bg);
 }
 button.secondary:hover:not(:disabled) {
     background-color: var(--button-secondary-bg-hover);
+}
+
+button.copy-btn {
+    background-color: var(--button-copy-bg);
+    min-width: auto; /* Permitir que sea más pequeño si es necesario */
+    flex-grow: 0; /* No crecer tanto como otros botones */
+    padding: 8px 12px;
+    font-size: 0.9em;
+}
+button.copy-btn:hover:not(:disabled) {
+    background-color: var(--button-copy-bg-hover);
 }
 
 
@@ -161,7 +181,7 @@ button:disabled {
 }
 
 #status {
-    margin-top: 15px;
+    margin-top: 10px; /* Reducido un poco ya que el timer está arriba */
     padding: 10px 12px;
     border-radius: var(--border-radius-small);
     font-weight: 600;
@@ -169,23 +189,10 @@ button:disabled {
     transition: background-color var(--transition-medium), color var(--transition-medium);
 }
 
-.status-idle {
-    font-style: normal;
-    color: var(--idle-text);
-    background-color: var(--idle-bg);
-}
-.status-processing {
-    color: var(--processing-text);
-    background-color: var(--processing-bg);
-}
-.status-success {
-    color: var(--success-text);
-    background-color: var(--success-bg);
-}
-.status-error {
-    color: var(--error-text);
-    background-color: var(--error-bg);
-}
+.status-idle { font-style: normal; color: var(--idle-text); background-color: var(--idle-bg); }
+.status-processing { color: var(--processing-text); background-color: var(--processing-bg); }
+.status-success { color: var(--success-text); background-color: var(--success-bg); }
+.status-error { color: var(--error-text); background-color: var(--error-bg); }
 
 .info {
     font-size: 0.9em;
@@ -194,108 +201,40 @@ button:disabled {
     padding: 10px;
     border-radius: var(--border-radius-small);
     border-left: 4px solid var(--accent-color);
-    margin-bottom: 20px; /* Añadido margen inferior */
+    margin-bottom: 20px; 
 }
-.info a {
-    color: var(--accent-color);
-    text-decoration: none;
-}
-.info a:hover {
-    text-decoration: underline;
-}
+.info a { color: var(--accent-color); text-decoration: none; }
+.info a:hover { text-decoration: underline; }
 
-.audio-playback-section {
-    text-align: center;
-}
-#audioPlayback {
-    width: 100%;
-    max-width: 500px;
-    margin-top: 10px;
-}
+.audio-playback-section { text-align: center; }
+#audioPlayback { width: 100%; max-width: 500px; margin-top: 10px; }
+body[data-theme="dark"] #audioPlayback { filter: invert(1) hue-rotate(180deg); }
 
-body[data-theme="dark"] #audioPlayback {
-    filter: invert(1) hue-rotate(180deg); 
-}
+.volume-meter-section { text-align: center; }
+#volumeMeterContainer { width: 80%; max-width: 300px; height: 20px; background-color: var(--idle-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius-small); margin: 10px auto; overflow: hidden; }
+#volumeMeterBar { width: 0%; height: 100%; background-color: var(--accent-color); transition: width 0.05s linear; }
+#volumeMeterBar.paused { background-color: var(--button-secondary-bg); }
 
-
-/* Volume Meter */
-.volume-meter-section {
-    text-align: center;
-}
-#volumeMeterContainer {
-    width: 80%;
-    max-width: 300px;
-    height: 20px;
-    background-color: var(--idle-bg);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-small);
-    margin: 10px auto;
-    overflow: hidden; 
-}
-#volumeMeterBar {
-    width: 0%;
-    height: 100%;
-    background-color: var(--accent-color);
-    transition: width 0.05s linear; 
-}
-#volumeMeterBar.paused {
-    background-color: var(--button-secondary-bg); /* Color diferente cuando está pausado */
-}
-
-
-/* Theme Switcher */
-.theme-switcher-section {
-    position: fixed;
-    top: 15px;
-    right: 20px;
-    z-index: 1000;
-}
-.theme-switch-wrapper {
-    display: flex;
-    align-items: center;
-}
-.theme-switch-label {
-    margin-right: 8px;
-    font-size: 0.9em;
-    color: var(--text-secondary);
-}
-.theme-switch {
-    display: inline-block;
-    height: 24px;
-    position: relative;
-    width: 44px;
-}
-.theme-switch input {
-    display:none;
-}
-.slider {
-    background-color: #ccc; 
-    bottom: 0;
-    cursor: pointer;
-    left: 0;
-    position: absolute;
-    right: 0;
-    top: 0;
-    transition: .4s;
-    border-radius: 24px;
-}
-.slider:before {
-    background-color: white;
-    bottom: 3px; 
-    content: "";
-    height: 18px; 
-    left: 3px;  
-    position: absolute;
-    transition: .4s;
-    width: 18px; 
-    border-radius: 50%;
-}
-input:checked + .slider {
-    background-color: var(--accent-color);
-}
-input:checked + .slider:before {
-    transform: translateX(20px); 
-}
+.theme-switcher-section { position: fixed; top: 15px; right: 20px; z-index: 1000; }
+.theme-switch-wrapper { display: flex; align-items: center; }
+.theme-switch-label { margin-right: 8px; font-size: 0.9em; color: var(--text-secondary); }
+.theme-switch { display: inline-block; height: 24px; position: relative; width: 44px; }
+.theme-switch input { display:none; }
+.slider { background-color: #ccc; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 24px; }
+.slider:before { background-color: white; bottom: 3px; content: ""; height: 18px; left: 3px; position: absolute; transition: .4s; width: 18px; border-radius: 50%; }
+input:checked + .slider { background-color: var(--accent-color); }
+input:checked + .slider:before { transform: translateX(20px); }
 body[data-theme="light"] .slider { background-color: #ccc; }
 body[data-theme="dark"] .slider { background-color: #555; } 
 body[data-theme="dark"] input:checked + .slider { background-color: var(--accent-color); }
+
+.polished-text-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5em; /* Ajustar según sea necesario */
+}
+.polished-text-header h2 {
+    margin-bottom: 0; /* Quitar margen inferior del h2 */
+    text-align: left; /* Alinear a la izquierda si es necesario */
+}
