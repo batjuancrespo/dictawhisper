@@ -20,25 +20,22 @@
 
     <div class="app-layout">
         <aside class="sidebar" id="technique-sidebar">
-            <div class="container" id="technique-selection-container">
+            <div class="sidebar-content-container"> <!-- Nuevo contenedor para padding y scroll interno -->
                 <h3>Seleccionar Técnica</h3>
-                <div id="techniqueButtons">
-                    <div class="technique-group">
-                        <button class="technique-btn btn-red" data-technique-text="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Abd Art+Portal</button>
-                        <button class="technique-btn btn-red" data-technique-text="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase portal.">Abd Portal</button>
-                        <button class="technique-btn btn-red" data-technique-text="Se realiza exploración toracoabdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Tórax+Abd Art+Portal</button>
-                        <button class="technique-btn btn-red" data-technique-text="Se realiza exploración sin administración endovenosa de contraste con adquisición de imágenes en reposo y durante maniobra de Valsalva.">Abd Hernia</button>
-                        <button class="technique-btn btn-red" data-technique-text="Se realiza exploración sin y tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Abd 3 Fases</button>
-                        <button class="technique-btn btn-blue" data-technique-text="Exploración ecográfica con sonda multifrecuencia.">Eco Abd</button>
-                    </div>
-                    <div class="technique-group">
-                        <button class="technique-btn btn-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM Hepática</button>
-                        <button class="technique-btn btn-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, estudio dinámico tras la administración endovenosa de contraste completándose la valoración con cortes radiales respecto al colédoco orientados a la valoración de la via biliar.">ColangioRM</button>
-                        <button class="technique-btn btn-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T2, difusión y estudio dinámico tras la administración endovenosa de contraste previa distensión de las asas intestinales. Exploración orientada a la valoración de asas de intestino delgado.">EnteroRM</button>
-                        <button class="technique-btn btn-yellow" data-technique-text="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa y difusión.">RM Fístulas</button>
-                        <button class="technique-btn btn-yellow" data-technique-text="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa en los tres planos del espacio, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM Neo Pelvis</button>
-                        <button id="clearHeaderButton" class="technique-btn btn-gray">Borrar Técnica</button>
-                    </div>
+                <div id="techniqueButtons" class="technique-buttons-grid">
+                    <!-- Los botones se agruparán por JS o se pueden mantener los divs .technique-group si se prefiere -->
+                    <button class="technique-btn btn-red" data-technique-text="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Abd Art+Portal</button>
+                    <button class="technique-btn btn-red" data-technique-text="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase portal.">Abd Portal</button>
+                    <button class="technique-btn btn-red" data-technique-text="Se realiza exploración toracoabdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Tórax+Abd Art+Portal</button>
+                    <button class="technique-btn btn-red" data-technique-text="Se realiza exploración sin administración endovenosa de contraste con adquisición de imágenes en reposo y durante maniobra de Valsalva.">Abd Hernia</button>
+                    <button class="technique-btn btn-red" data-technique-text="Se realiza exploración sin y tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Abd 3 Fases</button>
+                    <button class="technique-btn btn-blue" data-technique-text="Exploración ecográfica con sonda multifrecuencia.">Eco Abd</button>
+                    <button class="technique-btn btn-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM Hepática</button>
+                    <button class="technique-btn btn-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, estudio dinámico tras la administración endovenosa de contraste completándose la valoración con cortes radiales respecto al colédoco orientados a la valoración de la via biliar.">ColangioRM</button>
+                    <button class="technique-btn btn-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T2, difusión y estudio dinámico tras la administración endovenosa de contraste previa distensión de las asas intestinales. Exploración orientada a la valoración de asas de intestino delgado.">EnteroRM</button>
+                    <button class="technique-btn btn-yellow" data-technique-text="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa y difusión.">RM Fístulas</button>
+                    <button class="technique-btn btn-yellow" data-technique-text="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa en los tres planos del espacio, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM Neo Pelvis</button>
+                    <button id="clearTechniqueButton" class="technique-btn btn-gray">Borrar Técnica</button> <!-- Renombrado ID para claridad -->
                 </div>
             </div>
         </aside>
@@ -74,8 +71,11 @@
                 </div>
 
                 <div class="results">
-                    <h2>Texto Final Pulido (Editable):</h2>
-                    <textarea id="polishedText" rows="10" placeholder="Aquí aparecerá el texto final transcrito y pulido..."></textarea>
+                    <h2>Técnica Empleada:</h2> <!-- Nuevo Título -->
+                    <textarea id="techniqueText" rows="3" placeholder="La técnica seleccionada aparecerá aquí..."></textarea> <!-- Nuevo Textarea -->
+                    
+                    <h2>Texto Final Pulido (Dictado):</h2>
+                    <textarea id="polishedText" rows="8" placeholder="Aquí aparecerá el texto final transcrito y pulido..."></textarea> <!-- Reducido rows -->
                 </div>
             </div>
         </main>
