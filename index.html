@@ -18,15 +18,17 @@
         </div>
     </div>
 
-    <div class="container-wrapper"> <!-- Este wrapper ahora es el principal para centrar -->
-        <h1>
-            <img id="mainTitleImage" src="batmanneal.jpg" alt="Logo Tema Claro">
-            Dictado IA
-            <img id="mainTitleImageDark" src="joker.jpg" alt="Logo Tema Oscuro" style="display:none;">
-        </h1>
+    <div class="container-wrapper">
+        <div id="title-frame"> <!-- Marco del título -->
+            <h1>
+                <img id="mainTitleImage" src="batmanneal.jpg" alt="Logo Tema Claro">
+                Dictado IA
+                <img id="mainTitleImageDark" src="joker.jpg" alt="Logo Tema Oscuro" style="display:none;">
+            </h1>
+        </div>
         <p class="info"><strong>Advertencia:</strong> API Key en código. Para producción, usar backend.</p>
 
-        <div class="app-layout"> <!-- app-layout ahora solo agrupa verticalmente los contenedores -->
+        <div class="app-layout"> 
             
             <div class="container controls">
                 <div class="buttons-group">
@@ -52,12 +54,10 @@
                 <audio id="audioPlayback" controls></audio>
             </div>
             
-            <!-- Sección de Técnica ahora aquí -->
             <div class="container technique-section">
                 <h3>Técnica Aplicada:</h3>
                 <textarea id="headerArea" rows="4" placeholder="Selecciona una técnica o escribe aquí..."></textarea>
                 <div id="techniqueButtons">
-                    <!-- Grupo 1 -->
                     <div class="technique-group">
                         <button class="btn-tech-red" data-technique-text="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Abd Art+Portal</button>
                         <button class="btn-tech-red" data-technique-text="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase portal.">Abd Portal</button>
@@ -66,7 +66,6 @@
                         <button class="btn-tech-red" data-technique-text="Se realiza exploración sin y tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Abd 3 Fases</button>
                         <button class="btn-tech-blue" data-technique-text="Exploración ecográfica con sonda multifrecuencia.">Eco Abd</button>
                     </div>
-                    <!-- Grupo 2 -->
                     <div class="technique-group">
                         <button class="btn-tech-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM Hepática</button>
                         <button class="btn-tech-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, estudio dinámico tras la administración endovenosa de contraste completándose la valoración con cortes radiales respecto al colédoco orientados a la valoración de la via biliar.">ColangioRM</button>
@@ -78,13 +77,13 @@
                 </div>
             </div>
     
-            <div class="container results"> <!-- results es el contenedor del texto pulido -->
+            <div class="container results"> 
                 <h2>Texto del Informe:</h2>
                 <textarea id="polishedText" placeholder="El informe dictado y pulido aparecerá aquí..."></textarea>
             </div>
 
-        </div> <!-- Fin de app-layout -->
-    </div> <!-- Fin de container-wrapper -->
+        </div> 
+    </div> 
 
     <script src="script.js"></script>
 </body>
