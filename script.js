@@ -12,11 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeSwitch = document.getElementById('themeSwitch');
     const volumeMeterBar = document.getElementById('volumeMeterBar');
     const recordingTimeDisplay = document.getElementById('recordingTimeDisplay'); 
-    const headerArea = document.getElementById('headerArea'); // Nuevo: textarea de técnica
-    const techniqueButtonsContainer = document.getElementById('techniqueButtons'); // Nuevo: contenedor de botones de técnica
-    const clearHeaderButton = document.getElementById('clearHeaderButton'); // Nuevo: botón borrar técnica
-    const mainTitleImage = document.getElementById('main-title-image');
-    const mainTitleImageDark = document.getElementById('main-title-image-dark');
+    const headerArea = document.getElementById('headerArea'); 
+    const techniqueButtonsContainer = document.getElementById('techniqueButtons'); 
+    const clearHeaderButton = document.getElementById('clearHeaderButton'); 
+    const mainTitleImage = document.getElementById('mainTitleImage');
+    const mainTitleImageDark = document.getElementById('mainTitleImageDark');
 
 
     if (!polishedTextarea || !statusDiv || !startRecordBtn || !pauseResumeBtn || !stopRecordBtn || !retryProcessBtn || !copyPolishedTextBtn || !audioPlayback || !themeSwitch || !volumeMeterBar || !recordingTimeDisplay || !headerArea || !techniqueButtonsContainer || !clearHeaderButton || !mainTitleImage || !mainTitleImageDark) {
@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
         themeSwitch.checked = theme === 'dark';
-        // Cambiar visibilidad de imágenes del título
         mainTitleImage.style.display = theme === 'light' ? 'inline-block' : 'none';
         mainTitleImageDark.style.display = theme === 'dark' ? 'inline-block' : 'none';
     }
@@ -54,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const preferredTheme = localStorage.getItem('theme') || 
                            (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    applyTheme(preferredTheme); // Aplicar al cargar
+    applyTheme(preferredTheme); 
     
     function setAccentRGB() {
         const accentColor = getComputedStyle(document.body).getPropertyValue('--accent-color').trim();
@@ -86,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Status updated: ${message} (type: ${type})`);
         if (duration > 0) {
             setTimeout(() => {
-                if (statusDiv.textContent === message) { // Solo limpiar si el mensaje no ha cambiado
+                if (statusDiv.textContent === message) { 
                     updateButtonStates("initial"); 
                 }
             }, duration);
@@ -173,8 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Solicitando permiso para grabar...");
         setStatus("Solicitando permiso para grabar...", "processing");
         isPaused = false;
-        polishedTextarea.value = ''; // Limpiar área de informe principal
-        // No limpiamos headerArea aquí, el usuario puede querer mantener la técnica
+        polishedTextarea.value = ''; 
         audioChunks = [];
         currentAudioBlob = null;
         recordingSeconds = 0; 
@@ -263,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     async function processAudioBlob(audioBlob) {
-        polishedTextarea.value = ''; // Limpiar solo el área de texto principal
+        polishedTextarea.value = ''; 
         setStatus('Preparando audio para enviar...', 'processing');
         updateButtonStates("processing_audio");
         
@@ -321,39 +319,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const reportText = polishedTextarea.value.trim();
         let textToCopy = "";
 
-        if (headerText && reportText) {
-            textToCopy = headerText + "\n\n" + reportText;
-        } else if (reportText) {
-            textToCopy = reportText;
-        } else if (headerText) {
-            textToCopy = headerText;
-        }
+        if (headerText && reportText) { textToCopy = headerText + "\n\n" + reportText; }
+        else if (reportText) { textToCopy = reportText; }
+        else if (headerText) { textToCopy = headerText; }
 
-        if (textToCopy === '') {
-            setStatus("Nada que copiar. Ambas áreas de texto están vacías.", "idle", 3000);
-            return;
-        }
-        try {
-            await navigator.clipboard.writeText(textToCopy);
-            setStatus("¡Texto completo copiado!", "success", 3000);
-        } catch (err) {
-            console.error('Error al copiar texto: ', err);
-            setStatus("Error al copiar texto. Inténtalo manualmente.", "error", 3000);
-        }
+        if (textToCopy === '') { setStatus("Nada que copiar. Ambas áreas de texto están vacías.", "idle", 3000); return; }
+        try { await navigator.clipboard.writeText(textToCopy); setStatus("¡Texto completo copiado!", "success", 3000); }
+        catch (err) { console.error('Error al copiar texto: ', err); setStatus("Error al copiar texto. Inténtalo manualmente.", "error", 3000); }
     });
 
-    // --- Listener para botones de técnica ---
     techniqueButtonsContainer.addEventListener('click', (event) => {
         if (event.target.tagName === 'BUTTON' && event.target.dataset.techniqueText) {
-            headerArea.value = event.target.dataset.techniqueText;
-            headerArea.focus(); // Opcional: poner foco en el textarea
+            headerArea.value = event.target.dataset.techniqueText; headerArea.focus(); 
         }
     });
-    clearHeaderButton.addEventListener('click', () => {
-        headerArea.value = "";
-        headerArea.focus();
-    });
-
+    clearHeaderButton.addEventListener('click', () => { headerArea.value = ""; headerArea.focus(); });
 
     function blobToBase64(blob) {
         return new Promise((resolve, reject) => {
