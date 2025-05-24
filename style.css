@@ -3,52 +3,32 @@
     --line-height-base: 1.6;
     --border-radius-small: 4px;
     --border-radius-medium: 8px;
-    --shadow-soft: 0 4px 12px rgba(0,0,0,0.15); /* Sombra un poco más pronunciada */
+    --shadow-soft: 0 4px 12px rgba(0,0,0,0.15); 
     --transition-fast: 0.2s ease-in-out;
     --transition-medium: 0.3s ease;
 }
 
 /* Tema Oscuro (Estilo Principal a Replicar de la Imagen) */
 body[data-theme="dark"] {
-    --bg-primary: #22272e; /* Fondo general muy oscuro */
-    --bg-secondary: #2d333b; /* Fondo de los contenedores/tarjetas */
-    --text-primary: #adbac7; /* Texto principal claro */
-    --text-secondary: #768390; /* Texto secundario/muted */
-    --border-color: #444c56; /* Borde de contenedores y elementos */
-    --border-light-color: #373e47; /* Borde más sutil para divisiones internas */
-    --accent-color: #539bf5; /* Azul brillante para acentos, links, focus */
-    --accent-text-color: #ffffff; /* Texto para botones con fondo de color */
-
-    /* Colores específicos de botones de control principal - Tema Oscuro */
-    --btn-record-bg: #377ef0;         /* Azul (Empezar/Detener) */
-    --btn-record-bg-hover: #539bf5;
-    --btn-pause-bg: #d9971a;          /* Amarillo (Pausar) */
-    --btn-pause-bg-hover: #f0b72f;
-    --btn-pause-text: #22272e;        /* Texto oscuro para amarillo */
-    --btn-stop-bg: #e5534b;           /* Rojo (Detener, si se diferencia de empezar) */
-    --btn-stop-bg-hover: #f47067;
-    --btn-retry-bg: #4387d9;          /* Azul/Info (Reintentar) */
-    --btn-retry-bg-hover: #539bf5;
-    --btn-copy-bg: #ffc107;           /* Amarillo Naranja (Copiar, como en la imagen) */
-    --btn-copy-bg-hover: #e0a800;
-    --btn-copy-text: #22272e;         /* Texto oscuro para este amarillo/naranja */
-    
-    /* Colores para botones de técnica (similares a la imagen) */
-    --btn-technique-red-bg: #e5534b; 
-    --btn-technique-red-hover: #f47067;
-    --btn-technique-yellow-bg: #d9971a;
-    --btn-technique-yellow-hover: #f0b72f;
-    --btn-technique-yellow-text: #22272e;
-    --btn-technique-blue-bg: #377ef0;
-    --btn-technique-blue-hover: #539bf5;
-    --btn-technique-gray-bg: #444c56;
-    --btn-technique-gray-hover: #5d6774;
-    --btn-technique-text: var(--accent-text-color); /* Texto blanco para botones de técnica con fondo oscuro */
-
-    --volume-bar-low: #347d39;        /* Verde oscuro */
-    --volume-bar-medium: #d9971a;     /* Amarillo oscuro */
-    --volume-bar-high: #e5534b;       /* Rojo oscuro */
-    
+    --bg-primary: #22272e; 
+    --bg-secondary: #2d333b; 
+    --text-primary: #adbac7; 
+    --text-secondary: #768390; 
+    --border-color: #444c56; 
+    --border-light-color: #373e47; 
+    --accent-color: #539bf5; 
+    --accent-text-color: #ffffff; 
+    --btn-record-bg: #377ef0; --btn-record-bg-hover: #539bf5;
+    --btn-pause-bg: #d9971a; --btn-pause-bg-hover: #f0b72f; --btn-pause-text: #22272e; 
+    --btn-stop-bg: #e5534b; --btn-stop-bg-hover: #f47067;
+    --btn-retry-bg: #4387d9; --btn-retry-bg-hover: #539bf5;
+    --btn-copy-bg: #ffc107; --btn-copy-bg-hover: #e0a800; --btn-copy-text: #22272e; 
+    --btn-technique-red-bg: #e5534b; --btn-technique-red-hover: #f47067;
+    --btn-technique-yellow-bg: #d9971a; --btn-technique-yellow-hover: #f0b72f; --btn-technique-yellow-text: #22272e;
+    --btn-technique-blue-bg: #377ef0; --btn-technique-blue-hover: #539bf5;
+    --btn-technique-gray-bg: #444c56; --btn-technique-gray-hover: #5d6774;
+    --btn-technique-text: var(--accent-text-color); 
+    --volume-bar-low: #347d39; --volume-bar-medium: #d9971a; --volume-bar-high: #e5534b; 
     --success-bg: #14301c; --success-text: #a3cfbb;
     --error-bg: #3b1518; --error-text: #f1b0b7;
     --processing-bg: #002752; --processing-text: #b8d4fe;
@@ -61,9 +41,9 @@ body[data-theme="dark"] {
     --switch-bg: #444c56; --switch-thumb-bg: #768390; --switch-checked-bg: #377ef0;
 }
 
-/* Tema Claro (Alternativo, si se implementa el switch) */
+/* Tema Claro (Alternativo) */
 body[data-theme="light"] {
-    --bg-primary: #f4f8fa; /* Un blanco ligeramente azulado/grisáceo */
+    --bg-primary: #f4f8fa; 
     --bg-secondary: #ffffff;
     --text-primary: #2f363d;
     --text-secondary: #5c6975;
@@ -75,9 +55,8 @@ body[data-theme="light"] {
     --btn-pause-bg: #ffc107; --btn-pause-bg-hover: #e0a800; --btn-pause-text: #212529; 
     --btn-stop-bg: #dc3545; --btn-stop-bg-hover: #c82333;
     --btn-retry-bg: #17a2b8; --btn-retry-bg-hover: #138496;
-    --btn-copy-bg: #fd7e14;   /* Naranja para copiar en tema claro */
-    --btn-copy-bg-hover: #e66f0d;
-    --btn-copy-text: #ffffff;
+    --btn-copy-bg: #fd7e14;   
+    --btn-copy-bg-hover: #e66f0d; --btn-copy-text: #ffffff;
     --btn-technique-red-bg: #dc3545; --btn-technique-red-hover: #c82333;
     --btn-technique-yellow-bg: #ffc107; --btn-technique-yellow-hover: #e0a800; --btn-technique-yellow-text: #212529;
     --btn-technique-blue-bg: #17a2b8; --btn-technique-blue-hover: #138496;
@@ -106,31 +85,32 @@ body {
     transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
-.app-wrapper { /* Nuevo wrapper para centrar todo el contenido de la app */
+.app-wrapper {
     display: flex;
     flex-direction: column;
-    align-items: center; /* Centrar el app-layout horizontalmente */
+    align-items: center; 
     width: 100%;
 }
 
+/* Layout de dos columnas */
 .app-layout {
     display: flex;
-    flex-direction: row;
+    flex-direction: row; /* Columnas lado a lado */
     gap: 25px; 
     width: 100%;
-    max-width: 1300px; /* Ancho máximo aumentado para acomodar dos columnas bien */
-    margin-top: 20px;
+    max-width: 1300px; 
+    margin-top: 20px; /* Espacio después del título */
 }
 
 .main-column {
-    flex: 2.5; /* Darle un poco más de peso que a la sidebar */
+    flex: 2.5; /* Columna principal más ancha */
     display: flex;
     flex-direction: column;
     gap: 20px; 
 }
 
 .sidebar-column {
-    flex: 1; 
+    flex: 1; /* Columna lateral más estrecha */
     position: sticky; 
     top: 20px; 
     align-self: flex-start; 
@@ -139,22 +119,23 @@ body {
     gap: 20px;
 }
 
+
 .container { 
     background-color: var(--bg-secondary);
-    padding: 20px 25px; /* Más padding horizontal */
+    padding: 20px 25px; 
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--border-color);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Sombra más sutil para los containers */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
     transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 body[data-theme="dark"] .container {
-     box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* Sombra un poco más visible en oscuro */
+     box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
 }
 
 
 #title-frame {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary); /* Usar el color de fondo de los contenedores */
+    border: 1px solid var(--border-color); /* Borde igual a los contenedores */
     border-radius: var(--border-radius-medium);
     padding: 15px 20px; 
     display: flex;
@@ -162,14 +143,15 @@ body[data-theme="dark"] .container {
     justify-content: center; 
     box-shadow: var(--shadow-soft);
     width: 100%;
-    max-width: 1300px; /* Coincidir con app-layout */
+    max-width: 1300px; 
     box-sizing: border-box;
+    margin-bottom: 20px; /* Espacio antes del app-layout */
 }
 
 #title-frame h1 { 
-    font-size: 1.8em; /* Ligeramente más pequeño que antes */
+    font-size: 1.8em; 
     color: var(--text-primary);
-    font-weight: 600; /* Un poco menos bold */
+    font-weight: 600; 
     text-align: center;
     margin: 0; 
     line-height: 1.2; 
@@ -183,12 +165,12 @@ body[data-theme="dark"] .container {
 
 
 #mainTitleImage, #mainTitleImageDark {
-    height: 40px; /* Tamaño fijo para la imagen del título */
-    width: 40px;  /* Tamaño fijo */
-    margin-left: 15px; /* Imagen a la derecha del texto */
+    height: 40px; 
+    width: 40px;  
+    margin-left: 15px; 
     border-radius: var(--border-radius-small);
     border: 1px solid var(--theme-image-border);
-    object-fit: cover; /* cover para llenar el espacio, o contain si prefieres verla completa */
+    object-fit: cover; 
 }
 
 h2 { 
@@ -196,7 +178,7 @@ h2 {
     margin-top: 0; 
     color: var(--text-primary);
     text-align: center;
-    margin-bottom: 15px; /* Más espacio debajo de h2 */
+    margin-bottom: 15px; 
     font-weight: 500;
 }
 h3 { 
@@ -204,22 +186,22 @@ h3 {
     color: var(--text-secondary); 
     border-bottom: 1px solid var(--border-light-color);
     padding-bottom: 10px;
-    text-align: left; /* Alinear a la izquierda como en la imagen */
+    text-align: left; 
     margin-top: 0;
     margin-bottom: 15px;
     font-weight: 500;
 }
 
 .controls .buttons-group {
-    display: grid; /* Usar grid para mejor control de botones */
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); /* Columnas flexibles */
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
     gap: 12px;
     margin-bottom: 15px;
 }
 
 #recordingTimeDisplay {
     text-align: center;
-    font-size: 1.1em; /* Ligeramente más pequeño */
+    font-size: 1.1em; 
     font-weight: 500;
     color: var(--text-secondary);
     margin-bottom: 10px;
@@ -227,17 +209,17 @@ h3 {
 }
 
 textarea {
-    width: 100%; /* Ocupar todo el ancho disponible en su contenedor */
+    width: 100%; 
     padding: 12px;
-    margin-bottom: 10px; /* Menos margen inferior */
+    margin-bottom: 10px; 
     border: 1px solid var(--input-border);
     border-radius: var(--border-radius-small);
     box-sizing: border-box;
     background-color: var(--input-bg); 
     color: var(--input-text);
     transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
-    font-family: var(--font-primary); /* Asegurar misma fuente */
-    font-size: 1em; /* Tamaño de fuente base para textareas */
+    font-family: var(--font-primary); 
+    font-size: 1em; 
     line-height: 1.5;
 }
 textarea:focus {
@@ -248,11 +230,11 @@ textarea:focus {
 
 #polishedText { 
     min-height: 250px; 
-    font-size: 1.05em; /* Un poco más grande para el informe final */
+    font-size: 1.05em; 
 }
-#headerArea { 
-    min-height: 100px; /* Un poco más alto */
-    margin-bottom: 0; /* Sin margen si es el último */
+#headerArea { /* Textarea para la técnica, ahora en la columna principal */
+    min-height: 100px; 
+    margin-bottom: 0; /* Sin margen inferior si es el último en su contenedor antes de otro h3 */
 }
 
 button {
@@ -265,31 +247,22 @@ button {
     font-size: 0.95em; 
     transition: background-color var(--transition-medium), color var(--transition-medium), transform 0.1s ease;
     text-align: center;
-    width: 100%; /* Hacer que los botones en grid ocupen su celda */
+    width: 100%; 
 }
 button:active:not(:disabled) {
-    transform: translateY(1px); /* Pequeño efecto de pulsación */
+    transform: translateY(1px); 
 }
 
-.btn-record { background-color: var(--btn-record-bg); } /* Empezar */
-.btn-record.stop-style { background-color: var(--btn-stop-bg); } /* Detener */
+.btn-record { background-color: var(--btn-record-bg); } 
+.btn-record.stop-style { background-color: var(--btn-stop-bg); } 
 .btn-record:hover:not(:disabled) { background-color: var(--btn-record-bg-hover); }
 .btn-record.stop-style:hover:not(:disabled) { background-color: var(--btn-stop-bg-hover); }
-
 .btn-pause { background-color: var(--btn-pause-bg); color: var(--btn-pause-text); }
 .btn-pause:hover:not(:disabled) { background-color: var(--btn-pause-bg-hover); }
-
 .btn-retry { background-color: var(--btn-retry-bg); }
 .btn-retry:hover:not(:disabled) { background-color: var(--btn-retry-bg-hover); }
-
 .btn-copy { background-color: var(--btn-copy-bg); color: var(--btn-copy-text); }
 .btn-copy:hover:not(:disabled) { background-color: var(--btn-copy-bg-hover); }
-
-/* Si tenemos botones "Corregir", "Mejorar IA", etc., añadimos sus clases y variables aquí */
-/* Ejemplo: */
-/* .btn-correct { background-color: var(--button-success-bg); } */
-/* .btn-improve { background-color: var(--button-violet-bg); } */
-
 
 button:disabled {
     background-color: var(--button-disabled-bg);
@@ -299,80 +272,58 @@ button:disabled {
 }
 
 #status {
-    margin-top: 15px; /* Más espacio arriba */
-    padding: 8px 12px; /* Ligeramente menos padding */
+    margin-top: 15px; 
+    padding: 8px 12px; 
     border-radius: var(--border-radius-small);
-    font-weight: 500; /* Menos bold */
+    font-weight: 500; 
     text-align: center;
     transition: background-color var(--transition-medium), color var(--transition-medium);
-    color: var(--text-secondary); /* Color base para el estado */
+    color: var(--text-secondary); 
     font-size: 0.9em;
 }
-.status-idle { color: var(--idle-text); background-color: transparent; } /* Sin fondo cuando idle */
+.status-idle { color: var(--idle-text); background-color: transparent; } 
 .status-processing { color: var(--processing-text); background-color: var(--processing-bg); }
 .status-success { color: var(--success-text); background-color: var(--success-bg); }
 .status-error { color: var(--error-text); background-color: var(--error-bg); }
 
-.info { /* Este es el P de advertencia de API Key */
-    display: none; /* Ocultarlo por ahora para un look más limpio, o estilizarlo diferente */
+.info { 
+    display: none; 
 }
 
-.audio-playback-section { text-align: center; display: none; /* Ocultar por defecto para limpiar UI */ }
-/* Si se quiere mostrar, quitar display:none y estilizar el h3 como otros */
+.audio-playback-section { text-align: center; display: none; }
 .audio-playback-section h3 { text-align: left; }
 
-
-.volume-meter-section { text-align: center; display: none; /* Ocultar por defecto */ }
-/* Si se quiere mostrar, quitar display:none y estilizar el h3 */
-.volume-meter-section h3 { text-align: left; }
-
-#volumeMeterContainer { width: 100%; max-width: 250px; height: 15px; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius-small); margin: 10px auto; overflow: hidden; }
+#volumeMeterContainer { width: 100%; max-width: 250px; height: 15px; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius-small); margin: 0 auto 10px auto; /* Centrado y con margen inferior */ overflow: hidden; }
 #volumeMeterBar { width: 0%; height: 100%; background-color: var(--volume-bar-low); transition: width 0.05s linear, background-color 0.1s linear; }
 #volumeMeterBar.paused { background-color: var(--button-default-bg); }
 
+/* Ajustes (sidebar) */
+#settings-container h3 { margin-bottom: 15px; } /* Más espacio debajo del título de Ajustes */
+
 .theme-switcher-section { 
-    /* Ya no es fixed, se coloca en la sidebar */
-    background-color: var(--bg-secondary);
-    padding: 15px;
-    border-radius: var(--border-radius-medium);
-    /* box-shadow y border se heredan de .container si se usa esa clase */
+    /* Estilos para el contenedor del switch, si no es .container */
 }
-.theme-switch-wrapper { display: flex; align-items: center; justify-content: space-between; } /* Para alinear texto y switch */
-.theme-switch-label { margin-right: 0; font-size: 1em; color: var(--text-primary); } /* Ajustado */
-.theme-switch { display: inline-block; height: 22px; position: relative; width: 42px; } /* Ligeramente más pequeño */
+.theme-switch-wrapper { display: flex; align-items: center; justify-content: space-between; } 
+.theme-switch-label { margin-right: 0; font-size: 1em; color: var(--text-primary); } 
+.theme-switch { display: inline-block; height: 22px; position: relative; width: 42px; } 
 .theme-switch input { display:none; }
 .slider { background-color: var(--switch-bg); bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 22px; }
 .slider:before { background-color: var(--switch-thumb-bg); bottom: 2px; content: ""; height: 18px; left: 2px; position: absolute; transition: .4s; width: 18px; border-radius: 50%; }
 input:checked + .slider { background-color: var(--switch-checked-bg); } 
 input:checked + .slider:before { transform: translateX(20px); }
 
-/* Estilos para la sección de técnicas (ahora en la sidebar) */
-.technique-section h3 {
-    /* Ya tiene estilos base de h3 */
-}
-#techniqueButtons {
-    display: flex;
-    flex-direction: column; 
-    gap: 10px; 
-}
-.technique-group {
-    display: grid; /* Usar grid para botones de técnica */
-    grid-template-columns: repeat(2, 1fr); /* Dos columnas */
-    gap: 8px; 
-}
+.technique-section h3 { /* Estilos para el título de la sección técnica */ }
+#techniqueButtons { display: flex; flex-direction: column; gap: 10px; }
+.technique-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 #techniqueButtons button {
-    padding: 8px 10px; 
-    font-size: 0.88em; 
-    border: 1px solid var(--border-color); /* Añadir borde sutil */
+    padding: 8px 10px; font-size: 0.88em; 
+    border: 1px solid var(--border-color); 
     border-radius: var(--border-radius-small);
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
-    width: 100%; /* Ocupar celda de grid */
-    text-align: center;
+    width: 100%; text-align: center;
 }
-#techniqueButtons button:hover:not(:disabled) {
-    border-color: var(--accent-color); /* Resaltar borde al hover */
-}
+#techniqueButtons button:hover:not(:disabled) { border-color: var(--accent-color); }
 #techniqueButtons button:active:not(:disabled) { transform: scale(0.97); }
 #techniqueButtons .btn-tech-red { background-color: var(--btn-technique-red-bg); color: var(--accent-text-color); border-color: var(--btn-technique-red-bg); }
 #techniqueButtons .btn-tech-red:hover:not(:disabled) { background-color: var(--btn-technique-red-hover); border-color: var(--btn-technique-red-hover); }
@@ -380,44 +331,30 @@ input:checked + .slider:before { transform: translateX(20px); }
 #techniqueButtons .btn-tech-yellow:hover:not(:disabled) { background-color: var(--btn-technique-yellow-hover); border-color: var(--btn-technique-yellow-hover); }
 #techniqueButtons .btn-tech-blue { background-color: var(--btn-technique-blue-bg); color: var(--accent-text-color); border-color: var(--btn-technique-blue-bg); }
 #techniqueButtons .btn-tech-blue:hover:not(:disabled) { background-color: var(--btn-technique-blue-hover); border-color: var(--btn-technique-blue-hover); }
-#techniqueButtons .btn-tech-gray { background-color: var(--btn-technique-gray-bg); color: var(--btn-technique-text); border-color: var(--btn-technique-gray-bg); } /* Usar btn-technique-text para consistencia */
+#techniqueButtons .btn-tech-gray { background-color: var(--btn-technique-gray-bg); color: var(--btn-technique-text); border-color: var(--btn-technique-gray-bg); } 
 #techniqueButtons .btn-tech-gray:hover:not(:disabled) { background-color: var(--btn-technique-gray-hover); border-color: var(--btn-technique-gray-hover); }
 
-/* Slider de sensibilidad (si se añade) */
 .sensitivity-slider-section h3 { margin-bottom: 10px; }
 .slider-container { display: flex; align-items: center; justify-content: space-between; margin-top: 5px;}
 .slider-container label { margin-right: 10px; font-size: 0.9em; color: var(--text-secondary); } 
-#fuzzyThresholdSlider { width: 120px; cursor: pointer; accent-color: var(--accent-color); background: transparent; /* Quitar fondo por defecto del range */ }
+#fuzzyThresholdSlider { width: 120px; cursor: pointer; accent-color: var(--accent-color); background: transparent; }
 #fuzzyThresholdSlider::-webkit-slider-runnable-track { background: var(--input-border); height: 6px; border-radius: 3px; }
 #fuzzyThresholdSlider::-moz-range-track { background: var(--input-border); height: 6px; border-radius: 3px; }
 #fuzzyThresholdSlider::-ms-track { background: var(--input-border); height: 6px; border-radius: 3px; }
-#fuzzyThresholdSlider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; background: var(--accent-color); border-radius: 50%; margin-top: -5px; /* Centrar thumb */ }
+#fuzzyThresholdSlider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; background: var(--accent-color); border-radius: 50%; margin-top: -5px; }
 #fuzzyThresholdSlider::-moz-range-thumb { width: 16px; height: 16px; background: var(--accent-color); border-radius: 50%; border: none; }
 #fuzzyThresholdSlider::-ms-thumb { width: 16px; height: 16px; background: var(--accent-color); border-radius: 50%; border: none; }
 #fuzzyThresholdValue { font-weight: bold; color: var(--accent-color); font-size: 0.9em;}
 
-
 @media (max-width: 992px) { 
-    .app-layout {
-        flex-direction: column;
-    }
-    .sidebar-column {
-        position: static; 
-        width: 100%; 
-        order: 2; 
-    }
-    .main-column {
-        order: 1;
-    }
+    .app-layout { flex-direction: column; }
+    .sidebar-column { position: static; width: 100%; order: 2; }
+    .main-column { order: 1; }
     #title-frame h1 { font-size: 1.6em; }
     #mainTitleImage, #mainTitleImageDark { height: 35px; width: 35px; margin-left: 10px;}
 }
 @media (max-width: 768px) { 
-    .controls .buttons-group {
-        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); /* Ajustar para móvil */
-    }
-    button { font-size: 0.9em; } /* Unificar tamaño de fuente de botones */
-    #techniqueButtons .technique-group {
-        grid-template-columns: 1fr; /* Botones de técnica en una sola columna en móvil */
-    }
+    .controls .buttons-group { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+    button { font-size: 0.9em; } 
+    #techniqueButtons .technique-group { grid-template-columns: 1fr; }
 }
