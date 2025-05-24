@@ -28,7 +28,15 @@ body[data-theme="dark"] {
     --btn-technique-blue-bg: #377ef0; --btn-technique-blue-hover: #539bf5;
     --btn-technique-gray-bg: #444c56; --btn-technique-gray-hover: #5d6774;
     --btn-technique-text: var(--accent-text-color); 
-    --volume-bar-low: #347d39; --volume-bar-medium: #d9971a; --volume-bar-high: #e5534b; 
+    
+    /* Colores para la barra de volumen estilo 80s */
+    --volume-bar-color1: #2ecc71; /* Verde */
+    --volume-bar-color2: #f1c40f; /* Amarillo */
+    --volume-bar-color3: #e67e22; /* Naranja */
+    --volume-bar-color4: #e74c3c; /* Rojo */
+    --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
+
+
     --success-bg: #14301c; --success-text: #a3cfbb;
     --error-bg: #3b1518; --error-text: #f1b0b7;
     --processing-bg: #002752; --processing-text: #b8d4fe;
@@ -62,7 +70,13 @@ body[data-theme="light"] {
     --btn-technique-blue-bg: #17a2b8; --btn-technique-blue-hover: #138496;
     --btn-technique-gray-bg: #6c757d; --btn-technique-gray-hover: #5a6268;
     --btn-technique-text: var(--accent-text-color);
-    --volume-bar-low: #28a745; --volume-bar-medium: #ffc107; --volume-bar-high: #dc3545;
+
+    --volume-bar-color1: #2ecc71; 
+    --volume-bar-color2: #f1c40f; 
+    --volume-bar-color3: #e67e22; 
+    --volume-bar-color4: #e74c3c; 
+    --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
+
     --success-bg: #d4edda; --success-text: #155724;
     --error-bg: #f8d7da; --error-text: #721c24;
     --processing-bg: #e7f3ff; --processing-text: #004085;
@@ -92,25 +106,24 @@ body {
     width: 100%;
 }
 
-/* Layout de dos columnas */
 .app-layout {
     display: flex;
-    flex-direction: row; /* Columnas lado a lado */
+    flex-direction: row; 
     gap: 25px; 
     width: 100%;
     max-width: 1300px; 
-    margin-top: 20px; /* Espacio después del título */
+    margin-top: 20px; 
 }
 
 .main-column {
-    flex: 2.5; /* Columna principal más ancha */
+    flex: 2.5; 
     display: flex;
     flex-direction: column;
     gap: 20px; 
 }
 
 .sidebar-column {
-    flex: 1; /* Columna lateral más estrecha */
+    flex: 1; 
     position: sticky; 
     top: 20px; 
     align-self: flex-start; 
@@ -134,8 +147,8 @@ body[data-theme="dark"] .container {
 
 
 #title-frame {
-    background-color: var(--bg-secondary); /* Usar el color de fondo de los contenedores */
-    border: 1px solid var(--border-color); /* Borde igual a los contenedores */
+    background-color: var(--bg-secondary); 
+    border: 1px solid var(--border-color); 
     border-radius: var(--border-radius-medium);
     padding: 15px 20px; 
     display: flex;
@@ -145,7 +158,7 @@ body[data-theme="dark"] .container {
     width: 100%;
     max-width: 1300px; 
     box-sizing: border-box;
-    margin-bottom: 20px; /* Espacio antes del app-layout */
+    margin-bottom: 20px; 
 }
 
 #title-frame h1 { 
@@ -232,9 +245,9 @@ textarea:focus {
     min-height: 250px; 
     font-size: 1.05em; 
 }
-#headerArea { /* Textarea para la técnica, ahora en la columna principal */
+#headerArea { 
     min-height: 100px; 
-    margin-bottom: 0; /* Sin margen inferior si es el último en su contenedor antes de otro h3 */
+    margin-bottom: 0; 
 }
 
 button {
@@ -286,23 +299,42 @@ button:disabled {
 .status-success { color: var(--success-text); background-color: var(--success-bg); }
 .status-error { color: var(--error-text); background-color: var(--error-bg); }
 
-.info { 
-    display: none; 
-}
+.info { display: none; }
 
-.audio-playback-section { text-align: center; display: none; }
+.audio-playback-section { /* No display:none aquí, se controla por JS */
+    text-align: center; 
+}
 .audio-playback-section h3 { text-align: left; }
+#audioPlayback { width: 100%; margin-top: 10px; }
+body[data-theme="dark"] #audioPlayback { filter: invert(1) hue-rotate(180deg); }
 
-#volumeMeterContainer { width: 100%; max-width: 250px; height: 15px; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius-small); margin: 0 auto 10px auto; /* Centrado y con margen inferior */ overflow: hidden; }
-#volumeMeterBar { width: 0%; height: 100%; background-color: var(--volume-bar-low); transition: width 0.05s linear, background-color 0.1s linear; }
-#volumeMeterBar.paused { background-color: var(--button-default-bg); }
 
-/* Ajustes (sidebar) */
-#settings-container h3 { margin-bottom: 15px; } /* Más espacio debajo del título de Ajustes */
-
-.theme-switcher-section { 
-    /* Estilos para el contenedor del switch, si no es .container */
+#volumeMeterContainer { 
+    width: 100%; 
+    max-width: 100%; /* Ocupar ancho del contenedor de controles */
+    height: 20px; /* Más alto para el efecto multicolor */
+    background-color: var(--input-bg); 
+    border: 1px solid var(--border-color); 
+    border-radius: var(--border-radius-small); 
+    margin: 0 auto 10px auto; 
+    overflow: hidden; 
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
 }
+#volumeMeterBar { 
+    width: 0%; 
+    height: 100%; 
+    background: var(--volume-bar-gradient); /* Usar el gradiente */
+    transition: width 0.05s linear; /* Solo transicionar el ancho */
+    /* No se transiciona background-color directamente, el gradiente es fijo */
+}
+#volumeMeterBar.paused { 
+    background: var(--button-default-bg); /* Gris cuando pausado */
+}
+
+
+#settings-container h3 { margin-bottom: 15px; }
+
+.theme-switcher-section { }
 .theme-switch-wrapper { display: flex; align-items: center; justify-content: space-between; } 
 .theme-switch-label { margin-right: 0; font-size: 1em; color: var(--text-primary); } 
 .theme-switch { display: inline-block; height: 22px; position: relative; width: 42px; } 
@@ -312,7 +344,7 @@ button:disabled {
 input:checked + .slider { background-color: var(--switch-checked-bg); } 
 input:checked + .slider:before { transform: translateX(20px); }
 
-.technique-section h3 { /* Estilos para el título de la sección técnica */ }
+.technique-section h3 { }
 #techniqueButtons { display: flex; flex-direction: column; gap: 10px; }
 .technique-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 #techniqueButtons button {
