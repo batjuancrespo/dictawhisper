@@ -8,7 +8,7 @@
 </head>
 <body data-theme="dark"> <!-- Empezar con tema oscuro por defecto -->
 
-    <div class="app-wrapper">
+    <div class="app-wrapper"> <!-- Contenedor para centrar todo -->
         <div id="title-frame">
             <h1>
                 Dictado Radiológico <small>(by JCP)</small>
@@ -22,23 +22,20 @@
             <!-- Columna Principal (Izquierda) -->
             <div class="main-column">
                 <div class="container controls">
-                    <!-- <h2>Controles</h2> Eliminado para un look más limpio -->
                     <div class="buttons-group">
                         <button id="startRecordBtn" class="btn-record">Empezar Dictado</button>
                         <button id="pauseResumeBtn" class="btn-pause" disabled>Pausar</button>
-                        <!-- <button id="stopRecordBtn" class="btn-stop" disabled>Detener</button> --> <!-- Combinado con startRecordBtn -->
                         <button id="retryProcessBtn" class="btn-retry" disabled>Reintentar</button>
                         <button id="copyPolishedTextBtn" class="btn-copy" title="Copiar texto completo">Copiar</button>
-                        <!-- Aquí podrían ir "Corregir", "Mejorar IA" como en la imagen -->
                     </div>
                     <p id="recordingTimeDisplay"></p>
                     <p id="status" class="status-idle">Listo</p>
-                     <div id="volumeMeterContainer" style="margin-top:15px;"> <!-- Medidor de volumen aquí -->
+                     <div id="volumeMeterContainer" style="margin-top:15px; display: none;">
                          <div id="volumeMeterBar"></div>
                      </div>
                 </div>
         
-                <div class="container"> <!-- Un solo container para Técnica y Texto Informe -->
+                <div class="container"> 
                     <h3>Técnica Aplicada:</h3>
                     <textarea id="headerArea" rows="4" placeholder="Selecciona una técnica o escribe aquí..."></textarea>
                     
@@ -46,7 +43,7 @@
                     <textarea id="polishedText" placeholder="El informe dictado y pulido aparecerá aquí..."></textarea>
                 </div>
 
-                <div class="container audio-playback-section"> <!-- Oculto por defecto -->
+                <div class="container audio-playback-section"> 
                     <h3>Escuchar Grabación Original:</h3>
                     <audio id="audioPlayback" controls></audio>
                 </div>
@@ -63,14 +60,17 @@
                             <span class="slider"></span>
                         </label>
                     </div>
-                    <div class="slider-container sensitivity-slider-section" style="margin-top: 15px;"> <!-- Si se añade slider -->
-                        <!-- <label for="fuzzyThresholdSlider">Sensibilidad Sugerencias:</label>
+                    <!-- Ejemplo de cómo se añadiría el slider de sensibilidad si fuera necesario -->
+                    <!-- 
+                    <div class="slider-container sensitivity-slider-section" style="margin-top: 20px;">
+                        <label for="fuzzyThresholdSlider">Sensibilidad Sugerencias:</label>
                         <input type="range" id="fuzzyThresholdSlider" min="0.1" max="0.8" step="0.05" value="0.5">
-                        <span id="fuzzyThresholdValue">0.50</span> -->
+                        <span id="fuzzyThresholdValue">0.50</span>
                     </div>
+                    -->
                 </div>
 
-                <div class="container technique-section">
+                <div class="container technique-section"> <!-- Sección de botones de técnica movida aquí -->
                     <h3>Seleccionar Técnica</h3>
                     <div id="techniqueButtons">
                         <div class="technique-group">
@@ -91,7 +91,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="container suggestions-section" style="display: none;"> <!-- Oculto por ahora -->
+                <div class="container suggestions-section" style="display: none;"> 
                     <h3>Sugerencias de Corrección</h3>
                     <div id="fuzzySuggestionsList"><small>No hay sugerencias activas.</small></div>
                 </div>
