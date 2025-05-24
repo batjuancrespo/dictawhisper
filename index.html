@@ -5,90 +5,180 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dictado Radiológico IA</title>
     <link rel="stylesheet" href="style.css">
-</head>
-<body data-theme="dark"> 
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+      // Configuración de Firebase (REEMPLAZA CON TUS VALORES REALES SI ES NECESARIO)
+      const firebaseConfig = {
+         apiKey: "AIzaSyA_VQH1y-px8-QF3gMw3VOPjiiU1OefDBo", // Esta parece una clave de ejemplo, usa la tuya
+         authDomain: "almacena-correcciones-dictado.firebaseapp.com",
+         projectId: "almacena-correcciones-dictado",
+         storageBucket: "almacena-correcciones-dictado.appspot.com",
+         messagingSenderId: "209194920272",
+         appId: "1:209194920272:web:ccbec69d0a5aa88789e455",
+         measurementId: "G-6PQSKYMDP0" // Opcional, para Analytics
+       };
 
-    <div class="app-wrapper"> 
-        <div id="title-frame">
-            <h1>
-                Dictado Radiológico <small>(by JCP)</small>
-                <img id="mainTitleImageDark" src="joker.jpg" alt="Logo Tema Oscuro">
-                <img id="mainTitleImage" src="batmanneal.jpg" alt="Logo Tema Claro" style="display:none;">
-            </h1>
+      try {
+            // Importar funciones de Firebase SDK
+            const firebaseAppModule = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+            const firestoreModule = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+            const firebaseAuthModule = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+
+            // Inicializar Firebase App
+            window.firebaseApp = firebaseAppModule.initializeApp(firebaseConfig);
+            console.log("Firebase App inicializada.");
+
+            // Inicializar Firestore y Auth
+            window.db = firestoreModule.getFirestore(window.firebaseApp);
+            window.auth = firebaseAuthModule.getAuth(window.firebaseApp);
+            console.log("Firestore y Auth inicializados.");
+
+            // Exportar funciones necesarias al objeto window para acceso global (si se usan directamente en script.js no modular)
+            window.doc = firestoreModule.doc;
+            window.getDoc = firestoreModule.getDoc;
+            window.setDoc = firestoreModule.setDoc;
+            window.collection = firestoreModule.collection;
+            window.addDoc = firestoreModule.addDoc;
+            window.serverTimestamp = firestoreModule.serverTimestamp;
+            // ... (otras funciones de Firestore que puedas necesitar) ...
+
+            window.createUserWithEmailAndPassword = firebaseAuthModule.createUserWithEmailAndPassword;
+            window.signInWithEmailAndPassword = firebaseAuthModule.signInWithEmailAndPassword;
+            window.signOut = firebaseAuthModule.signOut;
+            window.onAuthStateChanged = firebaseAuthModule.onAuthStateChanged;
+            
+            console.log("Firebase SDKs cargados y funciones exportadas a window.");
+            // Disparar un evento personalizado para indicar que Firebase está listo
+            document.dispatchEvent(new CustomEvent('firebaseReady'));
+
+      } catch (error) {
+          console.error("Error crítico inicializando Firebase:", error);
+          alert("Error crítico: No se pudo inicializar Firebase. La aplicación no funcionará correctamente. Revisa la consola.");
+          document.body.innerHTML = '<h1>Error de Carga de Firebase</h1><p>Por favor, revisa la consola para más detalles y asegúrate de que la configuración de Firebase es correcta y las librerías son accesibles. Podría ser un problema con la API Key o la configuración del proyecto.</p>';
+      }
+    </script>
+</head>
+<body data-theme="dark" class="logged-out"> <!-- Clase inicial para ocultar app -->
+
+    <!-- Contenedor de Autenticación -->
+    <div id="auth-container">
+        <div class="auth-form-wrapper">
+            <form id="login-form" class="auth-form">
+                <h2>Iniciar Sesión</h2>
+                <div id="login-error" class="auth-error-message"></div>
+                <div>
+                    <label for="login-email">Email:</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div>
+                    <label for="login-password">Contraseña:</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" id="loginButton">Iniciar Sesión</button>
+                <p class="auth-switch">¿No tienes cuenta? <a href="#" id="showSignupLink">Regístrate</a></p>
+            </form>
+    
+            <form id="signup-form" class="auth-form" style="display: none;">
+                <h2>Crear Cuenta</h2>
+                <div id="signup-error" class="auth-error-message"></div>
+                <div>
+                    <label for="signup-email">Email:</label>
+                    <input type="email" id="signup-email" required>
+                </div>
+                <div>
+                    <label for="signup-password">Contraseña (mín. 6 caracteres):</label>
+                    <input type="password" id="signup-password" required minlength="6">
+                </div>
+                <button type="submit" id="signupButton">Registrarse</button>
+                <p class="auth-switch">¿Ya tienes cuenta? <a href="#" id="showLoginLink">Inicia Sesión</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de la Aplicación (inicialmente oculto) -->
+    <div id="app-container" style="display: none;">
+        <div class="user-info-bar">
+            <span id="userDisplay"></span>
+            <button id="logoutButton">Cerrar Sesión</button>
         </div>
 
-        <div class="app-layout"> 
-            <div class="main-column">
-                <div class="container controls">
-                    <div class="buttons-group">
-                        <button id="startRecordBtn" class="btn-record">Empezar Dictado</button>
-                        <button id="pauseResumeBtn" class="btn-pause" disabled>Pausar</button>
-                        <button id="retryProcessBtn" class="btn-retry" disabled>Reenviar audio</button> <!-- Texto cambiado -->
-                        <button id="copyPolishedTextBtn" class="btn-copy" title="Copiar texto completo">Copiar Todo</button>
+        <div class="app-wrapper"> 
+            <div id="title-frame">
+                <h1>
+                    Dictado Radiológico <small>(by JCP)</small>
+                    <img id="mainTitleImageDark" src="joker.jpg" alt="Logo Tema Oscuro">
+                    <img id="mainTitleImage" src="batmanneal.jpg" alt="Logo Tema Claro" style="display:none;">
+                </h1>
+            </div>
+
+            <div class="app-layout"> 
+                <div class="main-column">
+                    <div class="container controls">
+                        <div class="buttons-group">
+                            <button id="startRecordBtn" class="btn-record">Empezar Dictado</button>
+                            <button id="pauseResumeBtn" class="btn-pause" disabled>Pausar</button>
+                            <button id="retryProcessBtn" class="btn-retry" disabled>Reenviar audio</button>
+                            <button id="copyPolishedTextBtn" class="btn-copy" title="Copiar texto completo">Copiar Todo</button>
+                        </div>
+                        <p id="recordingTimeDisplay"></p>
+                        <p id="status" class="status-idle">Listo</p>
+                         <div id="volumeMeterContainer" style="margin-top:15px; display: none;"> 
+                             <div id="volumeMeterBar"></div>
+                         </div>
                     </div>
-                    <p id="recordingTimeDisplay"></p>
-                    <p id="status" class="status-idle">Listo</p>
-                     <div id="volumeMeterContainer" style="margin-top:15px; display: none;"> 
-                         <div id="volumeMeterBar"></div>
-                     </div>
+            
+                    <div class="container"> 
+                        <h3>Técnica Aplicada:</h3>
+                        <textarea id="headerArea" rows="4" placeholder="Selecciona una técnica o escribe aquí..."></textarea>
+                        
+                        <h3 style="margin-top: 20px;">Informe:</h3>
+                        <textarea id="polishedText" placeholder="El informe dictado y pulido aparecerá aquí..."></textarea>
+                    </div>
                 </div>
-        
-                <div class="container"> 
-                    <h3>Técnica Aplicada:</h3>
-                    <textarea id="headerArea" rows="4" placeholder="Selecciona una técnica o escribe aquí..."></textarea>
+
+                <div class="sidebar-column">
+                    <div class="container" id="settings-container">
+                        <h3>Ajustes</h3>
+                        <div class="theme-switch-wrapper">
+                            <label class="theme-switch-label" for="themeSwitch">Tema Oscuro</label>
+                            <label class="theme-switch">
+                                <input type="checkbox" id="themeSwitch">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="container technique-section"> 
+                        <h3>Seleccionar Técnica</h3>
+                        <div id="techniqueButtons">
+                            <div class="technique-group">
+                                <button class="btn-tech-red" data-technique-text="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Abd Art+Portal</button>
+                                <button class="btn-tech-red" data-technique-text="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase portal.">Abd Portal</button>
+                                <button class="btn-tech-red" data-technique-text="Se realiza exploración toracoabdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Tórax+Abd Art+Portal</button>
+                                <button class="btn-tech-red" data-technique-text="Se realiza exploración sin administración endovenosa de contraste con adquisición de imágenes en reposo y durante maniobra de Valsalva.">Abd Hernia</button>
+                                <button class="btn-tech-red" data-technique-text="Se realiza exploración sin y tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Abd 3 Fases</button>
+                                <button class="btn-tech-blue" data-technique-text="Exploración ecográfica con sonda multifrecuencia.">Eco Abd</button>
+                            </div>
+                            <div class="technique-group">
+                                <button class="btn-tech-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM Hepática</button>
+                                <button class="btn-tech-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, estudio dinámico tras la administración endovenosa de contraste completándose la valoración con cortes radiales respecto al colédoco orientados a la valoración de la via biliar.">ColangioRM</button>
+                                <button class="btn-tech-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T2, difusión y estudio dinámico tras la administración endovenosa de contraste previa distensión de las asas intestinales. Exploración orientada a la valoración de asas de intestino delgado.">EnteroRM</button>
+                                <button class="btn-tech-yellow" data-technique-text="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa y difusión.">RM Fístulas</button>
+                                <button class="btn-tech-yellow" data-technique-text="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa en los tres planos del espacio, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM Neo Pelvis</button>
+                                <button id="clearHeaderButton" class="btn-tech-gray">Borrar Técnica</button>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <h3 style="margin-top: 20px;">Informe:</h3>
-                    <textarea id="polishedText" placeholder="El informe dictado y pulido aparecerá aquí..."></textarea>
-                </div>
-            </div>
-
-            <div class="sidebar-column">
-                <div class="container" id="settings-container">
-                    <h3>Ajustes</h3>
-                    <div class="theme-switch-wrapper">
-                        <label class="theme-switch-label" for="themeSwitch">Tema Oscuro</label>
-                        <label class="theme-switch">
-                            <input type="checkbox" id="themeSwitch">
-                            <span class="slider"></span>
-                        </label>
+                    <div class="container audio-playback-section" style="display: none;"> 
+                        <h3>Escuchar Grabación</h3>
+                        <audio id="audioPlayback" controls></audio>
                     </div>
                 </div>
-
-                <div class="container technique-section"> 
-                    <h3>Seleccionar Técnica</h3>
-                    <div id="techniqueButtons">
-                        <div class="technique-group">
-                            <button class="btn-tech-red" data-technique-text="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Abd Art+Portal</button>
-                            <button class="btn-tech-red" data-technique-text="Se realiza exploración abdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase portal.">Abd Portal</button>
-                            <button class="btn-tech-red" data-technique-text="Se realiza exploración toracoabdominal tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Tórax+Abd Art+Portal</button>
-                            <button class="btn-tech-red" data-technique-text="Se realiza exploración sin administración endovenosa de contraste con adquisición de imágenes en reposo y durante maniobra de Valsalva.">Abd Hernia</button>
-                            <button class="btn-tech-red" data-technique-text="Se realiza exploración sin y tras la administración endovenosa de contraste con adquisición de imágenes en fase arterial y portal.">Abd 3 Fases</button>
-                            <button class="btn-tech-blue" data-technique-text="Exploración ecográfica con sonda multifrecuencia.">Eco Abd</button>
-                        </div>
-                        <div class="technique-group">
-                            <button class="btn-tech-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM Hepática</button>
-                            <button class="btn-tech-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T1 en fase y fuera de fase, T2 sin y con saturación grasa, estudio dinámico tras la administración endovenosa de contraste completándose la valoración con cortes radiales respecto al colédoco orientados a la valoración de la via biliar.">ColangioRM</button>
-                            <button class="btn-tech-yellow" data-technique-text="Se realiza exploración abdominal con secuencias potenciadas en T2, difusión y estudio dinámico tras la administración endovenosa de contraste previa distensión de las asas intestinales. Exploración orientada a la valoración de asas de intestino delgado.">EnteroRM</button>
-                            <button class="btn-tech-yellow" data-technique-text="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa y difusión.">RM Fístulas</button>
-                            <button class="btn-tech-yellow" data-technique-text="Se realiza exploración pélvica con secuencias potenciadas en T2 sin y con saturación grasa en los tres planos del espacio, difusión y estudio dinámico tras la administración endovenosa de contraste.">RM Neo Pelvis</button>
-                            <button id="clearHeaderButton" class="btn-tech-gray">Borrar Técnica</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="container audio-playback-section"> 
-                    <h3>Escuchar Grabación</h3>
-                    <audio id="audioPlayback" controls></audio>
-                </div>
-
-                <div class="container suggestions-section" style="display: none;"> 
-                    <h3>Sugerencias de Corrección</h3>
-                    <div id="fuzzySuggestionsList"><small>No hay sugerencias activas.</small></div>
-                </div>
-            </div>
+            </div> 
         </div> 
-    </div> 
+    </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script> <!-- Cambiado a type="module" -->
 </body>
 </html>
