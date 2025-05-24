@@ -6,9 +6,9 @@
     <title>Dictado Radiológico IA</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body data-theme="dark"> <!-- Empezar con tema oscuro por defecto -->
+<body data-theme="dark"> 
 
-    <div class="app-wrapper"> <!-- Contenedor para centrar todo -->
+    <div class="app-wrapper"> 
         <div id="title-frame">
             <h1>
                 Dictado Radiológico <small>(by JCP)</small>
@@ -16,10 +16,8 @@
                 <img id="mainTitleImage" src="batmanneal.jpg" alt="Logo Tema Claro" style="display:none;">
             </h1>
         </div>
-        <!-- <p class="info"><strong>Advertencia:</strong> API Key en código. Para producción, usar backend.</p> -->
 
         <div class="app-layout"> 
-            <!-- Columna Principal (Izquierda) -->
             <div class="main-column">
                 <div class="container controls">
                     <div class="buttons-group">
@@ -30,7 +28,7 @@
                     </div>
                     <p id="recordingTimeDisplay"></p>
                     <p id="status" class="status-idle">Listo</p>
-                     <div id="volumeMeterContainer" style="margin-top:15px; display: none;">
+                     <div id="volumeMeterContainer" style="margin-top:15px; display: none;"> 
                          <div id="volumeMeterBar"></div>
                      </div>
                 </div>
@@ -42,14 +40,8 @@
                     <h3 style="margin-top: 20px;">Informe:</h3>
                     <textarea id="polishedText" placeholder="El informe dictado y pulido aparecerá aquí..."></textarea>
                 </div>
-
-                <div class="container audio-playback-section"> 
-                    <h3>Escuchar Grabación Original:</h3>
-                    <audio id="audioPlayback" controls></audio>
-                </div>
             </div>
 
-            <!-- Columna Lateral (Derecha) -->
             <div class="sidebar-column">
                 <div class="container" id="settings-container">
                     <h3>Ajustes</h3>
@@ -60,17 +52,9 @@
                             <span class="slider"></span>
                         </label>
                     </div>
-                    <!-- Ejemplo de cómo se añadiría el slider de sensibilidad si fuera necesario -->
-                    <!-- 
-                    <div class="slider-container sensitivity-slider-section" style="margin-top: 20px;">
-                        <label for="fuzzyThresholdSlider">Sensibilidad Sugerencias:</label>
-                        <input type="range" id="fuzzyThresholdSlider" min="0.1" max="0.8" step="0.05" value="0.5">
-                        <span id="fuzzyThresholdValue">0.50</span>
-                    </div>
-                    -->
                 </div>
 
-                <div class="container technique-section"> <!-- Sección de botones de técnica movida aquí -->
+                <div class="container technique-section"> 
                     <h3>Seleccionar Técnica</h3>
                     <div id="techniqueButtons">
                         <div class="technique-group">
@@ -91,6 +75,12 @@
                         </div>
                     </div>
                 </div>
+                
+                <div class="container audio-playback-section"> <!-- Movido a la sidebar -->
+                    <h3>Escuchar Grabación</h3>
+                    <audio id="audioPlayback" controls></audio>
+                </div>
+
                 <div class="container suggestions-section" style="display: none;"> 
                     <h3>Sugerencias de Corrección</h3>
                     <div id="fuzzySuggestionsList"><small>No hay sugerencias activas.</small></div>
