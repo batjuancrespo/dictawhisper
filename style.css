@@ -6,271 +6,343 @@
     --shadow-soft: 0 4px 6px rgba(0,0,0,0.1);
     --transition-fast: 0.2s ease-in-out;
     --transition-medium: 0.3s ease;
-    --sidebar-width: 340px; /* Ancho del panel lateral, ajustado para 2 columnas */
+    --button-default-bg: #6c757d; 
+    --button-default-bg-hover: #5a6268;
 }
 
 /* Tema Claro (Default) */
 body[data-theme="light"] {
     --bg-primary: #f8f9fa;
     --bg-secondary: #ffffff;
-    --bg-sidebar: #e9ecef; 
     --text-primary: #212529;
     --text-secondary: #495057;
     --border-color: #dee2e6;
+    --border-light-color: #e9ecef; /* Un poco más claro para divisiones internas */
     --accent-color: #007bff; 
     --accent-text-color: #ffffff;
-
-    --btn-record-bg: #28a745;         
-    --btn-record-bg-hover: #218838;
-    --btn-pause-bg: #ffc107;          
-    --btn-pause-bg-hover: #e0a800;
-    --btn-pause-text: #212529;        
-    --btn-stop-bg: #dc3545;           
-    --btn-stop-bg-hover: #c82333;
-    --btn-retry-bg: #17a2b8;          
-    --btn-retry-bg-hover: #138496;
-    --btn-copy-bg: #007bff;           
-    --btn-copy-bg-hover: #0056b3;
-
-    --btn-technique-red-bg: #dc3545;
-    --btn-technique-red-bg-hover: #c82333;
-    --btn-technique-blue-bg: #007bff;
-    --btn-technique-blue-bg-hover: #0056b3;
-    --btn-technique-yellow-bg: #ffc107;
-    --btn-technique-yellow-bg-hover: #e0a800;
-    --btn-technique-yellow-text: #212529; 
-    --btn-technique-gray-bg: #6c757d;
-    --btn-technique-gray-bg-hover: #5a6268;
-
-    --volume-bar-low: #28a745;        
-    --volume-bar-medium: #ffc107;     
-    --volume-bar-high: #dc3545;       
-    
-    --success-bg: #d4edda;
-    --success-text: #155724;
-    --error-bg: #f8d7da;
-    --error-text: #721c24;
-    --processing-bg: #e7f3ff;
-    --processing-text: #004085;
-    --idle-bg: #f0f0f0;
-    --idle-text: #555;
+    --btn-record-bg: #28a745; --btn-record-bg-hover: #218838;
+    --btn-pause-bg: #ffc107; --btn-pause-bg-hover: #e0a800; --btn-pause-text: #212529; 
+    --btn-stop-bg: #dc3545; --btn-stop-bg-hover: #c82333;
+    --btn-retry-bg: #17a2b8; --btn-retry-bg-hover: #138496;
+    --btn-copy-bg: #007bff; --btn-copy-bg-hover: #0056b3;
+    --btn-technique-bg: var(--button-default-bg); --btn-technique-text: var(--accent-text-color);
+    --btn-technique-hover-bg: var(--button-default-bg-hover);
+    --btn-technique-red-bg: #dc3545; --btn-technique-red-hover: #c82333;
+    --btn-technique-yellow-bg: #ffc107; --btn-technique-yellow-hover: #e0a800; --btn-technique-yellow-text: #212529;
+    --btn-technique-blue-bg: #17a2b8; --btn-technique-blue-hover: #138496;
+    --btn-technique-gray-bg: #adb5bd; --btn-technique-gray-hover: #919ca5; --btn-technique-gray-text: #212529;
+    --volume-bar-low: #28a745; --volume-bar-medium: #ffc107; --volume-bar-high: #dc3545;
+    --success-bg: #d4edda; --success-text: #155724;
+    --error-bg: #f8d7da; --error-text: #721c24;
+    --processing-bg: #e7f3ff; --processing-text: #004085;
+    --idle-bg: #f0f0f0; --idle-text: #555;
     --button-disabled-bg: #ced4da;
+    --theme-image-border: var(--border-color);
 }
 
 /* Tema Oscuro */
 body[data-theme="dark"] {
     --bg-primary: #212529;
     --bg-secondary: #343a40;
-    --bg-sidebar: #2c3034; 
     --text-primary: #f8f9fa;
     --text-secondary: #adb5bd;
     --border-color: #495057;
+    --border-light-color: #373e47;
     --accent-color: #0d6efd; 
     --accent-text-color: #ffffff;
-
-    --btn-record-bg: #1db954;         
-    --btn-record-bg-hover: #1aa34a;
-    --btn-pause-bg: #ffc107;          
-    --btn-pause-bg-hover: #e0a800;
-    --btn-pause-text: #212529;        
-    --btn-stop-bg: #f44336;           
-    --btn-stop-bg-hover: #d32f2f;
-    --btn-retry-bg: #00bcd4;          
-    --btn-retry-bg-hover: #0097a7;
-    --btn-copy-bg: #2196F3;           
-    --btn-copy-bg-hover: #1976D2;
-
-    --btn-technique-red-bg: #f44336;
-    --btn-technique-red-bg-hover: #d32f2f;
-    --btn-technique-blue-bg: #2196F3;
-    --btn-technique-blue-bg-hover: #1976D2;
-    --btn-technique-yellow-bg: #ffc107;
-    --btn-technique-yellow-bg-hover: #e0a800;
-    --btn-technique-yellow-text: #212529;
-    --btn-technique-gray-bg: #5a6268;
-    --btn-technique-gray-bg-hover: #495057;
-
-    --volume-bar-low: #1db954;
-    --volume-bar-medium: #ffc107;
-    --volume-bar-high: #f44336;
-
-    --success-bg: #14301c; 
-    --success-text: #a3cfbb;
-    --error-bg: #3b1518;   
-    --error-text: #f1b0b7;
-    --processing-bg: #002752; 
-    --processing-text: #b8d4fe;
-    --idle-bg: #3e444a;
-    --idle-text: #ced4da;
+    --btn-record-bg: #1db954; --btn-record-bg-hover: #1aa34a;
+    --btn-pause-bg: #ffc107; --btn-pause-bg-hover: #e0a800; --btn-pause-text: #212529;
+    --btn-stop-bg: #f44336; --btn-stop-bg-hover: #d32f2f;
+    --btn-retry-bg: #00bcd4; --btn-retry-bg-hover: #0097a7;
+    --btn-copy-bg: #2196F3; --btn-copy-bg-hover: #1976D2;
+    --btn-technique-bg: #5a6268; --btn-technique-text: var(--accent-text-color);
+    --btn-technique-hover-bg: #495057;
+    --btn-technique-red-bg: #f44336; --btn-technique-red-hover: #d32f2f;
+    --btn-technique-yellow-bg: #ffc107; --btn-technique-yellow-hover: #e0a800; --btn-technique-yellow-text: #212529;
+    --btn-technique-blue-bg: #00bcd4; --btn-technique-blue-hover: #0097a7;
+    --btn-technique-gray-bg: #6c757d; --btn-technique-gray-hover: #5a6268; --btn-technique-gray-text: var(--accent-text-color);
+    --volume-bar-low: #1db954; --volume-bar-medium: #ffc107; --volume-bar-high: #f44336;
+    --success-bg: #14301c; --success-text: #a3cfbb;
+    --error-bg: #3b1518; --error-text: #f1b0b7;
+    --processing-bg: #002752; --processing-text: #b8d4fe;
+    --idle-bg: #3e444a; --idle-text: #ced4da;
     --button-disabled-bg: #495057;
+    --theme-image-border: var(--border-color);
 }
-
-/* App Layout */
-.app-layout {
-    display: flex;
-    min-height: 100vh; /* Ocupar toda la altura de la ventana */
-    max-height: 100vh; /* Prevenir que crezca más allá de la ventana */
-}
-
-.sidebar {
-    width: var(--sidebar-width);
-    flex-shrink: 0; /* Evitar que el sidebar se encoja */
-    background-color: var(--bg-sidebar);
-    border-right: 1px solid var(--border-color);
-    display: flex; /* Para centrar .sidebar-content-container si es más pequeño */
-    flex-direction: column;
-    transition: background-color var(--transition-fast), border-color var(--transition-fast);
-}
-.sidebar-content-container {
-    padding: 20px;
-    overflow-y: auto; /* Scroll para el contenido del sidebar si excede la altura */
-    flex-grow: 1; /* Para que ocupe el espacio vertical disponible */
-}
-.sidebar h3 {
-    margin-top: 0; /* Quitar margen superior del h3 del sidebar */
-    margin-bottom: 15px;
-    font-size: 1.2em;
-}
-
-.main-content {
-    flex-grow: 1;
-    display: flex; /* Para centrar .container si es más pequeño */
-    flex-direction: column;
-    overflow-y: auto; /* Scroll para el contenido principal si excede la altura */
-}
-.main-content .container {
-    width: 100%; /* Ocupar todo el ancho disponible en main-content */
-    max-width: 900px; 
-    margin: 0 auto; /* Centrar el contenido si hay espacio sobrante */
-    padding: 20px; /* Padding interno del container */
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1; /* Para que ocupe el espacio vertical disponible */
-}
-
 
 body {
     font-family: var(--font-primary);
     line-height: var(--line-height-base);
     margin: 0;
+    padding: 20px;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     transition: background-color var(--transition-fast), color var(--transition-fast);
-    overflow: hidden; /* Evitar scroll en el body, se maneja en .app-layout */
 }
 
-h1, h2, h3 { /* ... (sin cambios) ... */ }
-h1 { font-size: 1.8em; } 
-h2 { font-size: 1.4em; margin-top: 1.2em; }
-h3 { font-size: 1.1em; color: var(--text-secondary); }
-
-.controls, .audio-playback-section, .results, .theme-switcher-section, .volume-meter-section {
-    margin-bottom: 15px; 
-}
-.controls .buttons-group {
+/* Layout principal */
+.app-layout {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px; 
-    justify-content: center;
-    margin-bottom: 10px;
+    flex-direction: row;
+    gap: 20px; /* Espacio entre columnas */
+    width: 100%;
+    max-width: 1200px; /* Ancho máximo de la app */
+    margin: 0 auto; /* Centrar app */
 }
 
-#recordingTimeDisplay { /* ... (sin cambios) ... */ }
-textarea { /* ... (sin cambios) ... */ }
-textarea:focus { /* ... (sin cambios) ... */ }
-#techniqueText {
-    min-height: 60px; /* Altura para 2-3 líneas */
-    margin-bottom: 20px; /* Espacio antes del textarea de dictado */
-}
-#polishedText {
-    min-height: 100px; /* Reducido un poco */
-    flex-grow: 1; /* Para que ocupe el espacio vertical restante en .results */
-}
-.results {
+.main-column {
+    flex: 3; /* Columna principal ocupa más espacio */
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* Para que .results ocupe el espacio restante en .container */
+    gap: 20px; /* Espacio entre contenedores dentro de la columna */
+}
+
+.sidebar-column {
+    flex: 1; /* Columna lateral ocupa menos espacio */
+    position: sticky; /* Para que se quede fija al hacer scroll */
+    top: 20px; /* Espacio desde arriba */
+    align-self: flex-start; /* Para que no se estire con la columna principal */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 
-button { /* ... (sin cambios) ... */ }
-.btn-record, .btn-pause, .btn-stop, .btn-retry, .btn-copy { /* ... (sin cambios) ... */ }
-button:disabled { /* ... (sin cambios) ... */ }
-#status, .status-idle, .status-processing, .status-success, .status-error { /* ... (sin cambios) ... */ }
-.info, .info a { /* ... (sin cambios) ... */ }
-.audio-playback-section, #audioPlayback { /* ... (sin cambios) ... */ }
-.volume-meter-section, #volumeMeterContainer, #volumeMeterBar, #volumeMeterBar.paused { /* ... (sin cambios) ... */ }
-.theme-switcher-section, .theme-switch-wrapper, .theme-switch-label, .theme-switch, .slider { /* ... (sin cambios) ... */ }
-
-
-/* Estilos para los botones de técnica en el sidebar - 2 columnas */
-.technique-buttons-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Dos columnas de igual ancho */
-    gap: 8px; /* Espacio entre botones */
+.container-wrapper { /* Nuevo wrapper para título y contenido principal */
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto; /* Centrado */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
-.technique-btn {
-    /* width: 100%; No necesario con grid, se ajusta a la celda */
-    text-align: center; /* Centrar texto en botones de técnica */
-    padding: 10px 8px; /* Ajustar padding */
-    font-size: 0.8em; /* Un poco más pequeños */
-    flex-grow: 0; 
-    min-width: auto; 
-    color: var(--accent-text-color); 
-    line-height: 1.3; /* Para mejor ajuste del texto si es largo */
-    /* Altura fija para uniformidad, si se desea, o min-height */
-    min-height: 40px; /* Asegurar una altura mínima similar */
-    display: flex; /* Para centrar el texto verticalmente si es necesario */
+
+
+.container { /* Estilo base para todos los contenedores */
+    background-color: var(--bg-secondary);
+    padding: 20px;
+    border-radius: var(--border-radius-medium);
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--border-light-color);
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+
+h1, h2, h3 {
+    color: var(--text-primary);
+    text-align: center;
+    margin-top: 0; /* Quitar margen superior por defecto */
+    margin-bottom: 0.75em;
+}
+h1 { 
+    font-size: 2em; 
+    display: flex;
     align-items: center;
     justify-content: center;
 }
-
-.technique-btn.btn-red, .technique-btn.btn-blue, .technique-btn.btn-yellow, .technique-btn.btn-gray { /* ... (sin cambios en colores) ... */ }
-.technique-btn.btn-red { background-color: var(--btn-technique-red-bg); }
-.technique-btn.btn-red:hover { background-color: var(--btn-technique-red-bg-hover); }
-.technique-btn.btn-blue { background-color: var(--btn-technique-blue-bg); }
-.technique-btn.btn-blue:hover { background-color: var(--btn-technique-blue-bg-hover); }
-.technique-btn.btn-yellow { background-color: var(--btn-technique-yellow-bg); color: var(--btn-technique-yellow-text); }
-.technique-btn.btn-yellow:hover { background-color: var(--btn-technique-yellow-bg-hover); }
-.technique-btn.btn-gray { background-color: var(--btn-technique-gray-bg); }
-.technique-btn.btn-gray:hover { background-color: var(--btn-technique-gray-bg-hover); }
-
-/* Media Queries para Responsividad del Layout */
-@media (max-width: 960px) { /* Punto de quiebre donde el sidebar podría ser demasiado ancho */
-    :root {
-        --sidebar-width: 280px; /* Reducir ancho del sidebar */
-    }
+h2 { font-size: 1.5em; margin-top: 1em; } /* Ajustado margen */
+h3 { 
+    font-size: 1.1em; 
+    color: var(--text-secondary); 
+    border-bottom: 1px solid var(--border-light-color);
+    padding-bottom: 8px;
+}
+#main-title-image {
+    max-height: 50px;
+    width: auto;
+    margin: 0 15px;
+    border-radius: 4px;
+    border: 1px solid var(--theme-image-border);
 }
 
-@media (max-width: 768px) {
+
+.controls .buttons-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+#recordingTimeDisplay {
+    text-align: center;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    min-height: 1.5em; 
+}
+
+textarea {
+    width: calc(100% - 24px); 
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    box-sizing: border-box;
+    background-color: var(--bg-secondary); /* Usar el color de fondo del contenedor para inputs */
+    color: var(--text-primary);
+    transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+}
+textarea:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.2rem rgba(var(--accent-color-rgb, 0,123,255), 0.25); 
+}
+
+#polishedText { /* Area de texto principal */
+    min-height: 300px; 
+    font-size: 1.1em;
+}
+#headerArea { /* Textarea para la técnica */
+    min-height: 80px;
+    font-size: 1em;
+    margin-bottom: 0; /* Quitar margen si es el último elemento en su contenedor */
+}
+
+
+button {
+    color: var(--accent-text-color);
+    border: none;
+    padding: 10px 15px; /* Ligeramente menos padding horizontal */
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9em; /* Ligeramente más pequeño para que quepan más */
+    transition: background-color var(--transition-medium), color var(--transition-medium);
+    flex-grow: 1; 
+    min-width: 100px; /* Ajustado */
+    text-align: center;
+}
+
+.btn-record { background-color: var(--btn-record-bg); }
+.btn-record:hover:not(:disabled) { background-color: var(--btn-record-bg-hover); }
+.btn-pause { background-color: var(--btn-pause-bg); color: var(--btn-pause-text); }
+.btn-pause:hover:not(:disabled) { background-color: var(--btn-pause-bg-hover); }
+.btn-stop { background-color: var(--btn-stop-bg); }
+.btn-stop:hover:not(:disabled) { background-color: var(--btn-stop-bg-hover); }
+.btn-retry { background-color: var(--btn-retry-bg); }
+.btn-retry:hover:not(:disabled) { background-color: var(--btn-retry-bg-hover); }
+.btn-copy { background-color: var(--btn-copy-bg); }
+.btn-copy:hover:not(:disabled) { background-color: var(--btn-copy-bg-hover); }
+
+button:disabled {
+    background-color: var(--button-disabled-bg);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+#status {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: var(--border-radius-small);
+    font-weight: 600;
+    text-align: center;
+    transition: background-color var(--transition-medium), color var(--transition-medium);
+}
+.status-idle { font-style: normal; color: var(--idle-text); background-color: var(--idle-bg); }
+.status-processing { color: var(--processing-text); background-color: var(--processing-bg); }
+.status-success { color: var(--success-text); background-color: var(--success-bg); }
+.status-error { color: var(--error-text); background-color: var(--error-bg); }
+
+.info {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    background-color: var(--idle-bg);
+    padding: 10px;
+    border-radius: var(--border-radius-small);
+    border-left: 4px solid var(--accent-color);
+    margin-bottom: 20px; 
+}
+.info a { color: var(--accent-color); text-decoration: none; }
+.info a:hover { text-decoration: underline; }
+
+.audio-playback-section { text-align: center; }
+#audioPlayback { width: 100%; max-width: 500px; margin-top: 10px; }
+body[data-theme="dark"] #audioPlayback { filter: invert(1) hue-rotate(180deg); }
+
+.volume-meter-section { text-align: center; }
+#volumeMeterContainer { width: 80%; max-width: 300px; height: 20px; background-color: var(--idle-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius-small); margin: 10px auto; overflow: hidden; }
+#volumeMeterBar { width: 0%; height: 100%; background-color: var(--volume-bar-low); transition: width 0.05s linear, background-color 0.1s linear; }
+#volumeMeterBar.paused { background-color: var(--button-default-bg); }
+
+.theme-switcher-section { 
+    position: fixed; top: 15px; right: 20px; z-index: 1000; 
+    background-color: var(--bg-secondary);
+    padding: 8px 12px;
+    border-radius: var(--border-radius-medium);
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--border-color);
+}
+.theme-switch-wrapper { display: flex; align-items: center; }
+.theme-switch-label { margin-right: 8px; font-size: 0.9em; color: var(--text-secondary); }
+.theme-switch { display: inline-block; height: 24px; position: relative; width: 44px; }
+.theme-switch input { display:none; }
+.slider { background-color: #ccc; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 24px; }
+.slider:before { background-color: white; bottom: 3px; content: ""; height: 18px; left: 3px; position: absolute; transition: .4s; width: 18px; border-radius: 50%; }
+input:checked + .slider { background-color: var(--accent-color); } 
+input:checked + .slider:before { transform: translateX(20px); }
+body[data-theme="light"] .slider { background-color: #ccc; }
+body[data-theme="dark"] .slider { background-color: #555; } 
+body[data-theme="dark"] input:checked + .slider { background-color: var(--accent-color); }
+
+
+/* Estilos para la sección de técnicas */
+.technique-section h3 {
+    margin-bottom: 10px;
+}
+#techniqueButtons {
+    display: flex;
+    flex-direction: column; /* Para agrupar por filas */
+    gap: 10px; /* Espacio entre grupos de botones */
+}
+.technique-group {
+    display: flex;
+    flex-wrap: wrap; /* Permitir que los botones pasen a la siguiente línea */
+    gap: 8px; /* Espacio entre botones dentro de un grupo */
+    justify-content: flex-start; /* Alinear botones al inicio */
+}
+#techniqueButtons button {
+    padding: 8px 10px;
+    font-size: 0.85em;
+    border: none;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    min-width: auto; /* Permitir que sean más pequeños */
+    flex-grow: 0; /* No crecer por defecto */
+    flex-basis: content; /* Ancho basado en contenido */
+    color: var(--btn-technique-text);
+    background-color: var(--btn-technique-bg);
+}
+#techniqueButtons button:hover:not(:disabled) {
+    background-color: var(--btn-technique-hover-bg);
+}
+#techniqueButtons button:active:not(:disabled) {
+    transform: scale(0.97);
+}
+/* Colores específicos para botones de técnica */
+#techniqueButtons .btn-tech-red { background-color: var(--btn-technique-red-bg); color: var(--accent-text-color);}
+#techniqueButtons .btn-tech-red:hover:not(:disabled) { background-color: var(--btn-technique-red-hover); }
+#techniqueButtons .btn-tech-yellow { background-color: var(--btn-technique-yellow-bg); color: var(--btn-technique-yellow-text); }
+#techniqueButtons .btn-tech-yellow:hover:not(:disabled) { background-color: var(--btn-technique-yellow-hover); }
+#techniqueButtons .btn-tech-blue { background-color: var(--btn-technique-blue-bg); color: var(--accent-text-color); }
+#techniqueButtons .btn-tech-blue:hover:not(:disabled) { background-color: var(--btn-technique-blue-hover); }
+#techniqueButtons .btn-tech-gray { background-color: var(--btn-technique-gray-bg); color: var(--btn-technique-gray-text); }
+#techniqueButtons .btn-tech-gray:hover:not(:disabled) { background-color: var(--btn-technique-gray-hover); }
+
+/* Responsive: para pantallas más pequeñas, las columnas se apilan */
+@media (max-width: 992px) { /* Ligeramente antes que 768px para mejor visualización */
     .app-layout {
         flex-direction: column;
-        max-height: none; /* Permitir que el contenido defina la altura */
-        overflow-y: auto; /* Scroll en app-layout para móvil si todo es muy largo */
     }
-    body {
-        overflow: auto; /* Permitir scroll en body para móvil */
+    .sidebar-column {
+        position: static; /* Quitar sticky en móvil */
+        width: 100%; /* Ocupar todo el ancho */
+        order: 2; /* Mostrar después del contenido principal */
     }
-    .sidebar {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--border-color);
-        max-height: none; /* El sidebar puede crecer según su contenido */
-        flex-shrink: 1; /* Permitir que se encoja si es necesario */
+    .main-column {
+        order: 1;
     }
-    .sidebar-content-container {
-        /* No es necesario overflow-y: auto aquí si .sidebar no tiene max-height */
-    }
-    .main-content {
-        padding: 15px; /* Padding general para el contenido principal en móvil */
-        overflow-y: visible; /* No necesita su propio scroll si app-layout lo maneja */
-    }
-    .main-content .container {
-        padding: 15px;
-    }
-    .technique-buttons-grid {
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* Columnas adaptables */
-    }
-    .controls .buttons-group button { /* ... (sin cambios) ... */ }
-    h1 { font-size: 1.6em; }
 }
