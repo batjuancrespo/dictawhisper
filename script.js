@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const startRecordBtn = document.getElementById('startRecordBtn');
     const pauseResumeBtn = document.getElementById('pauseResumeBtn');
-    const stopRecordBtn = document.getElementById('stopRecordBtn');
+    // const stopRecordBtn = document.getElementById('stopRecordBtn'); // Eliminado, se combina con startRecordBtn
     const retryProcessBtn = document.getElementById('retryProcessBtn');
     const copyPolishedTextBtn = document.getElementById('copyPolishedTextBtn'); 
     const statusDiv = document.getElementById('status');
@@ -11,21 +11,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const audioPlayback = document.getElementById('audioPlayback');
     const themeSwitch = document.getElementById('themeSwitch');
     const volumeMeterBar = document.getElementById('volumeMeterBar');
+    const volumeMeterContainer = document.getElementById('volumeMeterContainer'); // Para mostrar/ocultar
     const recordingTimeDisplay = document.getElementById('recordingTimeDisplay'); 
     const headerArea = document.getElementById('headerArea'); 
     const techniqueButtonsContainer = document.getElementById('techniqueButtons'); 
     const clearHeaderButton = document.getElementById('clearHeaderButton'); 
-    const mainTitleImage = document.getElementById('mainTitleImage');
-    const mainTitleImageDark = document.getElementById('mainTitleImageDark');
+    const mainTitleImage = document.getElementById('mainTitleImage'); // Para tema claro
+    const mainTitleImageDark = document.getElementById('mainTitleImageDark'); // Para tema oscuro
 
+    // Verificar todos los elementos
+    const requiredElements = [
+        startRecordBtn, pauseResumeBtn, retryProcessBtn, copyPolishedTextBtn,
+        statusDiv, polishedTextarea, audioPlayback, themeSwitch,
+        volumeMeterBar, volumeMeterContainer, recordingTimeDisplay, headerArea,
+        techniqueButtonsContainer, clearHeaderButton, mainTitleImage, mainTitleImageDark
+    ];
 
-    if (!polishedTextarea || !statusDiv || !startRecordBtn || !pauseResumeBtn || !stopRecordBtn || !retryProcessBtn || !copyPolishedTextBtn || !audioPlayback || !themeSwitch || !volumeMeterBar || !recordingTimeDisplay || !headerArea || !techniqueButtonsContainer || !clearHeaderButton || !mainTitleImage || !mainTitleImageDark) {
-        const errorMessage = "Error crítico: Uno o más elementos HTML no se encontraron. Revisa los IDs.";
+    if (requiredElements.some(el => !el)) {
+        const missingElement = requiredElements.find(el => !el);
+        const elementId = missingElement ? "ID_DESCONOCIDO (revisar HTML y JS)" : "Varios elementos";
+        // Intenta obtener el ID si el elemento es null pero se le asignó a una variable con el nombre del ID
+        let idGuess = "ID_DESCONOCIDO";
+        for (const key in window) {
+            if (window[key] === missingElement && document.getElementById(key)) {
+                 idGuess = key;
+                 break;
+            }
+        }
+         if (missingElement === startRecordBtn && !document.getElementById('startRecordBtn')) idGuess = 'startRecordBtn';
+         // ... y así para los demás si es necesario ser más explícito
+        const errorMessage = `Error crítico: Elemento HTML no encontrado (posiblemente '${idGuess}'). Revisa los IDs en index.html y script.js.`;
+        console.error(errorMessage, {
+            startRecordBtn, pauseResumeBtn, retryProcessBtn, copyPolishedTextBtn,
+            statusDiv, polishedTextarea, audioPlayback, themeSwitch,
+            volumeMeterBar, volumeMeterContainer, recordingTimeDisplay, headerArea,
+            techniqueButtonsContainer, clearHeaderButton, mainTitleImage, mainTitleImageDark
+        });
         alert(errorMessage);
         if (statusDiv) setStatus("Error: Elementos HTML no encontrados.", "error");
-        else console.error(errorMessage);
         return;
     }
+
 
     let mediaRecorder;
     let audioChunks = [];
@@ -34,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let analyser;
     let microphoneSource;
     let animationFrameId;
+    let isRecording = false; // Nuevo estado para reemplazar 'recognizing'
     let isPaused = false;
     let recordingTimerInterval; 
     let recordingSeconds = 0;  
@@ -51,22 +78,28 @@ document.addEventListener('DOMContentLoaded', () => {
     themeSwitch.addEventListener('change', () => {
         applyTheme(themeSwitch.checked ? 'dark' : 'light');
     });
-    const preferredTheme = localStorage.getItem('theme') || 
-                           (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    // Aplicar tema oscuro por defecto si no hay preferencia guardada
+    const preferredTheme = localStorage.getItem('theme') || 'dark';
     applyTheme(preferredTheme); 
     
     function setAccentRGB() {
-        const accentColor = getComputedStyle(document.body).getPropertyValue('--accent-color').trim();
-        if (accentColor.startsWith('#')) {
-            const r = parseInt(accentColor.slice(1, 3), 16);
-            const g = parseInt(accentColor.slice(3, 5), 16);
-            const b = parseInt(accentColor.slice(5, 7), 16);
-            document.documentElement.style.setProperty('--accent-color-rgb', `${r},${g},${b}`);
-        } else if (accentColor.startsWith('rgb')) {
-            const parts = accentColor.match(/[\d.]+/g);
-            if (parts && parts.length >=3) {
-                 document.documentElement.style.setProperty('--accent-color-rgb', `${parts[0]},${parts[1]},${parts[2]}`);
+        try {
+            const bodyStyle = getComputedStyle(document.body);
+            if (!bodyStyle) return;
+            const accentColor = bodyStyle.getPropertyValue('--accent-color').trim();
+            if (accentColor.startsWith('#')) {
+                const r = parseInt(accentColor.slice(1, 3), 16);
+                const g = parseInt(accentColor.slice(3, 5), 16);
+                const b = parseInt(accentColor.slice(5, 7), 16);
+                document.documentElement.style.setProperty('--accent-color-rgb', `${r},${g},${b}`);
+            } else if (accentColor.startsWith('rgb')) {
+                const parts = accentColor.match(/[\d.]+/g);
+                if (parts && parts.length >=3) {
+                    document.documentElement.style.setProperty('--accent-color-rgb', `${parts[0]},${parts[1]},${parts[2]}`);
+                }
             }
+        } catch (e) {
+            console.warn("No se pudo establecer --accent-color-rgb:", e);
         }
     }
     setAccentRGB(); 
@@ -76,12 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setStatus(message, type = "idle", duration = 0) {
         statusDiv.textContent = message;
         statusDiv.className = ''; 
-        switch (type) {
-            case "processing": statusDiv.classList.add('status-processing'); break;
-            case "success": statusDiv.classList.add('status-success'); break;
-            case "error": statusDiv.classList.add('status-error'); break;
-            case "idle": default: statusDiv.classList.add('status-idle'); break;
-        }
+        statusDiv.classList.add(`status-${type}`);
         console.log(`Status updated: ${message} (type: ${type})`);
         if (duration > 0) {
             setTimeout(() => {
@@ -108,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const minutes = Math.floor(recordingSeconds / 60);
         const seconds = recordingSeconds % 60;
         const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        recordingTimeDisplay.textContent = `Tiempo: ${formattedTime}`;
+        recordingTimeDisplay.textContent = isRecording || isPaused ? `Tiempo: ${formattedTime}` : "";
     }
     function resetRecordingTimerDisplay() {
         recordingTimeDisplay.textContent = ""; 
@@ -117,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Volume Meter Logic ---
     function setupVolumeMeter(stream) {
+        volumeMeterContainer.style.display = 'block'; // Mostrar medidor
         if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
         if (audioContext.state === 'suspended') audioContext.resume(); 
         
@@ -129,32 +158,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const dataArray = new Uint8Array(bufferLength);
 
         function drawVolume() {
-            if (isPaused) { 
+            if (!isRecording || isPaused) { // Si no está grabando o está pausado
+                if(isPaused) volumeMeterBar.classList.add('paused'); else volumeMeterBar.classList.remove('paused');
                 animationFrameId = requestAnimationFrame(drawVolume); 
                 return;
             }
             animationFrameId = requestAnimationFrame(drawVolume);
             analyser.getByteFrequencyData(dataArray); 
-            
-            let sum = 0;
-            for(let i = 0; i < bufferLength; i++) { sum += dataArray[i]; }
+            let sum = 0; for(let i = 0; i < bufferLength; i++) { sum += dataArray[i]; }
             let average = sum / bufferLength; 
-            
-            let volumePercent = 0;
-            const sensitivityDivisor = 2.0; 
-            const minThreshold = 3; 
-
-            if (average > minThreshold) {
-                 volumePercent = (average / 255) * 100 / sensitivityDivisor;
-            }
+            let volumePercent = 0; const sensitivityDivisor = 2.0; const minThreshold = 3; 
+            if (average > minThreshold) volumePercent = (average / 255) * 100 / sensitivityDivisor;
             volumePercent = Math.min(100, Math.max(0, volumePercent));
-
             volumeMeterBar.style.width = volumePercent + '%';
             volumeMeterBar.classList.remove('paused');
-
-            if (volumePercent > 80) { volumeMeterBar.style.backgroundColor = 'var(--volume-bar-high)'; }
-            else if (volumePercent > 45) { volumeMeterBar.style.backgroundColor = 'var(--volume-bar-medium)'; }
-            else { volumeMeterBar.style.backgroundColor = 'var(--volume-bar-low)'; }
+            if (volumePercent > 80) volumeMeterBar.style.backgroundColor = 'var(--volume-bar-high)';
+            else if (volumePercent > 45) volumeMeterBar.style.backgroundColor = 'var(--volume-bar-medium)';
+            else volumeMeterBar.style.backgroundColor = 'var(--volume-bar-low)';
         }
         drawVolume();
     }
@@ -165,12 +185,26 @@ document.addEventListener('DOMContentLoaded', () => {
         volumeMeterBar.style.width = '0%';
         volumeMeterBar.classList.remove('paused');
         volumeMeterBar.style.backgroundColor = 'var(--volume-bar-low)'; 
+        volumeMeterContainer.style.display = 'none'; // Ocultar medidor
     }
     
     // --- Recording and Processing Logic ---
-    async function startRecording() {
-        console.log("Solicitando permiso para grabar...");
-        setStatus("Solicitando permiso para grabar...", "processing");
+    function toggleRecordingState() {
+        if (isRecording) { // Si está grabando (o pausado), detener
+            if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) {
+                mediaRecorder.stop(); 
+                setStatus("Deteniendo grabación...", "processing");
+                // isRecording se pondrá a false en onstop
+            }
+        } else { // No está grabando, empezar
+            startActualRecording();
+        }
+    }
+    
+    async function startActualRecording() {
+        console.log("Iniciando grabación...");
+        setStatus("Solicitando permiso...", "processing");
+        isRecording = true; // Marcar como grabando ANTES de pedir permiso
         isPaused = false;
         polishedTextarea.value = ''; 
         audioChunks = [];
@@ -178,12 +212,9 @@ document.addEventListener('DOMContentLoaded', () => {
         recordingSeconds = 0; 
         
         if (audioPlayback.src) { URL.revokeObjectURL(audioPlayback.src); audioPlayback.src = ''; audioPlayback.removeAttribute('src');}
-        
         if (!userApiKey) {
-            alert('API Key de Gemini no configurada.');
-            setStatus("Error: API Key no configurada.", "error");
-            updateButtonStates("initial");
-            return;
+            alert('API Key de Gemini no configurada.'); setStatus("Error: API Key.", "error");
+            isRecording = false; updateButtonStates("initial"); return;
         }
 
         try {
@@ -194,138 +225,160 @@ document.addEventListener('DOMContentLoaded', () => {
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
             mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
             mediaRecorder.onpause = () => {
-                console.log("MediaRecorder paused");
-                setStatus('Grabación pausada. Presiona "Reanudar" para continuar.', 'idle');
-                isPaused = true;
-                volumeMeterBar.classList.add('paused');
+                console.log("MediaRecorder paused"); setStatus('Grabación pausada.', 'idle');
+                isPaused = true; volumeMeterBar.classList.add('paused');
                 volumeMeterBar.style.backgroundColor = 'var(--button-default-bg)'; 
+                updateButtonStates("paused"); // Actualizar UI para estado pausado
             };
             mediaRecorder.onresume = () => {
-                console.log("MediaRecorder resumed");
-                setStatus('Grabando... (Reanudado)', 'processing');
-                isPaused = false;
-                volumeMeterBar.classList.remove('paused'); 
+                console.log("MediaRecorder resumed"); setStatus('Grabando... (Reanudado)', 'processing');
+                isPaused = false; volumeMeterBar.classList.remove('paused'); 
+                updateButtonStates("recording"); // Actualizar UI para estado grabando
             };
             mediaRecorder.onstop = async () => {
-                stopVolumeMeter(); 
-                stopRecordingTimer(); 
-                console.log("MediaRecorder.onstop - Grabación detenida.");
-                setStatus('Grabación detenida. Procesando audio...', 'processing');
-                isPaused = false;
+                isRecording = false; isPaused = false; // Asegurar estados
+                stopVolumeMeter(); stopRecordingTimer(); 
+                console.log("MediaRecorder.onstop");
+                setStatus('Grabación detenida. Procesando...', 'processing');
 
                 if (audioChunks.length === 0) {
                     setStatus("Error: No se grabó audio.", "error", 3000);
-                    updateButtonStates("stopped_error");
-                    return;
+                    updateButtonStates("stopped_error"); return;
                 }
                 currentAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                 if (currentAudioBlob.size === 0) {
-                    setStatus("Error: El audio grabado está vacío.", "error", 3000);
-                    updateButtonStates("stopped_error");
-                    return;
+                    setStatus("Error: Audio grabado vacío.", "error", 3000);
+                    updateButtonStates("stopped_error"); return;
                 }
                 const audioURL = URL.createObjectURL(currentAudioBlob);
-                audioPlayback.src = audioURL;
+                audioPlayback.src = audioURL; // audioPlayback.parentElement.style.display = 'block'; // Mostrar reproductor
                 updateButtonStates("stopped_success"); 
                 await processAudioBlob(currentAudioBlob);
             };
             mediaRecorder.onerror = (event) => {
-                stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay(); isPaused = false;
+                isRecording = false; isPaused = false;
+                stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay();
                 console.error("MediaRecorder error:", event.error);
-                setStatus(`Error de MediaRecorder: ${event.error.name}`, "error", 4000);
+                setStatus(`Error MediaRecorder: ${event.error.name}`, "error", 4000);
                 updateButtonStates("error");
             };
 
             mediaRecorder.start();
-            setStatus('Grabando... Habla ahora.', "processing");
+            setStatus('Grabando...', "processing");
             updateButtonStates("recording");
         } catch (err) {
-            isPaused = false; stopRecordingTimer(); resetRecordingTimerDisplay();
-            console.error('Error al acceder al micrófono:', err);
-            setStatus(`Error al acceder al micrófono: ${err.message}.`, "error", 4000);
+            isRecording = false; isPaused = false;
+            stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay();
+            console.error('Error acceso micrófono:', err);
+            setStatus(`Error Mic: ${err.message}.`, "error", 4000);
             updateButtonStates("initial");
         }
     }
 
     function handlePauseResume() {
-        if (!mediaRecorder) return;
-        if (mediaRecorder.state === "recording") { mediaRecorder.pause(); updateButtonStates("paused"); }
-        else if (mediaRecorder.state === "paused") { mediaRecorder.resume(); updateButtonStates("recording"); }
-    }
-
-    function stopRecording() {
-        console.log("Botón Detener Grabación presionado.");
-        if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) {
-            mediaRecorder.stop(); setStatus("Deteniendo grabación...", "processing");
-        } else { updateButtonStates("initial"); }
+        if (!mediaRecorder || !isRecording) return; // Solo si está activamente grabando
+        if (mediaRecorder.state === "recording") { mediaRecorder.pause(); /* onpause manejará UI */ }
+        else if (mediaRecorder.state === "paused") { mediaRecorder.resume(); /* onresume manejará UI */ }
     }
     
     async function processAudioBlob(audioBlob) {
         polishedTextarea.value = ''; 
-        setStatus('Preparando audio para enviar...', 'processing');
+        setStatus('Preparando audio...', 'processing');
         updateButtonStates("processing_audio");
-        
         try {
             const base64Audio = await blobToBase64(audioBlob);
-            if (!base64Audio || base64Audio.length < 100) throw new Error("Fallo al convertir audio a Base64 o audio demasiado corto.");
-            
+            if (!base64Audio || base64Audio.length < 100) throw new Error("Fallo Base64.");
             const polishedResult = await transcribeAndPolishAudio(base64Audio); 
-            
             polishedTextarea.value = polishedResult;
-            setStatus('Proceso de transcripción y pulido completado.', 'success', 3000);
+            setStatus('Proceso completado.', 'success', 3000);
             updateButtonStates("success_processing");
-
         } catch (error) {
             console.error('Error procesando audio:', error);
-            setStatus(`Error en procesamiento: ${error.message}`, "error", 4000);
-            polishedTextarea.value = `Error en el proceso: ${error.message}`; 
+            setStatus(`Error Proc: ${error.message}`, "error", 4000);
+            polishedTextarea.value = `Error: ${error.message}`; 
             updateButtonStates("error_processing"); 
         }
     }
 
     function updateButtonStates(state) {
-        startRecordBtn.disabled = true;
+        startRecordBtn.disabled = false; // Habilitado por defecto, se ajusta abajo
         pauseResumeBtn.disabled = true;
         pauseResumeBtn.textContent = "Pausar";
-        stopRecordBtn.disabled = true;
         retryProcessBtn.disabled = true;
         copyPolishedTextBtn.disabled = false; 
 
+        // Estilo del botón principal
+        startRecordBtn.textContent = "Empezar Dictado";
+        startRecordBtn.classList.remove("stop-style");
+
+
         switch (state) {
             case "initial":
-                startRecordBtn.disabled = false;
-                setStatus("Estado: Esperando para grabar...", "idle");
+                setStatus("Listo", "idle");
                 resetRecordingTimerDisplay();
+                stopVolumeMeter(); // Asegurar que el medidor está oculto
                 break;
-            case "recording": pauseResumeBtn.disabled = false; stopRecordBtn.disabled = false; break;
-            case "paused": pauseResumeBtn.disabled = false; pauseResumeBtn.textContent = "Reanudar"; stopRecordBtn.disabled = false; break;
-            case "stopped_success": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break;
-            case "stopped_error": startRecordBtn.disabled = false; resetRecordingTimerDisplay(); break;
-            case "processing_audio": retryProcessBtn.disabled = !currentAudioBlob; break;
-            case "error_processing": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break;
-            case "success_processing": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break;
-             case "error": startRecordBtn.disabled = false; resetRecordingTimerDisplay(); break;
-            default: startRecordBtn.disabled = false; resetRecordingTimerDisplay(); break;
+            case "recording":
+                startRecordBtn.textContent = "Detener Dictado";
+                startRecordBtn.classList.add("stop-style");
+                pauseResumeBtn.disabled = false;
+                setStatus('Grabando...', 'processing');
+                break;
+            case "paused":
+                startRecordBtn.textContent = "Detener Dictado"; // Aún se puede detener
+                startRecordBtn.classList.add("stop-style");
+                pauseResumeBtn.disabled = false;
+                pauseResumeBtn.textContent = "Reanudar";
+                setStatus('Grabación pausada.', 'idle');
+                break;
+            case "stopped_success": // Audio grabado, listo para procesar o reintentar
+                startRecordBtn.disabled = false; // Puede empezar nueva grabación
+                retryProcessBtn.disabled = !currentAudioBlob;
+                // El timer se detuvo, pero el tiempo final se muestra.
+                break;
+            case "stopped_error": 
+                 startRecordBtn.disabled = false;
+                 resetRecordingTimerDisplay();
+                 stopVolumeMeter();
+                break;
+            case "processing_audio": 
+                startRecordBtn.disabled = true; // No permitir iniciar/detener mientras procesa
+                retryProcessBtn.disabled = !currentAudioBlob; 
+                break;
+            case "error_processing": 
+                startRecordBtn.disabled = false; 
+                retryProcessBtn.disabled = !currentAudioBlob; 
+                break;
+            case "success_processing": 
+                startRecordBtn.disabled = false;
+                retryProcessBtn.disabled = !currentAudioBlob; 
+                break;
+             case "error": // Error general, ej. de MediaRecorder o permisos
+                startRecordBtn.disabled = false; 
+                resetRecordingTimerDisplay();
+                stopVolumeMeter();
+                break;
+            default: 
+                startRecordBtn.disabled = false;
+                resetRecordingTimerDisplay();
+                stopVolumeMeter();
+                break;
         }
     }
 
     retryProcessBtn.addEventListener('click', () => {
-        if (currentAudioBlob) { console.log("Reintentando procesamiento..."); processAudioBlob(currentAudioBlob); }
-        else { alert("No hay audio grabado para reintentar."); setStatus("No hay audio para reintentar.", "error", 3000); }
+        if (currentAudioBlob) { console.log("Reintentando..."); processAudioBlob(currentAudioBlob); }
+        else { alert("No hay audio grabado."); setStatus("No hay audio.", "error", 3000); }
     });
 
     copyPolishedTextBtn.addEventListener('click', async () => {
-        const headerText = headerArea.value.trim();
-        const reportText = polishedTextarea.value.trim();
+        const headerText = headerArea.value.trim(); const reportText = polishedTextarea.value.trim();
         let textToCopy = "";
-
-        if (headerText && reportText) { textToCopy = headerText + "\n\n" + reportText; }
-        else if (reportText) { textToCopy = reportText; }
-        else if (headerText) { textToCopy = headerText; }
-
-        if (textToCopy === '') { setStatus("Nada que copiar. Ambas áreas de texto están vacías.", "idle", 3000); return; }
-        try { await navigator.clipboard.writeText(textToCopy); setStatus("¡Texto completo copiado!", "success", 3000); }
-        catch (err) { console.error('Error al copiar texto: ', err); setStatus("Error al copiar texto. Inténtalo manualmente.", "error", 3000); }
+        if (headerText && reportText) textToCopy = headerText + "\n\n" + reportText;
+        else if (reportText) textToCopy = reportText; else if (headerText) textToCopy = headerText;
+        if (textToCopy === '') { setStatus("Nada que copiar.", "idle", 3000); return; }
+        try { await navigator.clipboard.writeText(textToCopy); setStatus("¡Texto copiado!", "success", 2000); }
+        catch (err) { console.error('Error copia:', err); setStatus("Error al copiar.", "error", 3000); }
     });
 
     techniqueButtonsContainer.addEventListener('click', (event) => {
@@ -335,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     clearHeaderButton.addEventListener('click', () => { headerArea.value = ""; headerArea.focus(); });
 
-    function blobToBase64(blob) {
+    function blobToBase64(blob) { /* ... sin cambios ... */ 
         return new Promise((resolve, reject) => {
             if (!blob || blob.size === 0) return reject(new Error("Blob nulo o vacío"));
             const reader = new FileReader();
@@ -351,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function callGeminiAPI(promptParts, isTextOnly = false) {
+    async function callGeminiAPI(promptParts, isTextOnly = false) { /* ... sin cambios ... */ 
         if (!userApiKey) throw new Error('API Key no configurada.');
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;
         const temperature = isTextOnly ? 0.1 : 0.2; 
@@ -370,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error('Respuesta de Gemini inesperada o sin texto, y sin razón de bloqueo clara.');
     }
 
-    async function transcribeAndPolishAudio(base64Audio) {
+    async function transcribeAndPolishAudio(base64Audio) { /* ... sin cambios ... */ 
         let transcribedText = '';
         try {
             setStatus('Transcribiendo audio...', 'processing');
@@ -403,9 +456,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    startRecordBtn.addEventListener('click', startRecording);
+    // Listener para el botón principal de Empezar/Detener Dictado
+    startRecordBtn.addEventListener('click', toggleRecordingState);
     pauseResumeBtn.addEventListener('click', handlePauseResume);
-    stopRecordBtn.addEventListener('click', stopRecording);
+    // stopRecordBtn ya no existe como botón separado
     
     updateButtonStates("initial"); 
     console.log("Script inicializado y event listeners asignados.");
