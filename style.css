@@ -17,7 +17,7 @@ body[data-theme="light"] {
     --text-primary: #212529;
     --text-secondary: #495057;
     --border-color: #dee2e6;
-    --border-light-color: #e9ecef; /* Un poco más claro para divisiones internas */
+    --border-light-color: #e9ecef; 
     --accent-color: #007bff; 
     --accent-text-color: #ffffff;
     --btn-record-bg: #28a745; --btn-record-bg-hover: #218838;
@@ -25,8 +25,7 @@ body[data-theme="light"] {
     --btn-stop-bg: #dc3545; --btn-stop-bg-hover: #c82333;
     --btn-retry-bg: #17a2b8; --btn-retry-bg-hover: #138496;
     --btn-copy-bg: #007bff; --btn-copy-bg-hover: #0056b3;
-    --btn-technique-bg: var(--button-default-bg); --btn-technique-text: var(--accent-text-color);
-    --btn-technique-hover-bg: var(--button-default-bg-hover);
+    --btn-technique-text: var(--accent-text-color); /* Texto para botones de técnica con fondo de color */
     --btn-technique-red-bg: #dc3545; --btn-technique-red-hover: #c82333;
     --btn-technique-yellow-bg: #ffc107; --btn-technique-yellow-hover: #e0a800; --btn-technique-yellow-text: #212529;
     --btn-technique-blue-bg: #17a2b8; --btn-technique-blue-hover: #138496;
@@ -55,8 +54,7 @@ body[data-theme="dark"] {
     --btn-stop-bg: #f44336; --btn-stop-bg-hover: #d32f2f;
     --btn-retry-bg: #00bcd4; --btn-retry-bg-hover: #0097a7;
     --btn-copy-bg: #2196F3; --btn-copy-bg-hover: #1976D2;
-    --btn-technique-bg: #5a6268; --btn-technique-text: var(--accent-text-color);
-    --btn-technique-hover-bg: #495057;
+    --btn-technique-text: var(--accent-text-color);
     --btn-technique-red-bg: #f44336; --btn-technique-red-hover: #d32f2f;
     --btn-technique-yellow-bg: #ffc107; --btn-technique-yellow-hover: #e0a800; --btn-technique-yellow-text: #212529;
     --btn-technique-blue-bg: #00bcd4; --btn-technique-blue-hover: #0097a7;
@@ -80,45 +78,28 @@ body {
     transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
-/* Layout principal */
+/* Layout principal - ahora una sola columna central */
 .app-layout {
     display: flex;
-    flex-direction: row;
-    gap: 20px; /* Espacio entre columnas */
+    flex-direction: column; /* Apilado vertical */
+    gap: 20px; 
     width: 100%;
-    max-width: 1200px; /* Ancho máximo de la app */
-    margin: 0 auto; /* Centrar app */
+    max-width: 900px; /* Un poco más ancho para acomodar bien todo */
+    margin: 0 auto; 
 }
 
-.main-column {
-    flex: 3; /* Columna principal ocupa más espacio */
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Espacio entre contenedores dentro de la columna */
-}
+/* Ya no necesitamos .main-column y .sidebar-column como flex items distintos */
 
-.sidebar-column {
-    flex: 1; /* Columna lateral ocupa menos espacio */
-    position: sticky; /* Para que se quede fija al hacer scroll */
-    top: 20px; /* Espacio desde arriba */
-    align-self: flex-start; /* Para que no se estire con la columna principal */
+.container-wrapper { 
+    width: 100%;
+    max-width: 900px; /* Coincide con app-layout */
+    margin: 0 auto; 
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-
-.container-wrapper { /* Nuevo wrapper para título y contenido principal */
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto; /* Centrado */
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-
-.container { /* Estilo base para todos los contenedores */
+.container { 
     background-color: var(--bg-secondary);
     padding: 20px;
     border-radius: var(--border-radius-medium);
@@ -127,34 +108,41 @@ body {
     transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
-
-h1, h2, h3 {
-    color: var(--text-primary);
-    text-align: center;
-    margin-top: 0; /* Quitar margen superior por defecto */
-    margin-bottom: 0.75em;
-}
 h1 { 
     font-size: 2em; 
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--text-primary);
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 0.5em; /* Reducido un poco */
 }
-h2 { font-size: 1.5em; margin-top: 1em; } /* Ajustado margen */
+h2 { 
+    font-size: 1.5em; 
+    margin-top: 1em; 
+    color: var(--text-primary);
+    text-align: center;
+    margin-bottom: 0.75em;
+}
 h3 { 
     font-size: 1.1em; 
     color: var(--text-secondary); 
     border-bottom: 1px solid var(--border-light-color);
     padding-bottom: 8px;
-}
-#main-title-image {
-    max-height: 50px;
-    width: auto;
-    margin: 0 15px;
-    border-radius: 4px;
-    border: 1px solid var(--theme-image-border);
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 0.75em;
 }
 
+#mainTitleImage, #mainTitleImageDark { /* Estilos para las imágenes del título */
+    max-height: 60px; /* Aumentado para mejor visibilidad */
+    width: auto;
+    margin: 0 20px; /* Más margen */
+    border-radius: 4px;
+    border: 1px solid var(--theme-image-border);
+    object-fit: contain; /* Para que la imagen se escale bien */
+}
 
 .controls .buttons-group {
     display: flex;
@@ -180,7 +168,7 @@ textarea {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-small);
     box-sizing: border-box;
-    background-color: var(--bg-secondary); /* Usar el color de fondo del contenedor para inputs */
+    background-color: var(--bg-secondary); 
     color: var(--text-primary);
     transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
 }
@@ -190,28 +178,28 @@ textarea:focus {
     box-shadow: 0 0 0 0.2rem rgba(var(--accent-color-rgb, 0,123,255), 0.25); 
 }
 
-#polishedText { /* Area de texto principal */
-    min-height: 300px; 
+#polishedText { 
+    min-height: 250px; /* Ajustado */
     font-size: 1.1em;
+    margin-top: 10px; /* Espacio desde el textarea de técnica */
 }
-#headerArea { /* Textarea para la técnica */
+#headerArea { 
     min-height: 80px;
     font-size: 1em;
-    margin-bottom: 0; /* Quitar margen si es el último elemento en su contenedor */
+    margin-bottom: 15px; /* Espacio antes de los botones de técnica */
 }
-
 
 button {
     color: var(--accent-text-color);
     border: none;
-    padding: 10px 15px; /* Ligeramente menos padding horizontal */
+    padding: 10px 15px; 
     border-radius: var(--border-radius-small);
     cursor: pointer;
     font-weight: 500;
-    font-size: 0.9em; /* Ligeramente más pequeño para que quepan más */
+    font-size: 0.9em; 
     transition: background-color var(--transition-medium), color var(--transition-medium);
     flex-grow: 1; 
-    min-width: 100px; /* Ajustado */
+    min-width: 100px; 
     text-align: center;
 }
 
@@ -253,7 +241,8 @@ button:disabled {
     padding: 10px;
     border-radius: var(--border-radius-small);
     border-left: 4px solid var(--accent-color);
-    margin-bottom: 20px; 
+    margin-bottom: 10px; /* Reducido */
+    text-align: center;
 }
 .info a { color: var(--accent-color); text-decoration: none; }
 .info a:hover { text-decoration: underline; }
@@ -287,62 +276,66 @@ body[data-theme="light"] .slider { background-color: #ccc; }
 body[data-theme="dark"] .slider { background-color: #555; } 
 body[data-theme="dark"] input:checked + .slider { background-color: var(--accent-color); }
 
-
-/* Estilos para la sección de técnicas */
+/* Estilos para la sección de técnicas (ahora en la columna principal) */
+.technique-section {
+    /* El estilo .container base ya aplica padding, bg, border, etc. */
+}
 .technique-section h3 {
     margin-bottom: 10px;
+    text-align: left; /* Alinear título a la izquierda */
 }
 #techniqueButtons {
     display: flex;
-    flex-direction: column; /* Para agrupar por filas */
-    gap: 10px; /* Espacio entre grupos de botones */
+    flex-direction: column; 
+    gap: 10px; 
 }
 .technique-group {
     display: flex;
-    flex-wrap: wrap; /* Permitir que los botones pasen a la siguiente línea */
-    gap: 8px; /* Espacio entre botones dentro de un grupo */
-    justify-content: flex-start; /* Alinear botones al inicio */
+    flex-wrap: wrap; 
+    gap: 8px; 
+    justify-content: flex-start; 
 }
 #techniqueButtons button {
-    padding: 8px 10px;
-    font-size: 0.85em;
+    padding: 8px 12px; /* Aumentar padding para mejor click */
+    font-size: 0.88em; /* Ligeramente más grande */
     border: none;
     border-radius: var(--border-radius-small);
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
-    min-width: auto; /* Permitir que sean más pequeños */
-    flex-grow: 0; /* No crecer por defecto */
-    flex-basis: content; /* Ancho basado en contenido */
-    color: var(--btn-technique-text);
-    background-color: var(--btn-technique-bg);
+    min-width: 110px; /* Ancho mínimo para uniformidad */
+    flex-grow: 0; /* No crecer para llenar espacio, que el texto defina el ancho hasta min-width */
+    flex-basis: auto; /* Que se ajuste al contenido y padding */
+    text-align: center;
+    color: var(--btn-technique-text); /* Color de texto general para estos botones */
 }
 #techniqueButtons button:hover:not(:disabled) {
-    background-color: var(--btn-technique-hover-bg);
+    /* El hover se define por las clases de color específicas */
 }
 #techniqueButtons button:active:not(:disabled) {
     transform: scale(0.97);
 }
-/* Colores específicos para botones de técnica */
-#techniqueButtons .btn-tech-red { background-color: var(--btn-technique-red-bg); color: var(--accent-text-color);}
+#techniqueButtons .btn-tech-red { background-color: var(--btn-technique-red-bg); }
 #techniqueButtons .btn-tech-red:hover:not(:disabled) { background-color: var(--btn-technique-red-hover); }
 #techniqueButtons .btn-tech-yellow { background-color: var(--btn-technique-yellow-bg); color: var(--btn-technique-yellow-text); }
 #techniqueButtons .btn-tech-yellow:hover:not(:disabled) { background-color: var(--btn-technique-yellow-hover); }
-#techniqueButtons .btn-tech-blue { background-color: var(--btn-technique-blue-bg); color: var(--accent-text-color); }
+#techniqueButtons .btn-tech-blue { background-color: var(--btn-technique-blue-bg); }
 #techniqueButtons .btn-tech-blue:hover:not(:disabled) { background-color: var(--btn-technique-blue-hover); }
 #techniqueButtons .btn-tech-gray { background-color: var(--btn-technique-gray-bg); color: var(--btn-technique-gray-text); }
 #techniqueButtons .btn-tech-gray:hover:not(:disabled) { background-color: var(--btn-technique-gray-hover); }
 
-/* Responsive: para pantallas más pequeñas, las columnas se apilan */
-@media (max-width: 992px) { /* Ligeramente antes que 768px para mejor visualización */
-    .app-layout {
-        flex-direction: column;
+/* Ya no se usa layout de dos columnas principal, así que el media query para apilar no es tan relevante para .app-layout */
+/* Podemos mantenerlo por si se reintroduce una sidebar real */
+@media (max-width: 768px) { 
+    /* Ajustes para pantallas pequeñas si es necesario */
+    h1 { font-size: 1.8em; }
+    #mainTitleImage, #mainTitleImageDark { max-height: 45px; margin: 0 10px;}
+    button { font-size: 0.85em; padding: 8px 12px; min-width: 90px;}
+    #techniqueButtons button { font-size: 0.8em; padding: 6px 10px; min-width: 100px;}
+    .controls .buttons-group {
+        flex-direction: column; /* Apilar botones de control en móvil */
     }
-    .sidebar-column {
-        position: static; /* Quitar sticky en móvil */
+    .controls .buttons-group button {
         width: 100%; /* Ocupar todo el ancho */
-        order: 2; /* Mostrar después del contenido principal */
-    }
-    .main-column {
-        order: 1;
+        margin-bottom: 8px;
     }
 }
