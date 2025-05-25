@@ -19,37 +19,34 @@
        };
 
       try {
-            // Importar funciones de Firebase SDK
+            console.log("DEBUG: Intentando cargar Firebase SDKs...");
             const firebaseAppModule = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
             const firestoreModule = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
             const firebaseAuthModule = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+            console.log("DEBUG: Módulos Firebase importados.");
 
-            // Inicializar Firebase App
             window.firebaseApp = firebaseAppModule.initializeApp(firebaseConfig);
-            console.log("Firebase App inicializada.");
+            console.log("DEBUG: Firebase App inicializada:", window.firebaseApp ? "Éxito" : "Fallo");
 
-            // Inicializar Firestore y Auth
             window.db = firestoreModule.getFirestore(window.firebaseApp);
             window.auth = firebaseAuthModule.getAuth(window.firebaseApp);
-            console.log("Firestore y Auth inicializados.");
+            console.log("DEBUG: Firestore y Auth inicializados:", window.db ? "DB Ok" : "DB Fallo", window.auth ? "Auth Ok" : "Auth Fallo");
 
-            // Exportar funciones necesarias al objeto window para acceso global (si se usan directamente en script.js no modular)
             window.doc = firestoreModule.doc;
             window.getDoc = firestoreModule.getDoc;
             window.setDoc = firestoreModule.setDoc;
             window.collection = firestoreModule.collection;
             window.addDoc = firestoreModule.addDoc;
             window.serverTimestamp = firestoreModule.serverTimestamp;
-            // ... (otras funciones de Firestore que puedas necesitar) ...
-
+            
             window.createUserWithEmailAndPassword = firebaseAuthModule.createUserWithEmailAndPassword;
             window.signInWithEmailAndPassword = firebaseAuthModule.signInWithEmailAndPassword;
             window.signOut = firebaseAuthModule.signOut;
             window.onAuthStateChanged = firebaseAuthModule.onAuthStateChanged;
             
-            console.log("Firebase SDKs cargados y funciones exportadas a window.");
-            // Disparar un evento personalizado para indicar que Firebase está listo
+            console.log("DEBUG: Firebase SDKs cargados y funciones exportadas a window.");
             document.dispatchEvent(new CustomEvent('firebaseReady'));
+            console.log("DEBUG: Evento firebaseReady disparado.");
 
       } catch (error) {
           console.error("Error crítico inicializando Firebase:", error);
@@ -58,9 +55,8 @@
       }
     </script>
 </head>
-<body data-theme="dark" class="logged-out"> <!-- Clase inicial para ocultar app -->
+<body data-theme="dark" class="logged-out">
 
-    <!-- Contenedor de Autenticación -->
     <div id="auth-container">
         <div class="auth-form-wrapper">
             <form id="login-form" class="auth-form">
@@ -95,7 +91,6 @@
         </div>
     </div>
 
-    <!-- Contenedor Principal de la Aplicación (inicialmente oculto) -->
     <div id="app-container" style="display: none;">
         <div class="user-info-bar">
             <span id="userDisplay"></span>
@@ -179,6 +174,6 @@
         </div> 
     </div>
 
-    <script type="module" src="script.js"></script> <!-- Cambiado a type="module" -->
+    <script type="module" src="script.js"></script> 
 </body>
 </html>
