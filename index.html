@@ -7,15 +7,15 @@
     <link rel="stylesheet" href="style.css">
     <!-- Firebase SDK Imports -->
     <script type="module">
-      // Configuración de Firebase (REEMPLAZA CON TUS VALORES REALES SI ES NECESARIO)
+      // Configuración de Firebase (REEMPLAZA CON TUS VALORES REALES)
       const firebaseConfig = {
-         apiKey: "AIzaSyA_VQH1y-px8-QF3gMw3VOPjiiU1OefDBo", // Esta parece una clave de ejemplo, usa la tuya
+         apiKey: "AIzaSyA_VQH1y-px8-QF3gMw3VOPjiiU1OefDBo", // EJEMPLO, USA TU API KEY REAL
          authDomain: "almacena-correcciones-dictado.firebaseapp.com",
          projectId: "almacena-correcciones-dictado",
          storageBucket: "almacena-correcciones-dictado.appspot.com",
          messagingSenderId: "209194920272",
          appId: "1:209194920272:web:ccbec69d0a5aa88789e455",
-         measurementId: "G-6PQSKYMDP0" // Opcional, para Analytics
+         measurementId: "G-6PQSKYMDP0" 
        };
 
       try {
@@ -36,8 +36,7 @@
             window.getDoc = firestoreModule.getDoc;
             window.setDoc = firestoreModule.setDoc;
             window.collection = firestoreModule.collection;
-            window.addDoc = firestoreModule.addDoc;
-            window.serverTimestamp = firestoreModule.serverTimestamp;
+            // addDoc y serverTimestamp no se usan en esta versión, pero pueden ser útiles
             
             window.createUserWithEmailAndPassword = firebaseAuthModule.createUserWithEmailAndPassword;
             window.signInWithEmailAndPassword = firebaseAuthModule.signInWithEmailAndPassword;
@@ -114,6 +113,7 @@
                             <button id="pauseResumeBtn" class="btn-pause" disabled>Pausar</button>
                             <button id="retryProcessBtn" class="btn-retry" disabled>Reenviar audio</button>
                             <button id="copyPolishedTextBtn" class="btn-copy" title="Copiar texto completo">Copiar Todo</button>
+                            <button id="correctTextSelectionBtn" class="btn-correct" disabled>Corregir Selección</button>
                         </div>
                         <p id="recordingTimeDisplay"></p>
                         <p id="status" class="status-idle">Listo</p>
@@ -140,6 +140,9 @@
                                 <input type="checkbox" id="themeSwitch">
                                 <span class="slider"></span>
                             </label>
+                        </div>
+                        <div class="button-group" style="margin-top: 20px;">
+                             <button id="manageVocabButton" class="btn-blue" disabled>Gestionar Vocabulario</button> 
                         </div>
                     </div>
 
@@ -172,6 +175,21 @@
                 </div>
             </div> 
         </div> 
+    </div>
+
+    <!-- Modal de Gestión de Vocabulario -->
+    <div id="vocabManagerModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button id="modalCloseButtonVocab" class="modal-close-button">×</button>
+            <h3>Gestionar Vocabulario Personalizado</h3>
+            <p><small>Las claves (texto incorrecto) se guardan en minúsculas.</small></p>
+            <ul id="vocabManagerList">
+                <!-- Las reglas se poblarán aquí por JS -->
+            </ul>
+            <div class="modal-actions">
+                <button id="modalAddNewRuleButtonVocab" class="btn-record">Añadir Nueva Regla</button>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="script.js"></script> 
