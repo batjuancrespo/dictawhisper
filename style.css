@@ -1,6 +1,3 @@
-/* Contenido completo de style.css (el mismo que la respuesta anterior, donde se ajustó el ancho) */
-/* No lo repito para no hacer esta respuesta excesivamente larga. */
-/* Asegúrate de tener los estilos para .btn-correct y los estilos del modal que te proporcioné antes. */
 :root {
     --font-primary: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --line-height-base: 1.6;
@@ -10,36 +7,91 @@
     --transition-fast: 0.2s ease-in-out;
     --transition-medium: 0.3s ease;
 }
-/* Tema Oscuro */
+
+/* Tema Oscuro (Estilo Principal a Replicar de la Imagen) */
 body[data-theme="dark"] {
-    --bg-primary: #22272e; --bg-secondary: #2d333b; --text-primary: #adbac7; --text-secondary: #768390; --border-color: #444c56; --border-light-color: #373e47; --accent-color: #539bf5; --accent-text-color: #ffffff; 
-    --btn-record-bg: #377ef0; --btn-record-bg-hover: #539bf5; --btn-pause-bg: #d9971a; --btn-pause-bg-hover: #f0b72f; --btn-pause-text: #22272e; --btn-stop-bg: #e5534b; --btn-stop-bg-hover: #f47067;
-    --btn-retry-bg: #4387d9; --btn-retry-bg-hover: #539bf5; --btn-copy-bg: #ffc107; --btn-copy-bg-hover: #e0a800; --btn-copy-text: #22272e; 
-    --btn-correct-bg: #28a745; --btn-correct-bg-hover: #218838; /* Color para Corregir */
-    --btn-technique-red-bg: #e5534b; --btn-technique-red-hover: #f47067; --btn-technique-yellow-bg: #d9971a; --btn-technique-yellow-hover: #f0b72f; --btn-technique-yellow-text: #22272e;
-    --btn-technique-blue-bg: #377ef0; --btn-technique-blue-hover: #539bf5; --btn-technique-gray-bg: #444c56; --btn-technique-gray-hover: #5d6774; --btn-technique-text: var(--accent-text-color); 
-    --volume-bar-color1: #2ecc71; --volume-bar-color2: #f1c40f; --volume-bar-color3: #e67e22; --volume-bar-color4: #e74c3c; --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
-    --success-bg: #14301c; --success-text: #a3cfbb; --error-bg: #3b1518; --error-text: #f1b0b7; --processing-bg: #002752; --processing-text: #b8d4fe; --idle-bg: #3e444a; --idle-text: #ced4da;
-    --button-disabled-bg: #444c56; --button-default-bg: #444c56; --theme-image-border: var(--border-color); --input-bg: #22272e; --input-border: #444c56; --input-text: #adbac7;
+    --bg-primary: #22272e; 
+    --bg-secondary: #2d333b; 
+    --text-primary: #adbac7; 
+    --text-secondary: #768390; 
+    --border-color: #444c56; 
+    --border-light-color: #373e47; 
+    --accent-color: #539bf5; 
+    --accent-text-color: #ffffff; 
+    --btn-record-bg: #377ef0; --btn-record-bg-hover: #539bf5;
+    --btn-pause-bg: #d9971a; --btn-pause-bg-hover: #f0b72f; --btn-pause-text: #22272e; 
+    --btn-stop-bg: #e5534b; --btn-stop-bg-hover: #f47067;
+    --btn-retry-bg: #4387d9; --btn-retry-bg-hover: #539bf5;
+    --btn-copy-bg: #ffc107; --btn-copy-bg-hover: #e0a800; --btn-copy-text: #22272e; 
+    --btn-correct-bg: #28a745; --btn-correct-bg-hover: #218838;
+    --btn-blue-bg: #377ef0; /* Definición para .btn-blue */
+    --btn-blue-bg-hover: #539bf5;
+    --btn-technique-red-bg: #e5534b; --btn-technique-red-hover: #f47067;
+    --btn-technique-yellow-bg: #d9971a; --btn-technique-yellow-hover: #f0b72f; --btn-technique-yellow-text: #22272e;
+    --btn-technique-blue-bg: #377ef0; /* Este es para los de técnica, puede ser el mismo que btn-blue-bg o diferente */
+    --btn-technique-blue-hover: #539bf5;
+    --btn-technique-gray-bg: #444c56; --btn-technique-gray-hover: #5d6774;
+    --btn-technique-text: var(--accent-text-color); 
+    --volume-bar-color1: #2ecc71; --volume-bar-color2: #f1c40f; --volume-bar-color3: #e67e22; --volume-bar-color4: #e74c3c; 
+    --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
+    --success-bg: #14301c; --success-text: #a3cfbb;
+    --error-bg: #3b1518; --error-text: #f1b0b7;
+    --processing-bg: #002752; --processing-text: #b8d4fe;
+    --idle-bg: #3e444a; --idle-text: #ced4da;
+    --button-disabled-bg: #444c56;
+    --button-default-bg: #444c56; 
+    --theme-image-border: var(--border-color);
+    --input-bg: #22272e;
+    --input-border: #444c56;
+    --input-text: #adbac7;
     --switch-bg: #444c56; --switch-thumb-bg: #768390; --switch-checked-bg: #377ef0;
     --auth-form-bg: var(--bg-secondary); --auth-error-color: var(--btn-stop-bg); --auth-link-color: var(--accent-color);
     --modal-overlay-bg: rgba(0,0,0,0.7); --modal-content-bg: var(--bg-secondary);
 }
-/* Tema Claro */
+
+/* Tema Claro (Alternativo) */
 body[data-theme="light"] {
-    --bg-primary: #f4f8fa; --bg-secondary: #ffffff; --text-primary: #2f363d; --text-secondary: #5c6975; --border-color: #d0d7de; --border-light-color: #e9ecef; --accent-color: #007bff; --accent-text-color: #ffffff;
-    --btn-record-bg: #28a745; --btn-record-bg-hover: #218838; --btn-pause-bg: #ffc107; --btn-pause-bg-hover: #e0a800; --btn-pause-text: #212529; --btn-stop-bg: #dc3545; --btn-stop-bg-hover: #c82333;
-    --btn-retry-bg: #17a2b8; --btn-retry-bg-hover: #138496; --btn-copy-bg: #fd7e14; --btn-copy-bg-hover: #e66f0d; --btn-copy-text: #ffffff;
+    --bg-primary: #f4f8fa; 
+    --bg-secondary: #ffffff;
+    --text-primary: #2f363d;
+    --text-secondary: #5c6975;
+    --border-color: #d0d7de;
+    --border-light-color: #e9ecef; 
+    --accent-color: #007bff; 
+    --accent-text-color: #ffffff;
+    --btn-record-bg: #28a745; --btn-record-bg-hover: #218838;
+    --btn-pause-bg: #ffc107; --btn-pause-bg-hover: #e0a800; --btn-pause-text: #212529; 
+    --btn-stop-bg: #dc3545; --btn-stop-bg-hover: #c82333;
+    --btn-retry-bg: #17a2b8; --btn-retry-bg-hover: #138496;
+    --btn-copy-bg: #fd7e14;   
+    --btn-copy-bg-hover: #e66f0d; --btn-copy-text: #ffffff;
     --btn-correct-bg: #28a745; --btn-correct-bg-hover: #218838;
-    --btn-technique-red-bg: #dc3545; --btn-technique-red-hover: #c82333; --btn-technique-yellow-bg: #ffc107; --btn-technique-yellow-hover: #e0a800; --btn-technique-yellow-text: #212529;
-    --btn-technique-blue-bg: #17a2b8; --btn-technique-blue-hover: #138496; --btn-technique-gray-bg: #6c757d; --btn-technique-gray-hover: #5a6268; --btn-technique-text: var(--accent-text-color);
-    --volume-bar-color1: #2ecc71; --volume-bar-color2: #f1c40f; --volume-bar-color3: #e67e22; --volume-bar-color4: #e74c3c; --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
-    --success-bg: #d4edda; --success-text: #155724; --error-bg: #f8d7da; --error-text: #721c24; --processing-bg: #e7f3ff; --processing-text: #004085; --idle-bg: #f0f0f0; --idle-text: #555;
-    --button-disabled-bg: #ced4da; --button-default-bg: #ced4da; --theme-image-border: var(--border-color); --input-bg: #ffffff; --input-border: #ced4da; --input-text: #2f363d;
+    --btn-blue-bg: #007bff; /* Definición para .btn-blue */
+    --btn-blue-bg-hover: #0056b3;
+    --btn-technique-red-bg: #dc3545; --btn-technique-red-hover: #c82333;
+    --btn-technique-yellow-bg: #ffc107; --btn-technique-yellow-hover: #e0a800; --btn-technique-yellow-text: #212529;
+    --btn-technique-blue-bg: #17a2b8; 
+    --btn-technique-blue-hover: #138496;
+    --btn-technique-gray-bg: #6c757d; --btn-technique-gray-hover: #5a6268;
+    --btn-technique-text: var(--accent-text-color);
+    --volume-bar-color1: #2ecc71; --volume-bar-color2: #f1c40f; --volume-bar-color3: #e67e22; --volume-bar-color4: #e74c3c; 
+    --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
+    --success-bg: #d4edda; --success-text: #155724;
+    --error-bg: #f8d7da; --error-text: #721c24;
+    --processing-bg: #e7f3ff; --processing-text: #004085;
+    --idle-bg: #f0f0f0; --idle-text: #555;
+    --button-disabled-bg: #ced4da;
+    --button-default-bg: #ced4da; 
+    --theme-image-border: var(--border-color);
+    --input-bg: #ffffff;
+    --input-border: #ced4da;
+    --input-text: #2f363d;
     --switch-bg: #ccc; --switch-thumb-bg: white; --switch-checked-bg: #007bff;
     --auth-form-bg: var(--bg-secondary); --auth-error-color: var(--btn-stop-bg); --auth-link-color: var(--accent-color);
     --modal-overlay-bg: rgba(0,0,0,0.6); --modal-content-bg: var(--bg-secondary);
 }
+
+/* ... (Resto de los estilos generales del body, auth, layout, container, title-frame, h1-h3, etc. SIN CAMBIOS) ... */
 body { font-family: var(--font-primary); line-height: var(--line-height-base); margin: 0; padding: 20px; background-color: var(--bg-primary); color: var(--text-primary); display: flex; justify-content: center; transition: background-color var(--transition-fast), color var(--transition-fast); box-sizing: border-box; }
 #auth-container { width: 100%; max-width: 450px; margin-top: 50px; }
 .auth-form-wrapper { background-color: var(--auth-form-bg); padding: 30px 40px; border-radius: var(--border-radius-medium); border: 1px solid var(--border-color); box-shadow: var(--shadow-soft); }
@@ -65,7 +117,7 @@ body.logged-in #auth-container { display: none; }
 .app-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; }
 .app-layout { display: flex; flex-direction: row; gap: 25px; width: 100%; max-width: 1600px; margin-top: 0; } 
 .main-column { flex-grow: 2; flex-shrink: 1; flex-basis: 0; display: flex; flex-direction: column; gap: 20px; }
-.sidebar-column { flex-grow: 1; flex-shrink: 1; flex-basis: 0; position: sticky; top: 20px; align-self: flex-start; display: flex; flex-direction: column; gap: 20px; max-width: 400px; /* Limitar ancho de sidebar */ }
+.sidebar-column { flex-grow: 1; flex-shrink: 1; flex-basis: 0; position: sticky; top: 20px; align-self: flex-start; display: flex; flex-direction: column; gap: 20px; max-width: 400px; }
 .container { background-color: var(--bg-secondary); padding: 20px 25px; border-radius: var(--border-radius-medium); border: 1px solid var(--border-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: background-color var(--transition-fast), border-color var(--transition-fast); }
 body[data-theme="dark"] .container { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
 #title-frame { background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius-medium); padding: 20px 25px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-soft); width: 100%; max-width: 1600px; box-sizing: border-box; margin-bottom: 20px; min-height: 80px; }
@@ -82,6 +134,7 @@ textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0
 #headerArea { min-height: 100px; margin-bottom: 0;  }
 button { color: var(--accent-text-color); border: none; padding: 10px 15px; border-radius: var(--border-radius-small); cursor: pointer; font-weight: 500; font-size: 0.95em; transition: background-color var(--transition-medium), color var(--transition-medium), transform 0.1s ease; text-align: center; width: 100%;  }
 button:active:not(:disabled) { transform: translateY(1px);  }
+
 .btn-record { background-color: var(--btn-record-bg); } 
 .btn-record.stop-style { background-color: var(--btn-stop-bg); } 
 .btn-record:hover:not(:disabled) { background-color: var(--btn-record-bg-hover); }
@@ -92,8 +145,11 @@ button:active:not(:disabled) { transform: translateY(1px);  }
 .btn-retry:hover:not(:disabled) { background-color: var(--btn-retry-bg-hover); }
 .btn-copy { background-color: var(--btn-copy-bg); color: var(--btn-copy-text); }
 .btn-copy:hover:not(:disabled) { background-color: var(--btn-copy-bg-hover); }
-.btn-correct { background-color: var(--btn-correct-bg); color: var(--accent-text-color); }
+.btn-correct { background-color: var(--btn-correct-bg); color: var(--accent-text-color); } /* Estilo para el botón Corregir */
 .btn-correct:hover:not(:disabled) { background-color: var(--btn-correct-bg-hover); }
+.btn-blue { background-color: var(--btn-blue-bg); color: var(--accent-text-color); } /* Estilo general para botones azules */
+.btn-blue:hover:not(:disabled) { background-color: var(--btn-blue-bg-hover); }
+
 button:disabled { background-color: var(--button-disabled-bg); color: var(--text-secondary); cursor: not-allowed; opacity: 0.6; }
 #status { margin-top: 15px; padding: 8px 12px; border-radius: var(--border-radius-small); font-weight: 500; text-align: center; transition: background-color var(--transition-medium), color var(--transition-medium); color: var(--text-secondary); font-size: 0.9em; }
 .status-idle { color: var(--idle-text); background-color: transparent; } 
@@ -126,10 +182,12 @@ input:checked + .slider:before { transform: translateX(20px); }
 #techniqueButtons .btn-tech-red:hover:not(:disabled) { background-color: var(--btn-technique-red-hover); border-color: var(--btn-technique-red-hover); }
 #techniqueButtons .btn-tech-yellow { background-color: var(--btn-technique-yellow-bg); color: var(--btn-technique-yellow-text); border-color: var(--btn-technique-yellow-bg); }
 #techniqueButtons .btn-tech-yellow:hover:not(:disabled) { background-color: var(--btn-technique-yellow-hover); border-color: var(--btn-technique-yellow-hover); }
-#techniqueButtons .btn-tech-blue { background-color: var(--btn-technique-blue-bg); color: var(--accent-text-color); border-color: var(--btn-technique-blue-bg); }
+#techniqueButtons .btn-tech-blue { background-color: var(--btn-technique-blue-bg); color: var(--accent-text-color); border-color: var(--btn-technique-blue-bg); } /* Para botones de técnica azules */
 #techniqueButtons .btn-tech-blue:hover:not(:disabled) { background-color: var(--btn-technique-blue-hover); border-color: var(--btn-technique-blue-hover); }
 #techniqueButtons .btn-tech-gray { background-color: var(--btn-technique-gray-bg); color: var(--btn-technique-text); border-color: var(--btn-technique-gray-bg); } 
 #techniqueButtons .btn-tech-gray:hover:not(:disabled) { background-color: var(--btn-technique-gray-hover); border-color: var(--btn-technique-gray-hover); }
+
+/* Estilos para el Modal de Vocabulario */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--modal-overlay-bg); display: none; justify-content: center; align-items: center; z-index: 1000; }
 .modal-content { background-color: var(--modal-content-bg); padding: 25px 30px; border-radius: var(--border-radius-medium); border: 1px solid var(--border-color); width: 90%; max-width: 600px; max-height: 85vh; box-shadow: var(--shadow-soft); position: relative; display: flex; flex-direction: column; }
 .modal-content h3 { margin-top: 0; margin-bottom: 20px; text-align: center; color: var(--text-primary); border-bottom: 1px solid var(--border-light-color); padding-bottom: 10px; }
@@ -148,5 +206,6 @@ input:checked + .slider:before { transform: translateX(20px); }
 .vocab-actions button:hover { opacity: 0.8; }
 .modal-actions { margin-top: 20px; text-align: center; flex-shrink: 0; }
 .modal-actions button { padding: 10px 20px; font-size: 1em; }
+
 @media (max-width: 992px) { .app-layout { flex-direction: column; } .sidebar-column { position: static; width: 100%; order: 2; } .main-column { order: 1; } #title-frame h1 { font-size: 1.6em; } #mainTitleImage, #mainTitleImageDark { height: 35px; width: 35px; margin-left: 10px;} }
 @media (max-width: 768px) { .controls .buttons-group { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); } button { font-size: 0.9em; }  #techniqueButtons .technique-group { grid-template-columns: 1fr; } }
