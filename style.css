@@ -1,394 +1,139 @@
-// No importar directamente firebase funciones aquí si ya están en window desde el HTML
-// const { initializeApp } = window.firebaseAppModule; // Ejemplo si fueran módulos
-// const { getFirestore, doc, getDoc, setDoc } = window.firestoreModule;
-// const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } = window.firebaseAuthModule;
-
-document.addEventListener('firebaseReady', () => {
-    console.log("DEBUG: Evento firebaseReady recibido. Procediendo a inicializar Auth y App...");
-    initializeAuthAndApp();
-});
-
-function initializeAuthAndApp() {
-    console.log("DEBUG: initializeAuthAndApp ejecutándose.");
-    // --- Selección DOM para Autenticación ---
-    const authContainer = document.getElementById('auth-container');
-    const appContainer = document.getElementById('app-container');
-    const loginForm = document.getElementById('login-form');
-    const signupForm = document.getElementById('signup-form');
-    const loginEmailInput = document.getElementById('login-email');
-    const loginPasswordInput = document.getElementById('login-password');
-    const signupEmailInput = document.getElementById('signup-email');
-    const signupPasswordInput = document.getElementById('signup-password');
-    const loginButton = document.getElementById('loginButton'); // Asegúrate que este ID existe
-    const signupButton = document.getElementById('signupButton'); // Asegúrate que este ID existe
-    const showSignupLink = document.getElementById('showSignupLink');
-    const showLoginLink = document.getElementById('showLoginLink');
-    const loginErrorDiv = document.getElementById('login-error');
-    const signupErrorDiv = document.getElementById('signup-error');
-    const userDisplaySpan = document.getElementById('userDisplay');
-    const logoutButton = document.getElementById('logoutButton');
-
-    // Verificar elementos de autenticación
-    if (!authContainer || !appContainer || !loginForm || !signupForm || !loginEmailInput || !loginPasswordInput || !signupEmailInput || !signupPasswordInput || !loginButton || !signupButton || !showSignupLink || !showLoginLink || !loginErrorDiv || !signupErrorDiv || !userDisplaySpan || !logoutButton) {
-        console.error("Error crítico: Faltan elementos HTML para la autenticación. IDs:", {
-            authContainer, appContainer, loginForm, signupForm, loginEmailInput, loginPasswordInput, signupEmailInput, signupPasswordInput, loginButton, signupButton, showSignupLink, showLoginLink, loginErrorDiv, signupErrorDiv, userDisplaySpan, logoutButton
-        });
-        alert("Error crítico: Faltan elementos HTML para la autenticación.");
-        return;
-    }
-    console.log("DEBUG: Todos los elementos de autenticación encontrados.");
-
-
-    // Usar las funciones de Firebase desde el objeto window
-    const auth = window.auth;
-    const createUserWithEmailAndPassword = window.createUserWithEmailAndPassword;
-    const signInWithEmailAndPassword = window.signInWithEmailAndPassword;
-    const signOut = window.signOut;
-    const onAuthStateChanged = window.onAuthStateChanged;
-
-    if (!auth || !createUserWithEmailAndPassword || !signInWithEmailAndPassword || !signOut || !onAuthStateChanged) {
-        console.error("Error crítico: Funciones de Firebase Auth no están disponibles en el objeto window.");
-        alert("Error crítico: Problema al cargar Firebase Auth.");
-        return;
-    }
-    console.log("DEBUG: Funciones de Firebase Auth disponibles.");
-
-
-    // --- Lógica de Autenticación ---
-    showSignupLink.addEventListener('click', (e) => { e.preventDefault(); loginForm.style.display = 'none'; signupForm.style.display = 'block'; loginErrorDiv.textContent = ''; signupErrorDiv.textContent = ''; });
-    showLoginLink.addEventListener('click', (e) => { e.preventDefault(); signupForm.style.display = 'none'; loginForm.style.display = 'block'; loginErrorDiv.textContent = ''; signupErrorDiv.textContent = ''; });
-
-    signupForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); const email = signupEmailInput.value; const password = signupPasswordInput.value;
-        signupErrorDiv.textContent = ''; signupButton.disabled = true; signupButton.textContent = 'Registrando...';
-        try { await createUserWithEmailAndPassword(auth, email, password); /* onAuthStateChanged manejará el resto */ }
-        catch (error) { signupErrorDiv.textContent = getFirebaseErrorMessage(error); }
-        finally { signupButton.disabled = false; signupButton.textContent = 'Registrarse'; }
-    });
-
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); const email = loginEmailInput.value; const password = loginPasswordInput.value;
-        loginErrorDiv.textContent = ''; loginButton.disabled = true; loginButton.textContent = 'Iniciando...';
-        try { await signInWithEmailAndPassword(auth, email, password); /* onAuthStateChanged manejará el resto */ }
-        catch (error) { loginErrorDiv.textContent = getFirebaseErrorMessage(error); }
-        finally { loginButton.disabled = false; loginButton.textContent = 'Iniciar Sesión'; }
-    });
-
-    logoutButton.addEventListener('click', async () => {
-        try { await signOut(auth); /* onAuthStateChanged manejará el cambio de UI */ }
-        catch (error) { console.error('Error al cerrar sesión:', error); alert("Error al cerrar sesión."); }
-    });
-    
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            console.log("DEBUG: Usuario autenticado:", user.uid, user.email);
-            document.body.classList.remove('logged-out');
-            document.body.classList.add('logged-in');
-            authContainer.style.display = 'none';
-            appContainer.style.display = 'block'; // O 'flex' si app-container es flex
-            userDisplaySpan.textContent = `${user.email || 'Usuario'}`;
-            
-            // Inicializar la app de dictado solo si no se ha hecho antes para este estado de login
-            if (!window.dictationAppInitialized) {
-                console.log("DEBUG: Inicializando app de dictado para el usuario.");
-                initializeDictationAppLogic(user.uid); // Pasar UID para cargar/guardar datos específicos del usuario
-                window.dictationAppInitialized = true;
-            }
-        } else {
-            console.log("DEBUG: Usuario no autenticado o sesión cerrada.");
-            document.body.classList.remove('logged-in');
-            document.body.classList.add('logged-out');
-            authContainer.style.display = 'block'; // O 'flex'
-            appContainer.style.display = 'none';
-            userDisplaySpan.textContent = '';
-            
-            // Detener cualquier grabación en curso si el usuario cierra sesión
-            if (window.currentMediaRecorder && window.currentMediaRecorder.state !== "inactive") {
-                try { window.currentMediaRecorder.stop(); } catch(e) { console.warn("Error al detener MediaRecorder en logout:", e); }
-            }
-            // Marcar que la app de dictado necesita reinicializarse si se vuelve a loguear otro usuario
-            window.dictationAppInitialized = false; 
-            console.log("DEBUG: App de dictado marcada para no inicializada.");
-        }
-    });
-
-    function getFirebaseErrorMessage(error) {
-        // Mapeo simple de errores comunes de Firebase Auth a mensajes más amigables
-        switch (error.code) {
-            case 'auth/invalid-email': return 'El formato del email no es válido.';
-            case 'auth/user-disabled': return 'Esta cuenta de usuario ha sido deshabilitada.';
-            case 'auth/user-not-found': return 'No se encontró ningún usuario con este email.';
-            case 'auth/wrong-password': return 'La contraseña es incorrecta.';
-            case 'auth/email-already-in-use': return 'Este email ya está registrado.';
-            case 'auth/weak-password': return 'La contraseña es demasiado débil.';
-            case 'auth/operation-not-allowed': return 'Operación no permitida. Contacta al administrador.';
-            case 'auth/network-request-failed': return 'Error de red. Verifica tu conexión.';
-            default: return error.message;
-        }
-    }
-
-} // Fin de initializeAuthAndApp
-
-
-// ====================================================================================
-// LÓGICA DE LA APLICACIÓN DE DICTADO (movida a su propia función de inicialización)
-// ====================================================================================
-function initializeDictationAppLogic(userId) {
-    console.log(`DEBUG: initializeDictationAppLogic para usuario: ${userId}`);
-    // --- Selección de Elementos DOM (ya están definidos globalmente en el script) ---
-    // Pero es buena práctica re-verificar o pasarlos si esta función fuera más modular
-    
-    // --- Variables Globales de la App de Dictado (algunas ya definidas globalmente) ---
-    // let mediaRecorder; // Ya global
-    // let audioChunks = []; // Ya global
-    // ... etc.
-
-    // --- Theme Switcher Logic (ya está global, podría quedarse así o re-instanciarse) ---
-    // ...
-
-    // --- Status, Timer, Volume Meter (ya están globales) ---
-    // ...
-
-    // --- Lógica de Grabación y Procesamiento ---
-    // Todas las funciones como toggleRecordingState, startActualRecording, processAudioBlob, etc.
-    // usarán el userId para interactuar con Firestore más adelante.
-    // Por ahora, su lógica interna de grabación y API de Gemini no cambia.
-
-    // --- Event Listeners para la app de dictado ---
-    // Estos listeners solo se deben añadir una vez.
-    // Podríamos verificar si ya existen para evitar duplicados si esta función se llamara múltiples veces por error.
-    if (!startRecordBtn.dataset.listenerAttached) {
-        startRecordBtn.addEventListener('click', toggleRecordingState);
-        startRecordBtn.dataset.listenerAttached = 'true';
-    }
-    if (!pauseResumeBtn.dataset.listenerAttached) {
-        pauseResumeBtn.addEventListener('click', handlePauseResume);
-        pauseResumeBtn.dataset.listenerAttached = 'true';
-    }
-    // ... y así para los demás botones de la app de dictado ...
-    if (!retryProcessBtn.dataset.listenerAttached) {
-        retryProcessBtn.addEventListener('click', () => { 
-            if (currentAudioBlob) { 
-                if (isRecording || isPaused) { alert("Detén la grabación actual antes de reenviar."); return; }
-                console.log("Reenviando audio..."); processAudioBlob(currentAudioBlob); 
-            }
-        });
-        retryProcessBtn.dataset.listenerAttached = 'true';
-    }
-    if (!copyPolishedTextBtn.dataset.listenerAttached) {
-        copyPolishedTextBtn.addEventListener('click', async () => { 
-            const headerText = headerArea.value.trim(); const reportText = polishedTextarea.value.trim();
-            let textToCopy = "";
-            if (headerText) textToCopy += headerText;
-            if (reportText) { if (textToCopy) textToCopy += "\n\n"; textToCopy += reportText; }
-            if (textToCopy === '') { setStatus("Nada que copiar.", "idle", 2000); return; }
-            try { await navigator.clipboard.writeText(textToCopy); setStatus("¡Texto copiado!", "success", 2000); }
-            catch (err) { console.error('Error copia:', err); setStatus("Error al copiar.", "error", 3000); }
-        });
-        copyPolishedTextBtn.dataset.listenerAttached = 'true';
-    }
-    if (!techniqueButtonsContainer.dataset.listenerAttached) {
-        techniqueButtonsContainer.addEventListener('click', (event) => { 
-            if (event.target.tagName === 'BUTTON' && event.target.dataset.techniqueText) {
-                headerArea.value = event.target.dataset.techniqueText; headerArea.focus(); 
-            }
-        });
-        techniqueButtonsContainer.dataset.listenerAttached = 'true';
-    }
-    if (!clearHeaderButton.dataset.listenerAttached) {
-        clearHeaderButton.addEventListener('click', () => { 
-            headerArea.value = ""; headerArea.focus(); 
-        });
-        clearHeaderButton.dataset.listenerAttached = 'true';
-    }
-
-    // --- Estado Inicial de la App de Dictado ---
-    updateButtonStates("initial"); 
-    console.log("DEBUG: Lógica de la app de dictado inicializada y listeners asignados.");
-
-} // Fin de initializeDictationAppLogic
-
-
-// --- Resto de funciones globales de la app de dictado ---
-// (blobToBase64, callGeminiAPI, capitalizeSentencesProperly, transcribeAndPolishAudio,
-//  updateButtonStates, etc. Estas funciones ya están definidas en el scope global del script)
-// No necesitan ser redefinidas dentro de initializeDictationAppLogic si ya son accesibles.
-// Lo importante es que la *llamada* a updateButtonStates("initial") y la asignación de listeners
-// ocurra DESPUÉS de que el usuario se autentique y los elementos de la app sean visibles.
-
-// Las funciones como toggleRecordingState, startActualRecording, etc., ya están definidas globalmente
-// y serán llamadas por los event listeners.
-
-// Asegurarse que las definiciones de funciones como toggleRecordingState, etc., estén aquí,
-// en el scope global del script, para que los event listeners las encuentren.
-
-// ...(COPIAR AQUÍ TODAS LAS FUNCIONES GLOBALES DE LA APP DE DICTADO QUE TENÍAMOS ANTES:
-// toggleRecordingState, startActualRecording, handlePauseResume, processAudioBlob,
-// updateButtonStates (ya está), blobToBase64, callGeminiAPI, capitalizeSentencesProperly,
-// transcribeAndPolishAudio)
-
-// --- Definiciones de funciones que estaban previamente globales ---
-// (Se han movido algunas inicializaciones y listeners a initializeDictationAppLogic)
-
-// Las siguientes funciones deben estar en el scope global para ser accesibles
-// por los listeners y otras partes del código.
-
-let mediaRecorder; // Ya global
-let audioChunks = []; // Ya global
-let currentAudioBlob = null; // Ya global
-let audioContext; // Ya global
-let analyser; // Ya global
-let microphoneSource; // Ya global
-let animationFrameId; // Ya global
-let isRecording = false; // Ya global
-let isPaused = false; // Ya global
-let recordingTimerInterval; // Ya global
-let recordingSeconds = 0;  // Ya global
-
-const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // API Key
-
-// Elementos DOM (ya obtenidos globalmente al inicio del script)
-const startRecordBtn = document.getElementById('startRecordBtn');
-const pauseResumeBtn = document.getElementById('pauseResumeBtn');
-const retryProcessBtn = document.getElementById('retryProcessBtn');
-const copyPolishedTextBtn = document.getElementById('copyPolishedTextBtn'); 
-const statusDiv = document.getElementById('status');
-const polishedTextarea = document.getElementById('polishedText');
-const audioPlayback = document.getElementById('audioPlayback');
-const audioPlaybackSection = document.querySelector('.audio-playback-section'); 
-const themeSwitch = document.getElementById('themeSwitch');
-const volumeMeterBar = document.getElementById('volumeMeterBar');
-const volumeMeterContainer = document.getElementById('volumeMeterContainer'); 
-const recordingTimeDisplay = document.getElementById('recordingTimeDisplay'); 
-const headerArea = document.getElementById('headerArea'); 
-const techniqueButtonsContainer = document.getElementById('techniqueButtons'); 
-const clearHeaderButton = document.getElementById('clearHeaderButton'); 
-const mainTitleImage = document.getElementById('mainTitleImage'); 
-const mainTitleImageDark = document.getElementById('mainTitleImageDark'); 
-
-
-function toggleRecordingState() { 
-    if (isRecording) { 
-        if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) {
-            mediaRecorder.stop(); setStatus("Deteniendo grabación...", "processing");
-        } else { isRecording = false; isPaused = false; updateButtonStates("initial"); }
-    } else { startActualRecording(); }
+/* Contenido completo de style.css proporcionado en la respuesta anterior (la versión larga y detallada) */
+/* ... (pega aquí el contenido completo de style.css de la respuesta donde se ajustó el frame del título) ... */
+/* Asegúrate de que los estilos para #auth-container, .auth-form-wrapper, etc., estén presentes */
+:root {
+    --font-primary: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --line-height-base: 1.6;
+    --border-radius-small: 4px;
+    --border-radius-medium: 8px;
+    --shadow-soft: 0 4px 12px rgba(0,0,0,0.15); 
+    --transition-fast: 0.2s ease-in-out;
+    --transition-medium: 0.3s ease;
 }
-
-async function startActualRecording() { 
-    setStatus("Solicitando permiso...", "processing");
-    isPaused = false; polishedTextarea.value = ''; audioChunks = []; currentAudioBlob = null; recordingSeconds = 0; 
-    audioPlaybackSection.style.display = 'none'; 
-    if (audioPlayback.src) { URL.revokeObjectURL(audioPlayback.src); audioPlayback.src = ''; audioPlayback.removeAttribute('src');}
-    if (!userApiKey) { alert('API Key de Gemini no configurada.'); setStatus("Error: API Key.", "error"); updateButtonStates("initial"); return; }
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        isRecording = true; 
-        setupVolumeMeter(stream); startRecordingTimer(); 
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-        window.currentMediaRecorder = mediaRecorder; // Para detener en logout
-        mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
-        mediaRecorder.onpause = () => {
-            setStatus('Grabación pausada.', 'idle'); isPaused = true; 
-            volumeMeterBar.classList.add('paused'); volumeMeterBar.style.background = 'var(--button-default-bg)'; 
-            updateButtonStates("paused"); 
-        };
-        mediaRecorder.onresume = () => {
-            setStatus('Grabando... (Reanudado)', 'processing'); isPaused = false; 
-            volumeMeterBar.classList.remove('paused'); volumeMeterBar.style.background = 'var(--volume-bar-gradient)'; 
-            updateButtonStates("recording"); 
-        };
-        mediaRecorder.onstop = async () => {
-            isRecording = false; isPaused = false; 
-            stopVolumeMeter(); stopRecordingTimer(); 
-            setStatus('Grabación detenida. Procesando...', 'processing');
-            if (audioChunks.length === 0) { setStatus("Error: No se grabó audio.", "error", 3000); updateButtonStates("stopped_error"); return; }
-            currentAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            if (currentAudioBlob.size === 0) { setStatus("Error: Audio grabado vacío.", "error", 3000); updateButtonStates("stopped_error"); return; }
-            const audioURL = URL.createObjectURL(currentAudioBlob);
-            audioPlayback.src = audioURL; 
-            audioPlaybackSection.style.display = 'block'; 
-            updateButtonStates("stopped_success"); 
-            await processAudioBlob(currentAudioBlob);
-        };
-        mediaRecorder.onerror = (event) => {
-            isRecording = false; isPaused = false;
-            stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay();
-            setStatus(`Error MediaRecorder: ${event.error.name}`, "error", 4000);
-            updateButtonStates("error");
-        };
-        mediaRecorder.start();
-        setStatus('Grabando...', "processing"); updateButtonStates("recording");      
-    } catch (err) {
-        isRecording = false; isPaused = false; 
-        stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay();
-        setStatus(`Error Mic: ${err.message}.`, "error", 4000);
-        updateButtonStates("initial");
-    }
+/* Tema Oscuro */
+body[data-theme="dark"] {
+    --bg-primary: #22272e; --bg-secondary: #2d333b; --text-primary: #adbac7; --text-secondary: #768390; --border-color: #444c56; --border-light-color: #373e47; --accent-color: #539bf5; --accent-text-color: #ffffff; 
+    --btn-record-bg: #377ef0; --btn-record-bg-hover: #539bf5; --btn-pause-bg: #d9971a; --btn-pause-bg-hover: #f0b72f; --btn-pause-text: #22272e; --btn-stop-bg: #e5534b; --btn-stop-bg-hover: #f47067;
+    --btn-retry-bg: #4387d9; --btn-retry-bg-hover: #539bf5; --btn-copy-bg: #ffc107; --btn-copy-bg-hover: #e0a800; --btn-copy-text: #22272e; 
+    --btn-technique-red-bg: #e5534b; --btn-technique-red-hover: #f47067; --btn-technique-yellow-bg: #d9971a; --btn-technique-yellow-hover: #f0b72f; --btn-technique-yellow-text: #22272e;
+    --btn-technique-blue-bg: #377ef0; --btn-technique-blue-hover: #539bf5; --btn-technique-gray-bg: #444c56; --btn-technique-gray-hover: #5d6774; --btn-technique-text: var(--accent-text-color); 
+    --volume-bar-color1: #2ecc71; --volume-bar-color2: #f1c40f; --volume-bar-color3: #e67e22; --volume-bar-color4: #e74c3c; --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
+    --success-bg: #14301c; --success-text: #a3cfbb; --error-bg: #3b1518; --error-text: #f1b0b7; --processing-bg: #002752; --processing-text: #b8d4fe; --idle-bg: #3e444a; --idle-text: #ced4da;
+    --button-disabled-bg: #444c56; --button-default-bg: #444c56; --theme-image-border: var(--border-color); --input-bg: #22272e; --input-border: #444c56; --input-text: #adbac7;
+    --switch-bg: #444c56; --switch-thumb-bg: #768390; --switch-checked-bg: #377ef0;
+    --auth-form-bg: var(--bg-secondary); --auth-error-color: var(--btn-stop-bg); --auth-link-color: var(--accent-color);
 }
-
-function handlePauseResume() { 
-    if (!mediaRecorder || !isRecording) return; 
-    if (mediaRecorder.state === "recording") { mediaRecorder.pause();  }
-    else if (mediaRecorder.state === "paused") { mediaRecorder.resume();  }
+/* Tema Claro */
+body[data-theme="light"] {
+    --bg-primary: #f4f8fa; --bg-secondary: #ffffff; --text-primary: #2f363d; --text-secondary: #5c6975; --border-color: #d0d7de; --border-light-color: #e9ecef; --accent-color: #007bff; --accent-text-color: #ffffff;
+    --btn-record-bg: #28a745; --btn-record-bg-hover: #218838; --btn-pause-bg: #ffc107; --btn-pause-bg-hover: #e0a800; --btn-pause-text: #212529; --btn-stop-bg: #dc3545; --btn-stop-bg-hover: #c82333;
+    --btn-retry-bg: #17a2b8; --btn-retry-bg-hover: #138496; --btn-copy-bg: #fd7e14; --btn-copy-bg-hover: #e66f0d; --btn-copy-text: #ffffff;
+    --btn-technique-red-bg: #dc3545; --btn-technique-red-hover: #c82333; --btn-technique-yellow-bg: #ffc107; --btn-technique-yellow-hover: #e0a800; --btn-technique-yellow-text: #212529;
+    --btn-technique-blue-bg: #17a2b8; --btn-technique-blue-hover: #138496; --btn-technique-gray-bg: #6c757d; --btn-technique-gray-hover: #5a6268; --btn-technique-text: var(--accent-text-color);
+    --volume-bar-color1: #2ecc71; --volume-bar-color2: #f1c40f; --volume-bar-color3: #e67e22; --volume-bar-color4: #e74c3c; --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
+    --success-bg: #d4edda; --success-text: #155724; --error-bg: #f8d7da; --error-text: #721c24; --processing-bg: #e7f3ff; --processing-text: #004085; --idle-bg: #f0f0f0; --idle-text: #555;
+    --button-disabled-bg: #ced4da; --button-default-bg: #ced4da; --theme-image-border: var(--border-color); --input-bg: #ffffff; --input-border: #ced4da; --input-text: #2f363d;
+    --switch-bg: #ccc; --switch-thumb-bg: white; --switch-checked-bg: #007bff;
+    --auth-form-bg: var(--bg-secondary); --auth-error-color: var(--btn-stop-bg); --auth-link-color: var(--accent-color);
 }
-    
-async function processAudioBlob(audioBlob) { 
-    polishedTextarea.value = ''; 
-    setStatus('Preparando audio...', 'processing');
-    updateButtonStates("processing_audio");
-    try {
-        const base64Audio = await blobToBase64(audioBlob);
-        if (!base64Audio || base64Audio.length < 100) throw new Error("Fallo Base64.");
-        const polishedResult = await transcribeAndPolishAudio(base64Audio); 
-        polishedTextarea.value = polishedResult;
-        setStatus('Proceso completado.', 'success', 3000);
-        updateButtonStates("success_processing");
-    } catch (error) {
-        setStatus(`Error Proc: ${error.message}`, "error", 4000);
-        polishedTextarea.value = `Error: ${error.message}`; 
-        updateButtonStates("error_processing"); 
-    }
-}
-
-function updateButtonStates(state) {
-    startRecordBtn.disabled = true; 
-    pauseResumeBtn.disabled = true;
-    retryProcessBtn.disabled = true; 
-    copyPolishedTextBtn.disabled = false; 
-    startRecordBtn.textContent = "Empezar Dictado";
-    startRecordBtn.classList.remove("stop-style");
-    pauseResumeBtn.textContent = "Pausar";
-
-    let showAudioPlayer = false;
-    if (currentAudioBlob) {
-        if (["initial", "stopped_success", "error_processing", "success_processing", "stopped_error"].includes(state)) {
-            showAudioPlayer = true;
-        }
-    }
-    audioPlaybackSection.style.display = showAudioPlayer ? 'block' : 'none';
-
-    switch (state) {
-        case "initial": startRecordBtn.disabled = false; setStatus("Listo", "idle"); resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break;
-        case "recording": startRecordBtn.disabled = false; startRecordBtn.textContent = "Detener Dictado"; startRecordBtn.classList.add("stop-style"); pauseResumeBtn.disabled = false; retryProcessBtn.disabled = true; break;
-        case "paused": startRecordBtn.disabled = false; startRecordBtn.textContent = "Detener Dictado"; startRecordBtn.classList.add("stop-style"); pauseResumeBtn.disabled = false; pauseResumeBtn.textContent = "Reanudar"; retryProcessBtn.disabled = true; break;
-        case "stopped_success": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break;
-        case "stopped_error": startRecordBtn.disabled = false; resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break;
-        case "processing_audio": startRecordBtn.disabled = true; pauseResumeBtn.disabled = true; retryProcessBtn.disabled = true; break;
-        case "error_processing": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break;
-        case "success_processing": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break;
-        case "error": startRecordBtn.disabled = false; resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break;
-        default: startRecordBtn.disabled = false; resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break;
-    }
-}
-
-function blobToBase64(blob) { return new Promise((resolve, reject) => { if (!blob || blob.size === 0) return reject(new Error("Blob nulo o vacío")); const reader = new FileReader(); reader.onloadend = () => { if (reader.result) { const base64String = reader.result.toString().split(',')[1]; if (!base64String) return reject(new Error("Fallo al extraer Base64.")); resolve(base64String); } else reject(new Error("FileReader no produjo resultado.")); }; reader.onerror = (error) => reject(error); reader.readAsDataURL(blob); }); }
-async function callGeminiAPI(promptParts, isTextOnly = false) { if (!userApiKey) throw new Error('API Key no configurada.'); const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`; const temperature = isTextOnly ? 0.1 : 0.2;  const body = { contents: [{ parts: promptParts }], generationConfig: { temperature: temperature } };  console.log(`Llamando a Gemini API (isTextOnly: ${isTextOnly}, temp: ${temperature}). Prompt (inicio):`, JSON.stringify(promptParts[0]).substring(0, 200) + "..."); const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!response.ok) { const errorData = await response.json(); console.error("Error data de Gemini API:", errorData); throw new Error(`Error API Gemini: ${errorData.error?.message || response.statusText} (Código: ${response.status})`); } const data = await response.json(); if (data.candidates?.[0]?.content?.parts?.[0]?.text) return data.candidates[0].content.parts[0].text; if (data.promptFeedback?.blockReason) throw new Error(`Bloqueado por Gemini: ${data.promptFeedback.blockReason}. ${data.promptFeedback.blockReasonMessage || ''}`); if (data.candidates?.[0]?.finishReason && data.candidates[0].finishReason !== "STOP") throw new Error(`Gemini finalizó con razón: ${data.candidates[0].finishReason}.`); if (data.candidates?.[0]?.finishReason === "STOP" && !data.candidates?.[0]?.content?.parts?.[0]?.text) return ""; throw new Error('Respuesta de Gemini inesperada o sin texto, y sin razón de bloqueo clara.'); }
-function capitalizeSentencesProperly(text) { if (!text || text.trim() === "") return ""; let result = text.trimStart(); if (result.length > 0) result = result.charAt(0).toUpperCase() + result.slice(1); result = result.replace(/([.!?])(\s*\n*|\s+)([a-záéíóúüñ])/g, (match, punctuation, whitespace, letter) => { return punctuation + whitespace + letter.toUpperCase(); }); return result; }
-async function transcribeAndPolishAudio(base64Audio) { let transcribedText = ''; try { setStatus('Transcribiendo audio...', 'processing'); const transcriptPromptParts = [ { "text": "Transcribe el siguiente audio a texto con la MÁXIMA LITERALIDAD POSIBLE. No corrijas errores de habla, repeticiones menores, ni cambies palabras. Si el hablante dice 'coma', 'punto', etc., transcríbelo tal cual como texto. El objetivo es una transcripción fiel palabra por palabra de lo que se oye:" }, { "inline_data": { "mime_type": "audio/webm", "data": base64Audio } } ]; transcribedText = await callGeminiAPI(transcriptPromptParts, false);  console.log("--- Transcripción Original (Consola) ---"); console.log(transcribedText); console.log("---------------------------------------"); } catch (error) { console.error("Error durante la transcripción interna:", error); throw new Error(`Fallo en transcripción interna: ${error.message}`);  } if (!transcribedText || transcribedText.trim() === "") throw new Error("La transcripción interna no produjo texto o está vacía.");  try { setStatus('Aplicando formato y puntuación...', 'processing'); const polishPromptParts = [ { "text": `Por favor, revisa el siguiente texto y aplica ÚNICAMENTE las siguientes modificaciones:\n1. Interpreta y reemplaza las siguientes palabras dictadas como signos de puntuación y formato EXACTAMENTE como se indica:\n    * 'coma' -> ','\n    * 'punto' -> '.'\n    * 'punto y aparte' -> '.' seguido de UN ÚNICO SALTO DE LÍNEA (\\n). NO insertes líneas en blanco adicionales.\n    * 'nueva línea' o 'siguiente línea' -> un único salto de línea (\\n).\n    * 'dos puntos' -> ':'\n    * 'punto y coma' -> ';'\n    * 'signo de interrogación', 'interrogación' o 'pregunta' (al final de una frase) -> '?'\n    * 'signo de exclamación', 'exclamación' o 'admiración' (al final de una frase) -> '!'\n2. Corrige ÚNICAMENTE errores ortográficos evidentes.\n3. Corrige ÚNICAMENTE errores gramaticales OBJETIVOS Y CLAROS que impidan la comprensión.\n4. NO CAMBIES la elección de palabras del hablante si son gramaticalmente correctas y comprensibles.\n5. NO REESTRUCTURES frases si son gramaticalmente correctas.\n6. PRESERVA el estilo y las expresiones exactas del hablante tanto como sea posible. El objetivo NO es "mejorar" el texto, sino formatearlo según lo dictado y corregir solo errores flagrantes.\n7. Si el texto ya contiene puntuación (ej. el hablante dictó "hola punto"), no la dupliques. Simplemente asegúrate de que el formato sea correcto.\n8. Asegúrate de que la primera letra de cada oración (después de un punto, signo de interrogación, o exclamación seguido de un espacio o salto de línea, y al inicio del texto) esté en mayúscula. \n\nTexto a procesar:\n"${transcribedText}"` } ]; let polishedResult = await callGeminiAPI(polishPromptParts, true);  let capitalizedText = capitalizeSentencesProperly(polishedResult); let postProcessedText = capitalizedText.replace(/\.\s*\n\s*\n/g, '.\n');  postProcessedText = postProcessedText.replace(/\n\s*\n/g, '\n');       return postProcessedText; } catch (error) { console.error("Error durante el pulido/formato:", error); setStatus(`Formato falló: ${error.message}. Mostrando transcripción más cruda.`, "error", 4000); return capitalizeSentencesProperly(transcribedText);  } }
-
-// El resto de los listeners que estaban antes globales, ahora se añaden dentro de initializeDictationAppLogic
-// La llamada a updateButtonStates("initial") también se hace allí.
-// Esto asegura que la app de dictado solo se "activa" completamente después del login.
-
-console.log("DEBUG: Script principal (fuera de DOMContentLoaded y firebaseReady) evaluado.");
+body { font-family: var(--font-primary); line-height: var(--line-height-base); margin: 0; padding: 20px; background-color: var(--bg-primary); color: var(--text-primary); display: flex; justify-content: center; transition: background-color var(--transition-fast), color var(--transition-fast); }
+#auth-container { width: 100%; max-width: 450px; margin-top: 50px; }
+.auth-form-wrapper { background-color: var(--auth-form-bg); padding: 30px 40px; border-radius: var(--border-radius-medium); border: 1px solid var(--border-color); box-shadow: var(--shadow-soft); }
+.auth-form h2 { text-align: center; margin-bottom: 25px; color: var(--text-primary); font-weight: 500; }
+.auth-form div { margin-bottom: 15px; }
+.auth-form label { display: block; text-align: left; margin-bottom: 6px; font-weight: 500; font-size: 0.9em; color: var(--text-secondary); }
+.auth-form input[type="email"], .auth-form input[type="password"] { width: 100%; padding: 10px; border: 1px solid var(--input-border); border-radius: var(--border-radius-small); box-sizing: border-box; background-color: var(--input-bg); color: var(--input-text); font-size: 1em; }
+.auth-form input[type="email"]:focus, .auth-form input[type="password"]:focus { border-color: var(--accent-color); outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb, 83,155,245),0.3); }
+.auth-form button { width: 100%; padding: 12px; font-size: 1.05em; cursor: pointer; border: none; border-radius: var(--border-radius-small); background-color: var(--accent-color); color: var(--accent-text-color); transition: background-color 0.2s ease; margin-top: 5px; }
+.auth-form button:hover { background-color: var(--btn-record-bg-hover); }
+.auth-error-message { color: var(--auth-error-color); margin-bottom: 15px; font-weight: 500; min-height: 1.2em; text-align: center; font-size: 0.9em; }
+.auth-switch { font-size: 0.9em; color: var(--text-secondary); margin-top: 20px; text-align: center; }
+.auth-switch a { color: var(--auth-link-color); text-decoration: none; font-weight: 500; }
+.auth-switch a:hover { text-decoration: underline; }
+body.logged-out #app-container { display: none; }
+body.logged-out #auth-container { display: block; } 
+body.logged-in #app-container { display: block; }
+body.logged-in #auth-container { display: none; }
+.user-info-bar { background-color: var(--bg-secondary); padding: 10px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: flex-end; align-items: center; margin-bottom: 20px; border-radius: var(--border-radius-medium) var(--border-radius-medium) 0 0; width: 100%; max-width: 1300px; box-sizing: border-box; }
+#userDisplay { margin-right: 15px; color: var(--text-secondary); font-size: 0.9em; }
+#logoutButton { background-color: var(--btn-stop-bg); color: var(--accent-text-color); padding: 6px 12px; font-size: 0.85em; min-width: auto; width: auto; flex-grow: 0; }
+#logoutButton:hover { background-color: var(--btn-stop-bg-hover); }
+.app-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.app-layout { display: flex; flex-direction: row; gap: 25px; width: 100%; max-width: 1300px; margin-top: 0; } 
+.main-column { flex: 2.5; display: flex; flex-direction: column; gap: 20px; }
+.sidebar-column { flex: 1; position: sticky; top: 20px; align-self: flex-start; display: flex; flex-direction: column; gap: 20px; }
+.container { background-color: var(--bg-secondary); padding: 20px 25px; border-radius: var(--border-radius-medium); border: 1px solid var(--border-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: background-color var(--transition-fast), border-color var(--transition-fast); }
+body[data-theme="dark"] .container { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+#title-frame { background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius-medium); padding: 20px 25px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-soft); width: 100%; max-width: 1300px; box-sizing: border-box; margin-bottom: 20px; min-height: 80px; }
+#title-frame h1 { font-size: 2.2em; color: var(--text-primary); font-weight: 600; text-align: center; margin: 0; line-height: 1.1; }
+#title-frame h1 small { font-size: 0.55em; color: var(--text-secondary); font-weight: normal; margin-left: 8px; }
+#mainTitleImage, #mainTitleImageDark { height: 55px; width: 55px; margin-left: 20px; border-radius: var(--border-radius-small); border: 1px solid var(--theme-image-border); object-fit: cover; }
+h2 { font-size: 1.4em; margin-top: 0; color: var(--text-primary); text-align: center; margin-bottom: 15px; font-weight: 500; }
+h3 { font-size: 1.1em; color: var(--text-secondary); border-bottom: 1px solid var(--border-light-color); padding-bottom: 10px; text-align: left; margin-top: 0; margin-bottom: 15px; font-weight: 500; }
+.controls .buttons-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 15px; }
+#recordingTimeDisplay { text-align: center; font-size: 1.1em; font-weight: 500; color: var(--text-secondary); margin-bottom: 10px; min-height: 1.5em;  }
+textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid var(--input-border); border-radius: var(--border-radius-small); box-sizing: border-box; background-color: var(--input-bg); color: var(--input-text); transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast); font-family: var(--font-primary); font-size: 1em; line-height: 1.5; }
+textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb, 83,155,245), 0.3);  }
+#polishedText { min-height: 250px; font-size: 1.05em;  }
+#headerArea { min-height: 100px; margin-bottom: 0;  }
+button { color: var(--accent-text-color); border: none; padding: 10px 15px; border-radius: var(--border-radius-small); cursor: pointer; font-weight: 500; font-size: 0.95em; transition: background-color var(--transition-medium), color var(--transition-medium), transform 0.1s ease; text-align: center; width: 100%;  }
+button:active:not(:disabled) { transform: translateY(1px);  }
+.btn-record { background-color: var(--btn-record-bg); } 
+.btn-record.stop-style { background-color: var(--btn-stop-bg); } 
+.btn-record:hover:not(:disabled) { background-color: var(--btn-record-bg-hover); }
+.btn-record.stop-style:hover:not(:disabled) { background-color: var(--btn-stop-bg-hover); }
+.btn-pause { background-color: var(--btn-pause-bg); color: var(--btn-pause-text); }
+.btn-pause:hover:not(:disabled) { background-color: var(--btn-pause-bg-hover); }
+.btn-retry { background-color: var(--btn-retry-bg); }
+.btn-retry:hover:not(:disabled) { background-color: var(--btn-retry-bg-hover); }
+.btn-copy { background-color: var(--btn-copy-bg); color: var(--btn-copy-text); }
+.btn-copy:hover:not(:disabled) { background-color: var(--btn-copy-bg-hover); }
+button:disabled { background-color: var(--button-disabled-bg); color: var(--text-secondary); cursor: not-allowed; opacity: 0.6; }
+#status { margin-top: 15px; padding: 8px 12px; border-radius: var(--border-radius-small); font-weight: 500; text-align: center; transition: background-color var(--transition-medium), color var(--transition-medium); color: var(--text-secondary); font-size: 0.9em; }
+.status-idle { color: var(--idle-text); background-color: transparent; } 
+.status-processing { color: var(--processing-text); background-color: var(--processing-bg); }
+.status-success { color: var(--success-text); background-color: var(--success-bg); }
+.status-error { color: var(--error-text); background-color: var(--error-bg); }
+.audio-playback-section { text-align: center; } 
+.audio-playback-section h3 { text-align: left; }
+#audioPlayback { width: 100%; margin-top: 10px; }
+body[data-theme="dark"] #audioPlayback { filter: invert(1) hue-rotate(180deg); }
+#volumeMeterContainer { width: 100%; max-width: 100%; height: 20px; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius-small); margin: 0 auto 10px auto; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+#volumeMeterBar { width: 0%; height: 100%; background: var(--volume-bar-gradient); transition: width 0.05s linear;  }
+#volumeMeterBar.paused { background: var(--button-default-bg);  }
+#settings-container h3 { margin-bottom: 15px; }
+.theme-switch-wrapper { display: flex; align-items: center; justify-content: space-between; } 
+.theme-switch-label { margin-right: 0; font-size: 1em; color: var(--text-primary); } 
+.theme-switch { display: inline-block; height: 22px; position: relative; width: 42px; } 
+.theme-switch input { display:none; }
+.slider { background-color: var(--switch-bg); bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 22px; }
+.slider:before { background-color: var(--switch-thumb-bg); bottom: 2px; content: ""; height: 18px; left: 2px; position: absolute; transition: .4s; width: 18px; border-radius: 50%; }
+input:checked + .slider { background-color: var(--switch-checked-bg); } 
+input:checked + .slider:before { transform: translateX(20px); }
+.technique-section h3 { }
+#techniqueButtons { display: flex; flex-direction: column; gap: 10px; }
+.technique-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+#techniqueButtons button { padding: 8px 10px; font-size: 0.88em; border: 1px solid var(--border-color); border-radius: var(--border-radius-small); cursor: pointer; transition: background-color 0.2s ease, transform 0.1s ease, border-color 0.2s ease; width: 100%; text-align: center; }
+#techniqueButtons button:hover:not(:disabled) { border-color: var(--accent-color); }
+#techniqueButtons button:active:not(:disabled) { transform: scale(0.97); }
+#techniqueButtons .btn-tech-red { background-color: var(--btn-technique-red-bg); color: var(--accent-text-color); border-color: var(--btn-technique-red-bg); }
+#techniqueButtons .btn-tech-red:hover:not(:disabled) { background-color: var(--btn-technique-red-hover); border-color: var(--btn-technique-red-hover); }
+#techniqueButtons .btn-tech-yellow { background-color: var(--btn-technique-yellow-bg); color: var(--btn-technique-yellow-text); border-color: var(--btn-technique-yellow-bg); }
+#techniqueButtons .btn-tech-yellow:hover:not(:disabled) { background-color: var(--btn-technique-yellow-hover); border-color: var(--btn-technique-yellow-hover); }
+#techniqueButtons .btn-tech-blue { background-color: var(--btn-technique-blue-bg); color: var(--accent-text-color); border-color: var(--btn-technique-blue-bg); }
+#techniqueButtons .btn-tech-blue:hover:not(:disabled) { background-color: var(--btn-technique-blue-hover); border-color: var(--btn-technique-blue-hover); }
+#techniqueButtons .btn-tech-gray { background-color: var(--btn-technique-gray-bg); color: var(--btn-technique-text); border-color: var(--btn-technique-gray-bg); } 
+#techniqueButtons .btn-tech-gray:hover:not(:disabled) { background-color: var(--btn-technique-gray-hover); border-color: var(--btn-technique-gray-hover); }
+.sensitivity-slider-section h3 { margin-bottom: 10px; }
+.slider-container { display: flex; align-items: center; justify-content: space-between; margin-top: 5px;}
+.slider-container label { margin-right: 10px; font-size: 0.9em; color: var(--text-secondary); } 
+#fuzzyThresholdSlider { width: 120px; cursor: pointer; accent-color: var(--accent-color); background: transparent; }
+#fuzzyThresholdSlider::-webkit-slider-runnable-track { background: var(--input-border); height: 6px; border-radius: 3px; }
+#fuzzyThresholdSlider::-moz-range-track { background: var(--input-border); height: 6px; border-radius: 3px; }
+#fuzzyThresholdSlider::-ms-track { background: var(--input-border); height: 6px; border-radius: 3px; }
+#fuzzyThresholdSlider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; background: var(--accent-color); border-radius: 50%; margin-top: -5px; }
+#fuzzyThresholdSlider::-moz-range-thumb { width: 16px; height: 16px; background: var(--accent-color); border-radius: 50%; border: none; }
+#fuzzyThresholdSlider::-ms-thumb { width: 16px; height: 16px; background: var(--accent-color); border-radius: 50%; border: none; }
+#fuzzyThresholdValue { font-weight: bold; color: var(--accent-color); font-size: 0.9em;}
+@media (max-width: 992px) { .app-layout { flex-direction: column; } .sidebar-column { position: static; width: 100%; order: 2; } .main-column { order: 1; } #title-frame h1 { font-size: 1.6em; } #mainTitleImage, #mainTitleImageDark { height: 35px; width: 35px; margin-left: 10px;} }
+@media (max-width: 768px) { .controls .buttons-group { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); } button { font-size: 0.9em; }  #techniqueButtons .technique-group { grid-template-columns: 1fr; } }
