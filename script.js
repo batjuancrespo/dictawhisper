@@ -1,5 +1,7 @@
+// Bloque importador de Firebase (desde el HTML, script type="module") ya se encarga de poner
+// firebaseApp, db, auth, y las funciones en el objeto window.
+
 // --- Variables Globales de la App de Dictado (declaradas una vez) ---
-// Estas se definirán después de la selección DOM inicial
 let startRecordBtn, pauseResumeBtn, retryProcessBtn, copyPolishedTextBtn, 
     statusDiv, polishedTextarea, audioPlayback, audioPlaybackSection, 
     themeSwitch, volumeMeterBar, volumeMeterContainer, recordingTimeDisplay, 
@@ -23,8 +25,6 @@ const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // API Key de Gemi
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DEBUG: DOMContentLoaded event fired.");
 
-    // --- Selección de Elementos DOM INICIAL (para toda la página) ---
-    // Elementos de la App de Dictado (se asignan a las variables globales)
     startRecordBtn = document.getElementById('startRecordBtn');
     pauseResumeBtn = document.getElementById('pauseResumeBtn');
     retryProcessBtn = document.getElementById('retryProcessBtn');
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     polishedTextarea = document.getElementById('polishedText');
     audioPlayback = document.getElementById('audioPlayback');
     audioPlaybackSection = document.querySelector('.audio-playback-section'); 
-    themeSwitch = document.getElementById('themeSwitch'); // Este es el switch de tema general
+    themeSwitch = document.getElementById('themeSwitch'); 
     volumeMeterBar = document.getElementById('volumeMeterBar');
     volumeMeterContainer = document.getElementById('volumeMeterContainer'); 
     recordingTimeDisplay = document.getElementById('recordingTimeDisplay'); 
@@ -66,7 +66,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     console.log("DEBUG: Todos los elementos HTML principales fueron encontrados en DOMContentLoaded.");
 
-    // El resto de la lógica que depende de Firebase se moverá al evento 'firebaseReady'
+    // Inicializar tema y acentos después de que los elementos estén disponibles
+    const preferredTheme = localStorage.getItem('theme') || 'dark'; 
+    applyTheme(preferredTheme); 
+    setAccentRGB(); 
+    new MutationObserver(setAccentRGB).observe(document.body, { attributes: true, attributeFilter: ['data-theme']});
+
+    // El listener de themeSwitch se añade aquí, ya que themeSwitch ya está definido
+    if (themeSwitch) {
+        themeSwitch.addEventListener('change', () => {
+            applyTheme(themeSwitch.checked ? 'dark' : 'light');
+        });
+    } else {
+        console.error("DEBUG: themeSwitch no fue encontrado, el listener de tema no se puede añadir.");
+    }
+
+
 }); // Fin de DOMContentLoaded
 
 
@@ -77,7 +92,6 @@ document.addEventListener('firebaseReady', () => {
 
 function initializeAuthAndApp() {
     console.log("DEBUG: initializeAuthAndApp - INICIO de la función.");
-    // --- Selección DOM para Autenticación (estos son específicos de esta función) ---
     const authContainer = document.getElementById('auth-container');
     const appContainer = document.getElementById('app-container');
     const loginForm = document.getElementById('login-form');
@@ -95,13 +109,12 @@ function initializeAuthAndApp() {
     const userDisplaySpan = document.getElementById('userDisplay');
     const logoutButton = document.getElementById('logoutButton');
 
-    // Verificar elementos de autenticación
     const authElements = {authContainer, appContainer, loginForm, signupForm, loginEmailInput, loginPasswordInput, signupEmailInput, signupPasswordInput, loginButton, signupButton, showSignupLink, showLoginLink, loginErrorDiv, signupErrorDiv, userDisplaySpan, logoutButton};
     for (const elName in authElements) {
         if (!authElements[elName]) {
             console.error(`DEBUG: initializeAuthAndApp - Elemento Auth NO encontrado: ${elName}`);
             alert(`Error crítico: Falta el elemento de UI para autenticación: ${elName}`);
-            return; // Detener si faltan elementos de auth
+            return; 
         }
     }
     console.log("DEBUG: initializeAuthAndApp - Elementos Auth DOM seleccionados correctamente.");
@@ -189,21 +202,8 @@ function initializeAuthAndApp() {
 
 function initializeDictationAppLogic(userId) {
     console.log(`DEBUG: initializeDictationAppLogic para usuario: ${userId} - Verificando elementos y asignando listeners.`);
-
-    // Las variables DOM ya fueron asignadas globalmente en DOMContentLoaded.
-    // Aquí solo verificamos que aún sean válidas (por si acaso algo raro pasa)
-    // y luego asignamos listeners.
-
-    const dictationElementsCheck = {startRecordBtn, pauseResumeBtn, retryProcessBtn, copyPolishedTextBtn, techniqueButtonsContainer, clearHeaderButton, themeSwitch, statusDiv};
-    for (const elName in dictationElementsCheck) {
-        if (!dictationElementsCheck[elName]) {
-            console.error(`DEBUG: initializeDictationAppLogic - Elemento App NO encontrado: ${elName}`);
-            alert(`Error crítico: Falta el elemento de UI de la app: ${elName}`);
-            return; // Detener si faltan elementos de la app de dictado
-        }
-    }
-    console.log("DEBUG: initializeDictationAppLogic - Todos los elementos de la app de dictado verificados.");
-
+    // Las variables DOM (startRecordBtn, etc.) ya fueron asignadas globalmente en DOMContentLoaded.
+    // Se verifica su existencia al inicio del script.
 
     if (!startRecordBtn.dataset.listenerAttached) { startRecordBtn.addEventListener('click', toggleRecordingState); startRecordBtn.dataset.listenerAttached = 'true'; console.log("DEBUG: Listener añadido a startRecordBtn.");}
     if (!pauseResumeBtn.dataset.listenerAttached) { pauseResumeBtn.addEventListener('click', handlePauseResume); pauseResumeBtn.dataset.listenerAttached = 'true'; console.log("DEBUG: Listener añadido a pauseResumeBtn.");}
@@ -212,15 +212,10 @@ function initializeDictationAppLogic(userId) {
     if (!techniqueButtonsContainer.dataset.listenerAttached) { techniqueButtonsContainer.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON' && e.target.dataset.techniqueText) { headerArea.value = e.target.dataset.techniqueText; headerArea.focus(); }}); techniqueButtonsContainer.dataset.listenerAttached = 'true'; console.log("DEBUG: Listener añadido a techniqueButtonsContainer.");}
     if (!clearHeaderButton.dataset.listenerAttached) { clearHeaderButton.addEventListener('click', () => { headerArea.value = ""; headerArea.focus(); }); clearHeaderButton.dataset.listenerAttached = 'true'; console.log("DEBUG: Listener añadido a clearHeaderButton.");}
     
-    // El listener de themeSwitch se añade globalmente al inicio (en DOMContentLoaded)
-    // y la función applyTheme se encarga de la lógica.
-    // No es necesario re-añadirlo aquí si ya está global.
-
     updateButtonStates("initial"); 
     console.log("DEBUG: Lógica de la app de dictado inicializada y listeners asignados.");
 } 
 
-// --- Funciones de la App de Dictado (definidas en el scope global del script) ---
 function applyTheme(theme) { 
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
@@ -239,7 +234,7 @@ function setAccentRGB() {
     } catch (e) { console.warn("No se pudo establecer --accent-color-rgb:", e); }
 }
 function setStatus(message, type = "idle", duration = 0) { 
-    if (!statusDiv) { console.error("DEBUG: statusDiv no está disponible para setStatus. Mensaje:", message); return; }
+    if (!statusDiv) { console.error("DEBUG: statusDiv no disponible para setStatus. Mensaje:", message); return; }
     statusDiv.textContent = message; statusDiv.className = ''; statusDiv.classList.add(`status-${type}`);
     if (duration > 0) { setTimeout(() => { if (statusDiv.textContent === message) updateButtonStates("initial"); }, duration); }
 }
