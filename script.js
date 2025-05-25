@@ -1,5 +1,74 @@
-// Bloque importador de Firebase (desde el HTML, script type="module") ya se encarga de poner
-// firebaseApp, db, auth, y las funciones en el objeto window.
+// --- Variables Globales de la App de Dictado (declaradas una vez) ---
+// Estas se definirán después de la selección DOM inicial
+let startRecordBtn, pauseResumeBtn, retryProcessBtn, copyPolishedTextBtn, 
+    statusDiv, polishedTextarea, audioPlayback, audioPlaybackSection, 
+    themeSwitch, volumeMeterBar, volumeMeterContainer, recordingTimeDisplay, 
+    headerArea, techniqueButtonsContainer, clearHeaderButton, 
+    mainTitleImage, mainTitleImageDark;
+
+let mediaRecorder;
+let audioChunks = [];
+let currentAudioBlob = null;
+let audioContext;
+let analyser;
+let microphoneSource;
+let animationFrameId;
+let isRecording = false; 
+let isPaused = false;
+let recordingTimerInterval; 
+let recordingSeconds = 0;  
+const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // API Key de Gemini
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DEBUG: DOMContentLoaded event fired.");
+
+    // --- Selección de Elementos DOM INICIAL (para toda la página) ---
+    // Elementos de la App de Dictado (se asignan a las variables globales)
+    startRecordBtn = document.getElementById('startRecordBtn');
+    pauseResumeBtn = document.getElementById('pauseResumeBtn');
+    retryProcessBtn = document.getElementById('retryProcessBtn');
+    copyPolishedTextBtn = document.getElementById('copyPolishedTextBtn'); 
+    statusDiv = document.getElementById('status');
+    polishedTextarea = document.getElementById('polishedText');
+    audioPlayback = document.getElementById('audioPlayback');
+    audioPlaybackSection = document.querySelector('.audio-playback-section'); 
+    themeSwitch = document.getElementById('themeSwitch'); // Este es el switch de tema general
+    volumeMeterBar = document.getElementById('volumeMeterBar');
+    volumeMeterContainer = document.getElementById('volumeMeterContainer'); 
+    recordingTimeDisplay = document.getElementById('recordingTimeDisplay'); 
+    headerArea = document.getElementById('headerArea'); 
+    techniqueButtonsContainer = document.getElementById('techniqueButtons'); 
+    clearHeaderButton = document.getElementById('clearHeaderButton'); 
+    mainTitleImage = document.getElementById('mainTitleImage'); 
+    mainTitleImageDark = document.getElementById('mainTitleImageDark'); 
+
+    const elementsMap = {
+        startRecordBtn, pauseResumeBtn, retryProcessBtn, copyPolishedTextBtn,
+        statusDiv, polishedTextarea, audioPlayback, audioPlaybackSection, themeSwitch,
+        volumeMeterBar, volumeMeterContainer, recordingTimeDisplay, headerArea,
+        techniqueButtonsContainer, clearHeaderButton, mainTitleImage, mainTitleImageDark
+    };
+
+    let allElementsFound = true;
+    for (const elementName in elementsMap) {
+        if (!elementsMap[elementName]) {
+            console.error(`DEBUG: Elemento NO encontrado en DOMContentLoaded: ${elementName}`);
+            allElementsFound = false;
+        }
+    }
+
+    if (!allElementsFound) {
+        const errorMessage = "Error crítico: Uno o más elementos HTML de la app no se encontraron al cargar el DOM. Revisa la consola.";
+        alert(errorMessage);
+        if (statusDiv) { statusDiv.textContent = "Error crítico de UI."; statusDiv.className = 'status-error';}
+        return; 
+    }
+    console.log("DEBUG: Todos los elementos HTML principales fueron encontrados en DOMContentLoaded.");
+
+    // El resto de la lógica que depende de Firebase se moverá al evento 'firebaseReady'
+}); // Fin de DOMContentLoaded
+
 
 document.addEventListener('firebaseReady', () => {
     console.log("DEBUG: Evento firebaseReady RECIBIDO. Llamando a initializeAuthAndApp...");
@@ -8,6 +77,7 @@ document.addEventListener('firebaseReady', () => {
 
 function initializeAuthAndApp() {
     console.log("DEBUG: initializeAuthAndApp - INICIO de la función.");
+    // --- Selección DOM para Autenticación (estos son específicos de esta función) ---
     const authContainer = document.getElementById('auth-container');
     const appContainer = document.getElementById('app-container');
     const loginForm = document.getElementById('login-form');
@@ -25,7 +95,16 @@ function initializeAuthAndApp() {
     const userDisplaySpan = document.getElementById('userDisplay');
     const logoutButton = document.getElementById('logoutButton');
 
-    console.log("DEBUG: initializeAuthAndApp - Elementos Auth DOM seleccionados:", { authContainer, appContainer, loginForm });
+    // Verificar elementos de autenticación
+    const authElements = {authContainer, appContainer, loginForm, signupForm, loginEmailInput, loginPasswordInput, signupEmailInput, signupPasswordInput, loginButton, signupButton, showSignupLink, showLoginLink, loginErrorDiv, signupErrorDiv, userDisplaySpan, logoutButton};
+    for (const elName in authElements) {
+        if (!authElements[elName]) {
+            console.error(`DEBUG: initializeAuthAndApp - Elemento Auth NO encontrado: ${elName}`);
+            alert(`Error crítico: Falta el elemento de UI para autenticación: ${elName}`);
+            return; // Detener si faltan elementos de auth
+        }
+    }
+    console.log("DEBUG: initializeAuthAndApp - Elementos Auth DOM seleccionados correctamente.");
 
     const auth = window.auth;
     const createUserWithEmailAndPassword = window.createUserWithEmailAndPassword;
@@ -40,56 +119,29 @@ function initializeAuthAndApp() {
     }
     console.log("DEBUG: initializeAuthAndApp - Funciones de Firebase Auth disponibles.");
 
-    if (showSignupLink) {
-        showSignupLink.addEventListener('click', (e) => { e.preventDefault(); loginForm.style.display = 'none'; signupForm.style.display = 'block'; loginErrorDiv.textContent = ''; signupErrorDiv.textContent = ''; });
-        console.log("DEBUG: initializeAuthAndApp - Listener para showSignupLink añadido.");
-    } else { console.error("DEBUG: initializeAuthAndApp - showSignupLink NO encontrado."); }
+    showSignupLink.addEventListener('click', (e) => { e.preventDefault(); loginForm.style.display = 'none'; signupForm.style.display = 'block'; loginErrorDiv.textContent = ''; signupErrorDiv.textContent = ''; });
+    showLoginLink.addEventListener('click', (e) => { e.preventDefault(); signupForm.style.display = 'none'; loginForm.style.display = 'block'; loginErrorDiv.textContent = ''; signupErrorDiv.textContent = ''; });
 
-    if (showLoginLink) {
-        showLoginLink.addEventListener('click', (e) => { e.preventDefault(); signupForm.style.display = 'none'; loginForm.style.display = 'block'; loginErrorDiv.textContent = ''; signupErrorDiv.textContent = ''; });
-        console.log("DEBUG: initializeAuthAndApp - Listener para showLoginLink añadido.");
-    } else { console.error("DEBUG: initializeAuthAndApp - showLoginLink NO encontrado."); }
+    signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault(); const email = signupEmailInput.value; const password = signupPasswordInput.value;
+        signupErrorDiv.textContent = ''; signupButton.disabled = true; signupButton.textContent = 'Registrando...';
+        try { await createUserWithEmailAndPassword(auth, email, password); }
+        catch (error) { signupErrorDiv.textContent = getFirebaseErrorMessage(error); }
+        finally { signupButton.disabled = false; signupButton.textContent = 'Registrarse'; }
+    });
 
-    if (signupForm) {
-        signupForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); console.log("DEBUG: Signup form submitted.");
-            const email = signupEmailInput.value; const password = signupPasswordInput.value;
-            signupErrorDiv.textContent = ''; signupButton.disabled = true; signupButton.textContent = 'Registrando...';
-            try { 
-                console.log("DEBUG: Intentando createUserWithEmailAndPassword...");
-                await createUserWithEmailAndPassword(auth, email, password); 
-                console.log("DEBUG: createUserWithEmailAndPassword tuvo éxito.");
-            }
-            catch (error) { console.error("DEBUG: Error en createUserWithEmailAndPassword:", error); signupErrorDiv.textContent = getFirebaseErrorMessage(error); }
-            finally { signupButton.disabled = false; signupButton.textContent = 'Registrarse'; }
-        });
-        console.log("DEBUG: initializeAuthAndApp - Listener para signupForm añadido.");
-    } else { console.error("DEBUG: initializeAuthAndApp - signupForm NO encontrado."); }
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault(); const email = loginEmailInput.value; const password = loginPasswordInput.value;
+        loginErrorDiv.textContent = ''; loginButton.disabled = true; loginButton.textContent = 'Iniciando...';
+        try { await signInWithEmailAndPassword(auth, email, password); }
+        catch (error) { loginErrorDiv.textContent = getFirebaseErrorMessage(error); }
+        finally { loginButton.disabled = false; loginButton.textContent = 'Iniciar Sesión'; }
+    });
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); console.log("DEBUG: Login form submitted.");
-            const email = loginEmailInput.value; const password = loginPasswordInput.value;
-            loginErrorDiv.textContent = ''; loginButton.disabled = true; loginButton.textContent = 'Iniciando...';
-            try { 
-                console.log("DEBUG: Intentando signInWithEmailAndPassword...");
-                await signInWithEmailAndPassword(auth, email, password); 
-                console.log("DEBUG: signInWithEmailAndPassword tuvo éxito.");
-            }
-            catch (error) { console.error("DEBUG: Error en signInWithEmailAndPassword:", error); loginErrorDiv.textContent = getFirebaseErrorMessage(error); }
-            finally { loginButton.disabled = false; loginButton.textContent = 'Iniciar Sesión'; }
-        });
-        console.log("DEBUG: initializeAuthAndApp - Listener para loginForm añadido.");
-    } else { console.error("DEBUG: initializeAuthAndApp - loginForm NO encontrado."); }
-
-    if (logoutButton) {
-        logoutButton.addEventListener('click', async () => {
-            console.log("DEBUG: Logout button clicked.");
-            try { await signOut(auth); console.log("DEBUG: signOut llamado.");}
-            catch (error) { console.error('DEBUG: Error al cerrar sesión:', error); alert("Error al cerrar sesión."); }
-        });
-        console.log("DEBUG: initializeAuthAndApp - Listener para logoutButton añadido.");
-    } else { console.error("DEBUG: initializeAuthAndApp - logoutButton NO encontrado."); }
+    logoutButton.addEventListener('click', async () => {
+        try { await signOut(auth); }
+        catch (error) { console.error('DEBUG: Error al cerrar sesión:', error); alert("Error al cerrar sesión."); }
+    });
     
     console.log("DEBUG: initializeAuthAndApp - Suscribiendo onAuthStateChanged listener...");
     onAuthStateChanged(auth, (user) => {
@@ -97,27 +149,24 @@ function initializeAuthAndApp() {
         if (user) {
             console.log("DEBUG: onAuthStateChanged - Usuario ESTÁ autenticado. UID:", user.uid, "Email:", user.email);
             document.body.classList.remove('logged-out'); document.body.classList.add('logged-in');
-            if (authContainer) authContainer.style.display = 'none'; else console.error("DEBUG: onAuthStateChanged - authContainer es null (user)");
-            if (appContainer) appContainer.style.display = 'block'; else console.error("DEBUG: onAuthStateChanged - appContainer es null (user)"); 
-            if (userDisplaySpan) userDisplaySpan.textContent = `${user.email || 'Usuario Autenticado'}`; else console.warn("DEBUG: onAuthStateChanged - userDisplaySpan es null");
-            console.log("DEBUG: onAuthStateChanged - Clases del body:", document.body.className);
+            authContainer.style.display = 'none'; appContainer.style.display = 'block'; 
+            userDisplaySpan.textContent = `${user.email || 'Usuario'}`;
+            
             if (!window.dictationAppInitialized) {
                 console.log("DEBUG: onAuthStateChanged - Llamando a initializeDictationAppLogic para el usuario:", user.uid);
                 initializeDictationAppLogic(user.uid); 
                 window.dictationAppInitialized = true;
             } else {
-                console.log("DEBUG: onAuthStateChanged - App de dictado ya inicializada.");
+                console.log("DEBUG: onAuthStateChanged - App de dictado ya inicializada. Refrescando estado inicial de botones.");
                 if (typeof updateButtonStates === "function") updateButtonStates("initial"); 
             }
         } else {
             console.log("DEBUG: onAuthStateChanged - Usuario NO está autenticado o sesión cerrada.");
             document.body.classList.remove('logged-in'); document.body.classList.add('logged-out');
-            if (authContainer) authContainer.style.display = 'block'; else console.error("DEBUG: onAuthStateChanged - authContainer es null (no user)"); 
-            if (appContainer) appContainer.style.display = 'none'; else console.error("DEBUG: onAuthStateChanged - appContainer es null (no user)"); 
-            if (userDisplaySpan) userDisplaySpan.textContent = ''; else console.warn("DEBUG: onAuthStateChanged - userDisplaySpan es null");
-            console.log("DEBUG: onAuthStateChanged - Clases del body:", document.body.className);
+            authContainer.style.display = 'block'; appContainer.style.display = 'none';
+            if (userDisplaySpan) userDisplaySpan.textContent = '';
             if (window.currentMediaRecorder && window.currentMediaRecorder.state !== "inactive") {
-                try { console.log("DEBUG: onAuthStateChanged - Deteniendo MediaRecorder en logout."); window.currentMediaRecorder.stop(); } 
+                try { window.currentMediaRecorder.stop(); } 
                 catch(e) { console.warn("DEBUG: onAuthStateChanged - Error al detener MediaRecorder en logout:", e); }
             }
             window.dictationAppInitialized = false; 
@@ -139,13 +188,22 @@ function initializeAuthAndApp() {
 } 
 
 function initializeDictationAppLogic(userId) {
-    console.log(`DEBUG: initializeDictationAppLogic para usuario: ${userId} - Asignando listeners.`);
-    // Verificar que los elementos de la app de dictado existen antes de añadir listeners
-    const dictationElements = [startRecordBtn, pauseResumeBtn, retryProcessBtn, copyPolishedTextBtn, techniqueButtonsContainer, clearHeaderButton, themeSwitch];
-    if (dictationElements.some(el => !el)) {
-        console.error("DEBUG: initializeDictationAppLogic - Faltan elementos DOM de la app de dictado. No se añadirán listeners.");
-        return;
+    console.log(`DEBUG: initializeDictationAppLogic para usuario: ${userId} - Verificando elementos y asignando listeners.`);
+
+    // Las variables DOM ya fueron asignadas globalmente en DOMContentLoaded.
+    // Aquí solo verificamos que aún sean válidas (por si acaso algo raro pasa)
+    // y luego asignamos listeners.
+
+    const dictationElementsCheck = {startRecordBtn, pauseResumeBtn, retryProcessBtn, copyPolishedTextBtn, techniqueButtonsContainer, clearHeaderButton, themeSwitch, statusDiv};
+    for (const elName in dictationElementsCheck) {
+        if (!dictationElementsCheck[elName]) {
+            console.error(`DEBUG: initializeDictationAppLogic - Elemento App NO encontrado: ${elName}`);
+            alert(`Error crítico: Falta el elemento de UI de la app: ${elName}`);
+            return; // Detener si faltan elementos de la app de dictado
+        }
     }
+    console.log("DEBUG: initializeDictationAppLogic - Todos los elementos de la app de dictado verificados.");
+
 
     if (!startRecordBtn.dataset.listenerAttached) { startRecordBtn.addEventListener('click', toggleRecordingState); startRecordBtn.dataset.listenerAttached = 'true'; console.log("DEBUG: Listener añadido a startRecordBtn.");}
     if (!pauseResumeBtn.dataset.listenerAttached) { pauseResumeBtn.addEventListener('click', handlePauseResume); pauseResumeBtn.dataset.listenerAttached = 'true'; console.log("DEBUG: Listener añadido a pauseResumeBtn.");}
@@ -154,31 +212,15 @@ function initializeDictationAppLogic(userId) {
     if (!techniqueButtonsContainer.dataset.listenerAttached) { techniqueButtonsContainer.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON' && e.target.dataset.techniqueText) { headerArea.value = e.target.dataset.techniqueText; headerArea.focus(); }}); techniqueButtonsContainer.dataset.listenerAttached = 'true'; console.log("DEBUG: Listener añadido a techniqueButtonsContainer.");}
     if (!clearHeaderButton.dataset.listenerAttached) { clearHeaderButton.addEventListener('click', () => { headerArea.value = ""; headerArea.focus(); }); clearHeaderButton.dataset.listenerAttached = 'true'; console.log("DEBUG: Listener añadido a clearHeaderButton.");}
     
-    // El listener para themeSwitch ya se añade globalmente, no es necesario aquí de nuevo si solo hay una instancia.
-    // Si se quisiera un comportamiento específico de tema *solo cuando logueado*, se añadiría aquí.
+    // El listener de themeSwitch se añade globalmente al inicio (en DOMContentLoaded)
+    // y la función applyTheme se encarga de la lógica.
+    // No es necesario re-añadirlo aquí si ya está global.
 
     updateButtonStates("initial"); 
     console.log("DEBUG: Lógica de la app de dictado inicializada y listeners asignados.");
 } 
 
-// --- Definiciones de funciones globales de la app de dictado ---
-// Estas funciones son llamadas por los event listeners o internamente.
-let mediaRecorder; 
-let audioChunks = []; 
-let currentAudioBlob = null; 
-let audioContext; 
-let analyser; 
-let microphoneSource; 
-let animationFrameId; 
-let isRecording = false; 
-let isPaused = false; 
-let recordingTimerInterval; 
-let recordingSeconds = 0;  
-const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; 
-
-// Elementos DOM (ya obtenidos globalmente, solo para claridad de que se usan aquí)
-// const startRecordBtn, pauseResumeBtn, etc.
-
+// --- Funciones de la App de Dictado (definidas en el scope global del script) ---
 function applyTheme(theme) { 
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
@@ -197,7 +239,7 @@ function setAccentRGB() {
     } catch (e) { console.warn("No se pudo establecer --accent-color-rgb:", e); }
 }
 function setStatus(message, type = "idle", duration = 0) { 
-    if (!statusDiv) { console.error("DEBUG: statusDiv no disponible para setStatus. Mensaje:", message); return; }
+    if (!statusDiv) { console.error("DEBUG: statusDiv no está disponible para setStatus. Mensaje:", message); return; }
     statusDiv.textContent = message; statusDiv.className = ''; statusDiv.classList.add(`status-${type}`);
     if (duration > 0) { setTimeout(() => { if (statusDiv.textContent === message) updateButtonStates("initial"); }, duration); }
 }
@@ -211,13 +253,10 @@ function toggleRecordingState() { if (isRecording) { if (mediaRecorder && (media
 async function startActualRecording() { setStatus("Solicitando permiso...", "processing"); isPaused = false; polishedTextarea.value = ''; audioChunks = []; currentAudioBlob = null; recordingSeconds = 0; audioPlaybackSection.style.display = 'none'; if (audioPlayback.src) { URL.revokeObjectURL(audioPlayback.src); audioPlayback.src = ''; audioPlayback.removeAttribute('src');} if (!userApiKey) { alert('API Key de Gemini no configurada.'); setStatus("Error: API Key.", "error"); updateButtonStates("initial"); return; } try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); isRecording = true; setupVolumeMeter(stream); startRecordingTimer(); mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' }); window.currentMediaRecorder = mediaRecorder; mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); }; mediaRecorder.onpause = () => { setStatus('Grabación pausada.', 'idle'); isPaused = true; volumeMeterBar.classList.add('paused'); volumeMeterBar.style.background = 'var(--button-default-bg)'; updateButtonStates("paused"); }; mediaRecorder.onresume = () => { setStatus('Grabando... (Reanudado)', 'processing'); isPaused = false; volumeMeterBar.classList.remove('paused'); volumeMeterBar.style.background = 'var(--volume-bar-gradient)'; updateButtonStates("recording"); }; mediaRecorder.onstop = async () => { isRecording = false; isPaused = false; stopVolumeMeter(); stopRecordingTimer(); setStatus('Grabación detenida. Procesando...', 'processing'); if (audioChunks.length === 0) { setStatus("Error: No se grabó audio.", "error", 3000); updateButtonStates("stopped_error"); return; } currentAudioBlob = new Blob(audioChunks, { type: 'audio/webm' }); if (currentAudioBlob.size === 0) { setStatus("Error: Audio grabado vacío.", "error", 3000); updateButtonStates("stopped_error"); return; } const audioURL = URL.createObjectURL(currentAudioBlob); audioPlayback.src = audioURL; audioPlaybackSection.style.display = 'block'; updateButtonStates("stopped_success"); await processAudioBlob(currentAudioBlob); }; mediaRecorder.onerror = (event) => { isRecording = false; isPaused = false; stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay(); setStatus(`Error MediaRecorder: ${event.error.name}`, "error", 4000); updateButtonStates("error"); }; mediaRecorder.start(); setStatus('Grabando...', "processing"); updateButtonStates("recording"); } catch (err) { isRecording = false; isPaused = false; stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay(); setStatus(`Error Mic: ${err.message}.`, "error", 4000); updateButtonStates("initial"); } }
 function handlePauseResume() { if (!mediaRecorder || !isRecording) return; if (mediaRecorder.state === "recording") { mediaRecorder.pause();  } else if (mediaRecorder.state === "paused") { mediaRecorder.resume();  } }
 async function processAudioBlob(audioBlob) { polishedTextarea.value = ''; setStatus('Preparando audio...', 'processing'); updateButtonStates("processing_audio"); try { const base64Audio = await blobToBase64(audioBlob); if (!base64Audio || base64Audio.length < 100) throw new Error("Fallo Base64."); const polishedResult = await transcribeAndPolishAudio(base64Audio); polishedTextarea.value = polishedResult; setStatus('Proceso completado.', 'success', 3000); updateButtonStates("success_processing"); } catch (error) { setStatus(`Error Proc: ${error.message}`, "error", 4000); polishedTextarea.value = `Error: ${error.message}`; updateButtonStates("error_processing"); } }
-function updateButtonStates(state) { startRecordBtn.disabled = true; pauseResumeBtn.disabled = true; retryProcessBtn.disabled = true; copyPolishedTextBtn.disabled = false; startRecordBtn.textContent = "Empezar Dictado"; startRecordBtn.classList.remove("stop-style"); pauseResumeBtn.textContent = "Pausar"; let showAudioPlayer = false; if (currentAudioBlob) { if (["initial", "stopped_success", "error_processing", "success_processing", "stopped_error"].includes(state)) { showAudioPlayer = true; } } if(audioPlaybackSection) audioPlaybackSection.style.display = showAudioPlayer ? 'block' : 'none'; else console.warn("DEBUG: audioPlaybackSection es null en updateButtonStates"); switch (state) { case "initial": startRecordBtn.disabled = false; if(statusDiv && statusDiv.textContent !== "Listo") setStatus("Listo", "idle"); resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break; case "recording": startRecordBtn.disabled = false; startRecordBtn.textContent = "Detener Dictado"; startRecordBtn.classList.add("stop-style"); pauseResumeBtn.disabled = false; retryProcessBtn.disabled = true; break; case "paused": startRecordBtn.disabled = false; startRecordBtn.textContent = "Detener Dictado"; startRecordBtn.classList.add("stop-style"); pauseResumeBtn.disabled = false; pauseResumeBtn.textContent = "Reanudar"; retryProcessBtn.disabled = true; break; case "stopped_success": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break; case "stopped_error": startRecordBtn.disabled = false; resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break; case "processing_audio": startRecordBtn.disabled = true; pauseResumeBtn.disabled = true; retryProcessBtn.disabled = true; break; case "error_processing": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break; case "success_processing": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break; case "error": startRecordBtn.disabled = false; resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break; default: startRecordBtn.disabled = false; resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break; } }
+function updateButtonStates(state) { startRecordBtn.disabled = true; pauseResumeBtn.disabled = true; retryProcessBtn.disabled = true; copyPolishedTextBtn.disabled = false; startRecordBtn.textContent = "Empezar Dictado"; startRecordBtn.classList.remove("stop-style"); pauseResumeBtn.textContent = "Pausar"; let showAudioPlayer = false; if (currentAudioBlob) { if (["initial", "stopped_success", "error_processing", "success_processing", "stopped_error"].includes(state)) { showAudioPlayer = true; } } if(audioPlaybackSection) audioPlaybackSection.style.display = showAudioPlayer ? 'block' : 'none'; else console.warn("DEBUG: audioPlaybackSection es null en updateButtonStates"); switch (state) { case "initial": startRecordBtn.disabled = false; if(statusDiv && statusDiv.textContent.toLowerCase() !== "listo" && !statusDiv.textContent.toLowerCase().includes("error")) setStatus("Listo", "idle"); resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break; case "recording": startRecordBtn.disabled = false; startRecordBtn.textContent = "Detener Dictado"; startRecordBtn.classList.add("stop-style"); pauseResumeBtn.disabled = false; retryProcessBtn.disabled = true; break; case "paused": startRecordBtn.disabled = false; startRecordBtn.textContent = "Detener Dictado"; startRecordBtn.classList.add("stop-style"); pauseResumeBtn.disabled = false; pauseResumeBtn.textContent = "Reanudar"; retryProcessBtn.disabled = true; break; case "stopped_success": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break; case "stopped_error": startRecordBtn.disabled = false; resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break; case "processing_audio": startRecordBtn.disabled = true; pauseResumeBtn.disabled = true; retryProcessBtn.disabled = true; break; case "error_processing": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break; case "success_processing": startRecordBtn.disabled = false; retryProcessBtn.disabled = !currentAudioBlob; break; case "error": startRecordBtn.disabled = false; resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break; default: startRecordBtn.disabled = false; resetRecordingTimerDisplay(); stopVolumeMeter(); retryProcessBtn.disabled = !currentAudioBlob; break; } }
 function blobToBase64(blob) { return new Promise((resolve, reject) => { if (!blob || blob.size === 0) return reject(new Error("Blob nulo o vacío")); const reader = new FileReader(); reader.onloadend = () => { if (reader.result) { const base64String = reader.result.toString().split(',')[1]; if (!base64String) return reject(new Error("Fallo al extraer Base64.")); resolve(base64String); } else reject(new Error("FileReader no produjo resultado.")); }; reader.onerror = (error) => reject(error); reader.readAsDataURL(blob); }); }
 async function callGeminiAPI(promptParts, isTextOnly = false) { if (!userApiKey) throw new Error('API Key no configurada.'); const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`; const temperature = isTextOnly ? 0.1 : 0.2;  const body = { contents: [{ parts: promptParts }], generationConfig: { temperature: temperature } };  console.log(`Llamando a Gemini API (isTextOnly: ${isTextOnly}, temp: ${temperature}). Prompt (inicio):`, JSON.stringify(promptParts[0]).substring(0, 200) + "..."); const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!response.ok) { const errorData = await response.json(); console.error("Error data de Gemini API:", errorData); throw new Error(`Error API Gemini: ${errorData.error?.message || response.statusText} (Código: ${response.status})`); } const data = await response.json(); if (data.candidates?.[0]?.content?.parts?.[0]?.text) return data.candidates[0].content.parts[0].text; if (data.promptFeedback?.blockReason) throw new Error(`Bloqueado por Gemini: ${data.promptFeedback.blockReason}. ${data.promptFeedback.blockReasonMessage || ''}`); if (data.candidates?.[0]?.finishReason && data.candidates[0].finishReason !== "STOP") throw new Error(`Gemini finalizó con razón: ${data.candidates[0].finishReason}.`); if (data.candidates?.[0]?.finishReason === "STOP" && !data.candidates?.[0]?.content?.parts?.[0]?.text) return ""; throw new Error('Respuesta de Gemini inesperada o sin texto, y sin razón de bloqueo clara.'); }
 function capitalizeSentencesProperly(text) { if (!text || text.trim() === "") return ""; let result = text.trimStart(); if (result.length > 0) result = result.charAt(0).toUpperCase() + result.slice(1); result = result.replace(/([.!?])(\s*\n*|\s+)([a-záéíóúüñ])/g, (match, punctuation, whitespace, letter) => { return punctuation + whitespace + letter.toUpperCase(); }); return result; }
 async function transcribeAndPolishAudio(base64Audio) { let transcribedText = ''; try { setStatus('Transcribiendo audio...', 'processing'); const transcriptPromptParts = [ { "text": "Transcribe el siguiente audio a texto con la MÁXIMA LITERALIDAD POSIBLE. No corrijas errores de habla, repeticiones menores, ni cambies palabras. Si el hablante dice 'coma', 'punto', etc., transcríbelo tal cual como texto. El objetivo es una transcripción fiel palabra por palabra de lo que se oye:" }, { "inline_data": { "mime_type": "audio/webm", "data": base64Audio } } ]; transcribedText = await callGeminiAPI(transcriptPromptParts, false);  console.log("--- Transcripción Original (Consola) ---"); console.log(transcribedText); console.log("---------------------------------------"); } catch (error) { console.error("Error durante la transcripción interna:", error); throw new Error(`Fallo en transcripción interna: ${error.message}`);  } if (!transcribedText || transcribedText.trim() === "") throw new Error("La transcripción interna no produjo texto o está vacía.");  try { setStatus('Aplicando formato y puntuación...', 'processing'); const polishPromptParts = [ { "text": `Por favor, revisa el siguiente texto y aplica ÚNICAMENTE las siguientes modificaciones:\n1. Interpreta y reemplaza las siguientes palabras dictadas como signos de puntuación y formato EXACTAMENTE como se indica:\n    * 'coma' -> ','\n    * 'punto' -> '.'\n    * 'punto y aparte' -> '.' seguido de UN ÚNICO SALTO DE LÍNEA (\\n). NO insertes líneas en blanco adicionales.\n    * 'nueva línea' o 'siguiente línea' -> un único salto de línea (\\n).\n    * 'dos puntos' -> ':'\n    * 'punto y coma' -> ';'\n    * 'signo de interrogación', 'interrogación' o 'pregunta' (al final de una frase) -> '?'\n    * 'signo de exclamación', 'exclamación' o 'admiración' (al final de una frase) -> '!'\n2. Corrige ÚNICAMENTE errores ortográficos evidentes.\n3. Corrige ÚNICAMENTE errores gramaticales OBJETIVOS Y CLAROS que impidan la comprensión.\n4. NO CAMBIES la elección de palabras del hablante si son gramaticalmente correctas y comprensibles.\n5. NO REESTRUCTURES frases si son gramaticalmente correctas.\n6. PRESERVA el estilo y las expresiones exactas del hablante tanto como sea posible. El objetivo NO es "mejorar" el texto, sino formatearlo según lo dictado y corregir solo errores flagrantes.\n7. Si el texto ya contiene puntuación (ej. el hablante dictó "hola punto"), no la dupliques. Simplemente asegúrate de que el formato sea correcto.\n8. Asegúrate de que la primera letra de cada oración (después de un punto, signo de interrogación, o exclamación seguido de un espacio o salto de línea, y al inicio del texto) esté en mayúscula. \n\nTexto a procesar:\n"${transcribedText}"` } ]; let polishedResult = await callGeminiAPI(polishPromptParts, true);  let capitalizedText = capitalizeSentencesProperly(polishedResult); let postProcessedText = capitalizedText.replace(/\.\s*\n\s*\n/g, '.\n');  postProcessedText = postProcessedText.replace(/\n\s*\n/g, '\n');       return postProcessedText; } catch (error) { console.error("Error durante el pulido/formato:", error); setStatus(`Formato falló: ${error.message}. Mostrando transcripción más cruda.`, "error", 4000); return capitalizeSentencesProperly(transcribedText);  } }
-
-// La inicialización de los listeners de la app de dictado se mueve a initializeDictationAppLogic
-// que es llamada por onAuthStateChanged cuando un usuario se loguea.
 
 console.log("DEBUG: Script principal (fuera de DOMContentLoaded y firebaseReady) evaluado. Esperando firebaseReady...");
