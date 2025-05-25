@@ -1,7 +1,3 @@
-/* Contenido completo de style.css (el mismo que la respuesta anterior, es largo) */
-/* Asegúrate de copiar y pegar el contenido completo de style.css de la respuesta anterior aquí. */
-/* No lo repito para no hacer esta respuesta excesivamente larga. */
-/* Los estilos relevantes para auth ya estaban incluidos. */
 :root {
     --font-primary: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --line-height-base: 1.6;
@@ -11,32 +7,84 @@
     --transition-fast: 0.2s ease-in-out;
     --transition-medium: 0.3s ease;
 }
-/* Tema Oscuro */
+
+/* Tema Oscuro (Estilo Principal a Replicar de la Imagen) */
 body[data-theme="dark"] {
-    --bg-primary: #22272e; --bg-secondary: #2d333b; --text-primary: #adbac7; --text-secondary: #768390; --border-color: #444c56; --border-light-color: #373e47; --accent-color: #539bf5; --accent-text-color: #ffffff; 
-    --btn-record-bg: #377ef0; --btn-record-bg-hover: #539bf5; --btn-pause-bg: #d9971a; --btn-pause-bg-hover: #f0b72f; --btn-pause-text: #22272e; --btn-stop-bg: #e5534b; --btn-stop-bg-hover: #f47067;
-    --btn-retry-bg: #4387d9; --btn-retry-bg-hover: #539bf5; --btn-copy-bg: #ffc107; --btn-copy-bg-hover: #e0a800; --btn-copy-text: #22272e; 
-    --btn-technique-red-bg: #e5534b; --btn-technique-red-hover: #f47067; --btn-technique-yellow-bg: #d9971a; --btn-technique-yellow-hover: #f0b72f; --btn-technique-yellow-text: #22272e;
-    --btn-technique-blue-bg: #377ef0; --btn-technique-blue-hover: #539bf5; --btn-technique-gray-bg: #444c56; --btn-technique-gray-hover: #5d6774; --btn-technique-text: var(--accent-text-color); 
-    --volume-bar-color1: #2ecc71; --volume-bar-color2: #f1c40f; --volume-bar-color3: #e67e22; --volume-bar-color4: #e74c3c; --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
-    --success-bg: #14301c; --success-text: #a3cfbb; --error-bg: #3b1518; --error-text: #f1b0b7; --processing-bg: #002752; --processing-text: #b8d4fe; --idle-bg: #3e444a; --idle-text: #ced4da;
-    --button-disabled-bg: #444c56; --button-default-bg: #444c56; --theme-image-border: var(--border-color); --input-bg: #22272e; --input-border: #444c56; --input-text: #adbac7;
+    --bg-primary: #22272e; 
+    --bg-secondary: #2d333b; 
+    --text-primary: #adbac7; 
+    --text-secondary: #768390; 
+    --border-color: #444c56; 
+    --border-light-color: #373e47; 
+    --accent-color: #539bf5; 
+    --accent-text-color: #ffffff; 
+    --btn-record-bg: #377ef0; --btn-record-bg-hover: #539bf5;
+    --btn-pause-bg: #d9971a; --btn-pause-bg-hover: #f0b72f; --btn-pause-text: #22272e; 
+    --btn-stop-bg: #e5534b; --btn-stop-bg-hover: #f47067;
+    --btn-retry-bg: #4387d9; --btn-retry-bg-hover: #539bf5;
+    --btn-copy-bg: #ffc107; --btn-copy-bg-hover: #e0a800; --btn-copy-text: #22272e; 
+    --btn-technique-red-bg: #e5534b; --btn-technique-red-hover: #f47067;
+    --btn-technique-yellow-bg: #d9971a; --btn-technique-yellow-hover: #f0b72f; --btn-technique-yellow-text: #22272e;
+    --btn-technique-blue-bg: #377ef0; --btn-technique-blue-hover: #539bf5;
+    --btn-technique-gray-bg: #444c56; --btn-technique-gray-hover: #5d6774;
+    --btn-technique-text: var(--accent-text-color); 
+    
+    --volume-bar-color1: #2ecc71; --volume-bar-color2: #f1c40f; --volume-bar-color3: #e67e22; --volume-bar-color4: #e74c3c; 
+    --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
+
+    --success-bg: #14301c; --success-text: #a3cfbb;
+    --error-bg: #3b1518; --error-text: #f1b0b7;
+    --processing-bg: #002752; --processing-text: #b8d4fe;
+    --idle-bg: #3e444a; --idle-text: #ced4da;
+    --button-disabled-bg: #444c56;
+    --button-default-bg: #444c56; 
+    --theme-image-border: var(--border-color);
+    --input-bg: #22272e;
+    --input-border: #444c56;
+    --input-text: #adbac7;
     --switch-bg: #444c56; --switch-thumb-bg: #768390; --switch-checked-bg: #377ef0;
     --auth-form-bg: var(--bg-secondary); --auth-error-color: var(--btn-stop-bg); --auth-link-color: var(--accent-color);
 }
-/* Tema Claro */
+
+/* Tema Claro (Alternativo) */
 body[data-theme="light"] {
-    --bg-primary: #f4f8fa; --bg-secondary: #ffffff; --text-primary: #2f363d; --text-secondary: #5c6975; --border-color: #d0d7de; --border-light-color: #e9ecef; --accent-color: #007bff; --accent-text-color: #ffffff;
-    --btn-record-bg: #28a745; --btn-record-bg-hover: #218838; --btn-pause-bg: #ffc107; --btn-pause-bg-hover: #e0a800; --btn-pause-text: #212529; --btn-stop-bg: #dc3545; --btn-stop-bg-hover: #c82333;
-    --btn-retry-bg: #17a2b8; --btn-retry-bg-hover: #138496; --btn-copy-bg: #fd7e14; --btn-copy-bg-hover: #e66f0d; --btn-copy-text: #ffffff;
-    --btn-technique-red-bg: #dc3545; --btn-technique-red-hover: #c82333; --btn-technique-yellow-bg: #ffc107; --btn-technique-yellow-hover: #e0a800; --btn-technique-yellow-text: #212529;
-    --btn-technique-blue-bg: #17a2b8; --btn-technique-blue-hover: #138496; --btn-technique-gray-bg: #6c757d; --btn-technique-gray-hover: #5a6268; --btn-technique-text: var(--accent-text-color);
-    --volume-bar-color1: #2ecc71; --volume-bar-color2: #f1c40f; --volume-bar-color3: #e67e22; --volume-bar-color4: #e74c3c; --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
-    --success-bg: #d4edda; --success-text: #155724; --error-bg: #f8d7da; --error-text: #721c24; --processing-bg: #e7f3ff; --processing-text: #004085; --idle-bg: #f0f0f0; --idle-text: #555;
-    --button-disabled-bg: #ced4da; --button-default-bg: #ced4da; --theme-image-border: var(--border-color); --input-bg: #ffffff; --input-border: #ced4da; --input-text: #2f363d;
+    --bg-primary: #f4f8fa; 
+    --bg-secondary: #ffffff;
+    --text-primary: #2f363d;
+    --text-secondary: #5c6975;
+    --border-color: #d0d7de;
+    --border-light-color: #e9ecef; 
+    --accent-color: #007bff; 
+    --accent-text-color: #ffffff;
+    --btn-record-bg: #28a745; --btn-record-bg-hover: #218838;
+    --btn-pause-bg: #ffc107; --btn-pause-bg-hover: #e0a800; --btn-pause-text: #212529; 
+    --btn-stop-bg: #dc3545; --btn-stop-bg-hover: #c82333;
+    --btn-retry-bg: #17a2b8; --btn-retry-bg-hover: #138496;
+    --btn-copy-bg: #fd7e14;   
+    --btn-copy-bg-hover: #e66f0d; --btn-copy-text: #ffffff;
+    --btn-technique-red-bg: #dc3545; --btn-technique-red-hover: #c82333;
+    --btn-technique-yellow-bg: #ffc107; --btn-technique-yellow-hover: #e0a800; --btn-technique-yellow-text: #212529;
+    --btn-technique-blue-bg: #17a2b8; --btn-technique-blue-hover: #138496;
+    --btn-technique-gray-bg: #6c757d; --btn-technique-gray-hover: #5a6268;
+    --btn-technique-text: var(--accent-text-color);
+
+    --volume-bar-color1: #2ecc71; --volume-bar-color2: #f1c40f; --volume-bar-color3: #e67e22; --volume-bar-color4: #e74c3c; 
+    --volume-bar-gradient: linear-gradient(to right, var(--volume-bar-color1) 0%, var(--volume-bar-color1) 40%, var(--volume-bar-color2) 60%, var(--volume-bar-color3) 80%, var(--volume-bar-color4) 100%);
+
+    --success-bg: #d4edda; --success-text: #155724;
+    --error-bg: #f8d7da; --error-text: #721c24;
+    --processing-bg: #e7f3ff; --processing-text: #004085;
+    --idle-bg: #f0f0f0; --idle-text: #555;
+    --button-disabled-bg: #ced4da;
+    --button-default-bg: #ced4da; 
+    --theme-image-border: var(--border-color);
+    --input-bg: #ffffff;
+    --input-border: #ced4da;
+    --input-text: #2f363d;
     --switch-bg: #ccc; --switch-thumb-bg: white; --switch-checked-bg: #007bff;
     --auth-form-bg: var(--bg-secondary); --auth-error-color: var(--btn-stop-bg); --auth-link-color: var(--accent-color);
 }
+
 body { font-family: var(--font-primary); line-height: var(--line-height-base); margin: 0; padding: 20px; background-color: var(--bg-primary); color: var(--text-primary); display: flex; justify-content: center; transition: background-color var(--transition-fast), color var(--transition-fast); }
 #auth-container { width: 100%; max-width: 450px; margin-top: 50px; }
 .auth-form-wrapper { background-color: var(--auth-form-bg); padding: 30px 40px; border-radius: var(--border-radius-medium); border: 1px solid var(--border-color); box-shadow: var(--shadow-soft); }
@@ -53,16 +101,17 @@ body { font-family: var(--font-primary); line-height: var(--line-height-base); m
 .auth-switch a:hover { text-decoration: underline; }
 body.logged-out #app-container { display: none; }
 body.logged-out #auth-container { display: block; } 
-body.logged-in #app-container { display: block; }
+body.logged-in #app-container { display: block; } /* Cambiado a block para el app-wrapper */
 body.logged-in #auth-container { display: none; }
 .user-info-bar { background-color: var(--bg-secondary); padding: 10px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: flex-end; align-items: center; margin-bottom: 20px; border-radius: var(--border-radius-medium) var(--border-radius-medium) 0 0; width: 100%; max-width: 1300px; box-sizing: border-box; }
 #userDisplay { margin-right: 15px; color: var(--text-secondary); font-size: 0.9em; }
 #logoutButton { background-color: var(--btn-stop-bg); color: var(--accent-text-color); padding: 6px 12px; font-size: 0.85em; min-width: auto; width: auto; flex-grow: 0; }
 #logoutButton:hover { background-color: var(--btn-stop-bg-hover); }
+
 .app-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; }
 .app-layout { display: flex; flex-direction: row; gap: 25px; width: 100%; max-width: 1300px; margin-top: 0; } 
-.main-column { flex: 2.5; display: flex; flex-direction: column; gap: 20px; }
-.sidebar-column { flex: 1; position: sticky; top: 20px; align-self: flex-start; display: flex; flex-direction: column; gap: 20px; }
+.main-column { flex-grow: 2; flex-shrink: 1; flex-basis: 0; display: flex; flex-direction: column; gap: 20px; } /* MODIFICADO */
+.sidebar-column { flex-grow: 1; flex-shrink: 1; flex-basis: 0; position: sticky; top: 20px; align-self: flex-start; display: flex; flex-direction: column; gap: 20px; } /* MODIFICADO */
 .container { background-color: var(--bg-secondary); padding: 20px 25px; border-radius: var(--border-radius-medium); border: 1px solid var(--border-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: background-color var(--transition-fast), border-color var(--transition-fast); }
 body[data-theme="dark"] .container { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
 #title-frame { background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius-medium); padding: 20px 25px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-soft); width: 100%; max-width: 1300px; box-sizing: border-box; margin-bottom: 20px; min-height: 80px; }
