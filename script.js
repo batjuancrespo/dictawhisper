@@ -1,13 +1,10 @@
-// --- Variables Globales del Módulo (accesibles en todo el script) ---
+// --- Variables Globales de la App de Dictado (declaradas una vez) ---
 let startRecordBtn, pauseResumeBtn, retryProcessBtn, copyPolishedTextBtn, correctTextSelectionBtn, 
     statusDiv, polishedTextarea, audioPlayback, audioPlaybackSection, 
     themeSwitch, volumeMeterBar, volumeMeterContainer, recordingTimeDisplay, 
     headerArea, techniqueButtonsContainer, clearHeaderButton, 
     mainTitleImage, mainTitleImageDark,
     vocabManagerModal, vocabManagerList, modalCloseButtonVocab, modalAddNewRuleButtonVocab, manageVocabButton;
-
-// Variables para contenedores Auth/App y elementos de usuario
-let authContainer, appContainer, userDisplaySpan, logoutButton;
 
 let mediaRecorder;
 let audioChunks = [];
@@ -28,7 +25,7 @@ let customVocabulary = {};
 let learnedCorrections = {};    
 let commonMistakeNormalization = {};
 
-// Variables para el Atajo de Teclado
+// --- Variables para el Atajo de Teclado ---
 let isProcessingShortcut = false;
 const SHORTCUT_DEBOUNCE_MS = 300; 
 let firstShiftIsDown = false; 
@@ -37,12 +34,10 @@ let shortcutSequenceActive = false;
 let shortcutTimeoutId = null; 
 const SHORTCUT_WINDOW_MS = 700; 
 
-// --- FIN de Variables Globales del Módulo ---
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DEBUG: DOMContentLoaded event fired.");
 
-    // Asignar elementos DOM de la App de Dictado a las variables globales
     startRecordBtn = document.getElementById('startRecordBtn');
     pauseResumeBtn = document.getElementById('pauseResumeBtn');
     retryProcessBtn = document.getElementById('retryProcessBtn');
@@ -67,19 +62,12 @@ document.addEventListener('DOMContentLoaded', () => {
     modalCloseButtonVocab = document.getElementById('modalCloseButtonVocab'); 
     modalAddNewRuleButtonVocab = document.getElementById('modalAddNewRuleButtonVocab');
 
-    // Asignar contenedores Auth/App y elementos de usuario globales
-    authContainer = document.getElementById('auth-container');
-    appContainer = document.getElementById('app-container');
-    userDisplaySpan = document.getElementById('userDisplay');
-    logoutButton = document.getElementById('logoutButton');
-
     const elementsMap = {
         startRecordBtn, pauseResumeBtn, retryProcessBtn, copyPolishedTextBtn, correctTextSelectionBtn,
         statusDiv, polishedTextarea, audioPlayback, audioPlaybackSection, themeSwitch,
         volumeMeterBar, volumeMeterContainer, recordingTimeDisplay, headerArea,
         techniqueButtonsContainer, clearHeaderButton, mainTitleImage, mainTitleImageDark,
-        manageVocabButton, vocabManagerModal, vocabManagerList, modalCloseButtonVocab, modalAddNewRuleButtonVocab,
-        authContainer, appContainer, userDisplaySpan, logoutButton 
+        manageVocabButton, vocabManagerModal, vocabManagerList, modalCloseButtonVocab, modalAddNewRuleButtonVocab
     };
 
     let allElementsFound = true;
@@ -96,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statusDiv) { statusDiv.textContent = "Error crítico de UI."; statusDiv.className = 'status-error';}
         return; 
     }
-    console.log("DEBUG: Todos los elementos HTML principales (incluyendo auth/app containers) fueron encontrados en DOMContentLoaded.");
+    console.log("DEBUG: Todos los elementos HTML principales fueron encontrados en DOMContentLoaded.");
 
     const preferredTheme = localStorage.getItem('theme') || 'dark'; 
     applyTheme(preferredTheme); 
@@ -120,8 +108,8 @@ document.addEventListener('firebaseReady', () => {
 
 function initializeAuthAndApp() {
     console.log("DEBUG: initializeAuthAndApp - INICIO de la función.");
-    // authContainer, appContainer, userDisplaySpan, logoutButton ya son globales y están asignados.
-
+    const authContainer = document.getElementById('auth-container');
+    const appContainer = document.getElementById('app-container');
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
     const loginEmailInput = document.getElementById('login-email');
@@ -134,16 +122,18 @@ function initializeAuthAndApp() {
     const showLoginLink = document.getElementById('showLoginLink');
     const loginErrorDiv = document.getElementById('login-error');
     const signupErrorDiv = document.getElementById('signup-error');
+    const userDisplaySpan = document.getElementById('userDisplay');
+    const logoutButton = document.getElementById('logoutButton');
 
-    const authFormElements = {loginForm, signupForm, loginEmailInput, loginPasswordInput, signupEmailInput, signupPasswordInput, loginButton, signupButton, showSignupLink, showLoginLink, loginErrorDiv, signupErrorDiv};
-    for (const elName in authFormElements) {
-        if (!authFormElements[elName]) {
-            console.error(`DEBUG: initializeAuthAndApp - Elemento de Formulario Auth NO encontrado: ${elName}`);
+    const authElements = {authContainer, appContainer, loginForm, signupForm, loginEmailInput, loginPasswordInput, signupEmailInput, signupPasswordInput, loginButton, signupButton, showSignupLink, showLoginLink, loginErrorDiv, signupErrorDiv, userDisplaySpan, logoutButton};
+    for (const elName in authElements) {
+        if (!authElements[elName]) {
+            console.error(`DEBUG: initializeAuthAndApp - Elemento Auth NO encontrado: ${elName}`);
             alert(`Error crítico: Falta el elemento de UI para autenticación: ${elName}`);
             return; 
         }
     }
-    console.log("DEBUG: initializeAuthAndApp - Elementos de Formularios Auth DOM seleccionados correctamente.");
+    console.log("DEBUG: initializeAuthAndApp - Elementos Auth DOM seleccionados correctamente.");
 
     const auth = window.auth;
     const createUserWithEmailAndPassword = window.createUserWithEmailAndPassword;
@@ -177,36 +167,32 @@ function initializeAuthAndApp() {
         finally { loginButton.disabled = false; loginButton.textContent = 'Iniciar Sesión'; }
     });
 
-    if (logoutButton) {
+    if(logoutButton) {
         logoutButton.addEventListener('click', async () => {
             try { await signOut(auth); }
             catch (error) { console.error('DEBUG: Error al cerrar sesión:', error); alert("Error al cerrar sesión."); }
         });
-    } else { console.error("DEBUG: logoutButton no encontrado en initializeAuthAndApp para añadir listener."); }
+    }
     
     console.log("DEBUG: initializeAuthAndApp - Suscribiendo onAuthStateChanged listener...");
     onAuthStateChanged(auth, async (user) => { 
         console.log("DEBUG: onAuthStateChanged - CALLBACK EJECUTADO. User object:", user ? user.uid : null); 
         if (user) {
             currentUserId = user.uid; 
-            console.log("DEBUG: onAuthStateChanged - Usuario ESTÁ autenticado. UID:", currentUserId);
+            console.log("DEBUG: onAuthStateChanged - Usuario ESTÁ autenticado. UID:", currentUserId, "Email:", user.email);
             document.body.classList.remove('logged-out'); document.body.classList.add('logged-in');
-            
-            if (authContainer) authContainer.style.display = 'none'; 
-            else console.error("DEBUG: authContainer es null DENTRO de onAuthStateChanged (user)");
-            
-            if (appContainer) appContainer.style.display = 'flex'; 
-            else console.error("DEBUG: appContainer es null DENTRO de onAuthStateChanged (user)");
-            
-            if (userDisplaySpan) userDisplaySpan.textContent = `${user.email || 'Usuario'}`;
-            else console.warn("DEBUG: userDisplaySpan es null DENTRO de onAuthStateChanged (user)");
+            if(authContainer) authContainer.style.display = 'none'; 
+            if(appContainer) appContainer.style.display = 'flex'; 
+            if(userDisplaySpan) userDisplaySpan.textContent = `${user.email || 'Usuario'}`;
             
             await loadUserVocabularyFromFirestore(currentUserId); 
 
             if (!window.dictationAppInitialized) {
+                console.log("DEBUG: onAuthStateChanged - Llamando a initializeDictationAppLogic para el usuario:", currentUserId);
                 initializeDictationAppLogic(currentUserId); 
                 window.dictationAppInitialized = true;
             } else {
+                console.log("DEBUG: onAuthStateChanged - App de dictado ya inicializada. Refrescando estado inicial de botones.");
                 if (typeof updateButtonStates === "function") updateButtonStates("initial"); 
             }
         } else {
@@ -214,15 +200,17 @@ function initializeAuthAndApp() {
             customVocabulary = {}; 
             learnedCorrections = {};
             commonMistakeNormalization = {};
+            console.log("DEBUG: onAuthStateChanged - Usuario NO está autenticado o sesión cerrada.");
             document.body.classList.remove('logged-in'); document.body.classList.add('logged-out');
-            if (authContainer) authContainer.style.display = 'block';
-            if (appContainer) appContainer.style.display = 'none';
+            if(authContainer) authContainer.style.display = 'block'; 
+            if(appContainer) appContainer.style.display = 'none';
             if (userDisplaySpan) userDisplaySpan.textContent = '';
             if (window.currentMediaRecorder && window.currentMediaRecorder.state !== "inactive") {
                 try { window.currentMediaRecorder.stop(); } 
-                catch(e) { /* ... */ }
+                catch(e) { console.warn("DEBUG: onAuthStateChanged - Error al detener MediaRecorder en logout:", e); }
             }
             window.dictationAppInitialized = false; 
+            resetShortcutKeys(); // Resetear estado del atajo en logout
         }
     });
     console.log("DEBUG: initializeAuthAndApp - onAuthStateChanged listener suscrito.");
@@ -240,8 +228,8 @@ function initializeAuthAndApp() {
     }
 } 
 
-function initializeDictationAppLogic(userIdPassedIn) { 
-    console.log(`DEBUG: initializeDictationAppLogic para usuario: ${userIdPassedIn} - Asignando listeners.`);
+function initializeDictationAppLogic(userId) {
+    console.log(`DEBUG: initializeDictationAppLogic para usuario: ${userId} - Asignando listeners.`);
     
     if (startRecordBtn && !startRecordBtn.dataset.listenerAttached) { startRecordBtn.addEventListener('click', toggleRecordingState); startRecordBtn.dataset.listenerAttached = 'true';}
     if (pauseResumeBtn && !pauseResumeBtn.dataset.listenerAttached) { pauseResumeBtn.addEventListener('click', handlePauseResume); pauseResumeBtn.dataset.listenerAttached = 'true';}
@@ -255,46 +243,88 @@ function initializeDictationAppLogic(userIdPassedIn) {
     if (modalAddNewRuleButtonVocab && !modalAddNewRuleButtonVocab.dataset.listenerAttached) { modalAddNewRuleButtonVocab.addEventListener('click', handleAddNewVocabRule); modalAddNewRuleButtonVocab.dataset.listenerAttached = 'true'; }
     if (vocabManagerModal && !vocabManagerModal.dataset.listenerAttached) { vocabManagerModal.addEventListener('click', (e) => { if (e.target === vocabManagerModal) closeVocabManager(); }); vocabManagerModal.dataset.listenerAttached = 'true'; }
     
+    // --- Listener para el Atajo de Teclado Global: Shift + Cmd/Ctrl + Shift (REVISADO) ---
     if (!document.dataset.dictationGlobalShortcutListenerAttached) {
-        console.log("DEBUG: initializeDictationAppLogic - Añadiendo listener GLOBAL para atajo Shift+Cmd/Ctrl+Shift (revisado)");
+        console.log("DEBUG_SC: Añadiendo listeners GLOBALES para atajo Shift+Cmd/Ctrl+Shift (versión con logs exhaustivos)");
+
         document.addEventListener('keydown', function(event) {
-            if (!window.dictationAppInitialized) return;
+            // console.log(`DEBUG_SC KeyDown Event: Key='${event.key}', Code='${event.code}', Shift:${event.shiftKey}, Ctrl:${event.ctrlKey}, Meta:${event.metaKey}, Repeat:${event.repeat} | States: firstS:${firstShiftIsDown}, cmdCtrl:${cmdCtrlIsDown}, seqActive:${shortcutSequenceActive}`);
+            if (!window.dictationAppInitialized) { return; }
             const targetTagName = event.target.tagName.toLowerCase();
             if (['input', 'textarea'].includes(targetTagName) && !event.target.readOnly) { return; }
             if (event.repeat) { return; }
+
             if (event.key === 'Shift') {
-                if (!isRecording && !isPaused && !shortcutSequenceActive && !firstShiftIsDown) { 
-                    firstShiftIsDown = true; cmdCtrlIsDown = false; shortcutSequenceActive = false; 
-                    clearTimeout(shortcutTimeoutId); shortcutTimeoutId = setTimeout(resetShortcutKeys, SHORTCUT_WINDOW_MS); return; 
+                // console.log(`DEBUG_SC: KeyDown 'Shift'. States: firstS:${firstShiftIsDown}, cmdCtrl:${cmdCtrlIsDown}, seqActive:${shortcutSequenceActive}`);
+                if (!shortcutSequenceActive && !firstShiftIsDown) { 
+                    firstShiftIsDown = true;
+                    cmdCtrlIsDown = false; 
+                    shortcutSequenceActive = false; 
+                    // console.log("DEBUG_SC: Primer Shift detectado. firstShiftIsDown=true. Esperando Cmd/Ctrl.");
+                    clearTimeout(shortcutTimeoutId);
+                    shortcutTimeoutId = setTimeout(resetShortcutKeys, SHORTCUT_WINDOW_MS);
+                    return; 
                 }
+                
                 if (shortcutSequenceActive && firstShiftIsDown && cmdCtrlIsDown) {
-                    event.preventDefault();
-                    if (!startRecordBtn || startRecordBtn.disabled || isProcessingShortcut) { resetShortcutKeys(); return; }
-                    isProcessingShortcut = true; toggleRecordingState();
+                    event.preventDefault(); 
+                    console.log("DEBUG_SC: ATARJO Shift+Cmd/Ctrl+Shift COMPLETADO!");
+                    if (!startRecordBtn || startRecordBtn.disabled || isProcessingShortcut) {
+                        console.warn("DEBUG_SC: Atajo COMPLETADO pero ignorado (Botón deshabilitado o atajo en proceso).");
+                        resetShortcutKeys(); return;
+                    }
+                    isProcessingShortcut = true;
+                    toggleRecordingState();
                     setTimeout(() => { isProcessingShortcut = false; }, SHORTCUT_DEBOUNCE_MS);
                     resetShortcutKeys(); 
-                }
+                } else { /* console.log("DEBUG_SC: KeyDown 'Shift' pero no se cumplieron condiciones."); */ }
             } else if (event.metaKey || event.ctrlKey) {
+                // console.log(`DEBUG_SC: KeyDown Cmd/Ctrl. States: firstS:${firstShiftIsDown}, cmdCtrl:${cmdCtrlIsDown}, seqActive:${shortcutSequenceActive}`);
                 if (firstShiftIsDown && !cmdCtrlIsDown) { 
-                    cmdCtrlIsDown = true; shortcutSequenceActive = true; 
-                    clearTimeout(shortcutTimeoutId); shortcutTimeoutId = setTimeout(resetShortcutKeys, SHORTCUT_WINDOW_MS);
-                } else if (!firstShiftIsDown) { resetShortcutKeys(); }
-            } else { if (firstShiftIsDown || cmdCtrlIsDown) { resetShortcutKeys(); } }
+                    cmdCtrlIsDown = true;
+                    shortcutSequenceActive = true; 
+                    // console.log("DEBUG_SC: Cmd/Ctrl detectado. Esperando SEGUNDO Shift.");
+                    clearTimeout(shortcutTimeoutId); 
+                    shortcutTimeoutId = setTimeout(resetShortcutKeys, SHORTCUT_WINDOW_MS);
+                } else if (!firstShiftIsDown) {
+                    resetShortcutKeys();
+                }
+            } else { 
+                if (firstShiftIsDown || cmdCtrlIsDown || shortcutSequenceActive) { 
+                    // console.log(`DEBUG_SC: Tecla '${event.key}' no relacionada. Reseteando.`);
+                    resetShortcutKeys();
+                }
+            }
         });
+
         document.addEventListener('keyup', function(event) {
             if (!window.dictationAppInitialized) return;
-            if (event.key === 'Shift') { if (firstShiftIsDown && !cmdCtrlIsDown) { resetShortcutKeys(); } }
-            else if (event.key === 'Meta' || event.key === 'Control') { if (cmdCtrlIsDown) { resetShortcutKeys(); } }
+            // console.log(`DEBUG_SC KeyUp Event: Key='${event.key}', Code='${event.code}', Shift:${event.shiftKey}, Ctrl:${event.ctrlKey}, Meta:${event.metaKey}`);
+            if (event.key === 'Shift') {
+                if (firstShiftIsDown && !cmdCtrlIsDown) { 
+                     // console.log("DEBUG_SC: KeyUp 'Shift' (era primer Shift sin Cmd/Ctrl). Reseteando.");
+                     resetShortcutKeys();
+                }
+            } else if (event.key === 'Meta' || event.key === 'Control') {
+                if (cmdCtrlIsDown) {
+                    // console.log("DEBUG_SC: KeyUp Cmd/Ctrl. Reseteando.");
+                    resetShortcutKeys();
+                }
+            }
         });
+        
         window.addEventListener('blur', resetShortcutKeys); 
         document.dataset.dictationGlobalShortcutListenerAttached = 'true';
+    } else {
+        console.log("DEBUG: Listener de atajo global YA EXISTE.");
     }
+    
     updateButtonStates("initial"); 
 } 
 
 function resetShortcutKeys() {
-    if (firstShiftIsDown || cmdCtrlIsDown || shortcutSequenceActive) {
-        // console.log("DEBUG_SC: resetShortcutKeys() ejecutado."); // Opcional: log menos verboso
+    if (firstShiftIsDown || cmdCtrlIsDown || shortcutSequenceActive) { 
+        // console.log("DEBUG_SC: resetShortcutKeys() ejecutado.");
     }
     firstShiftIsDown = false; cmdCtrlIsDown = false; shortcutSequenceActive = false;
     clearTimeout(shortcutTimeoutId);
@@ -325,7 +355,7 @@ function applyAllUserCorrections(text) { if (!text) return ""; let processedText
 function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function openVocabManager() { vocabManagerModal = vocabManagerModal || document.getElementById('vocabManagerModal'); if (!vocabManagerModal) { console.error("Modal de vocabulario no encontrado."); return; } populateVocabManagerList(); vocabManagerModal.style.display = 'flex'; }
 function closeVocabManager() { vocabManagerModal = vocabManagerModal || document.getElementById('vocabManagerModal'); if (!vocabManagerModal) return; vocabManagerModal.style.display = 'none'; }
-function populateVocabManagerList() { vocabManagerList = vocabManagerList || document.getElementById('vocabManagerList'); if (!vocabManagerList) { console.error("Lista del modal de vocabulario no encontrada."); return; } vocabManagerList.innerHTML = ''; const keys = Object.keys(customVocabulary).sort(); if (keys.length === 0) { vocabManagerList.innerHTML = '<li>No hay reglas personalizadas (rulesMap).</li>'; return; } keys.forEach(key => { const value = customVocabulary[key]; const listItem = document.createElement('li'); listItem.innerHTML = `<span class="vocab-key">${key}</span> <span class="vocab-arrow">➔</span> <span class="vocab-value">${value}</span> <div class="vocab-actions"><button class="edit-vocab-btn" data-key="${key}">Editar</button><button class="delete-vocab-btn" data-key="${key}">Borrar</button></div>`; listItem.querySelector('.edit-vocab-btn').addEventListener('click', () => handleEditVocabRule(key)); listItem.querySelector('.delete-vocab-btn').addEventListener('click', () => handleDeleteVocabRule(key)); vocabManagerList.appendChild(listItem); }); }
+function populateVocabManagerList() { vocabManagerList = vocabManagerList || document.getElementById('vocabManagerList'); if (!vocabManagerList) { console.error("Lista del modal de vocabulario no encontrada."); return; } vocabManagerList.innerHTML = ''; const keys = Object.keys(customVocabulary).sort(); if (keys.length === 0) { vocabManagerList.innerHTML = '<li>No hay reglas personalizadas (rulesMap).</li>'; return; } keys.forEach(key => { const value = customVocabulary[key]; const listItem = document.createElement('li'); listItem.innerHTML = `<span class="vocab-key">${key}</span> <span class="vocab-arrow">➔</span> <span class="vocab-value">${value}</span> <div class="vocab-actions"><button class="edit-vocab-btn" data-vocab-key-edit="${key}">Editar</button><button class="delete-vocab-btn" data-vocab-key-delete="${key}">Borrar</button></div>`; const editBtn = listItem.querySelector('.edit-vocab-btn'); const deleteBtn = listItem.querySelector('.delete-vocab-btn'); if(editBtn) editBtn.addEventListener('click', (e) => handleEditVocabRule(e.target.dataset.vocabKeyEdit)); if(deleteBtn) deleteBtn.addEventListener('click', (e) => handleDeleteVocabRule(e.target.dataset.vocabKeyDelete)); vocabManagerList.appendChild(listItem); }); }
 async function handleAddNewVocabRule() { const errorKeyRaw = prompt("Texto incorrecto (o palabra a reemplazar):"); if (!errorKeyRaw || errorKeyRaw.trim() === "") return; const errorKey = errorKeyRaw.trim().toLowerCase(); const correctValueRaw = prompt(`Corrección para "${errorKeyRaw}":`); if (correctValueRaw === null) return; const correctValue = correctValueRaw.trim(); if (customVocabulary[errorKey] === correctValue && correctValue !== "") { alert("Regla ya existe con el mismo valor."); return; } customVocabulary[errorKey] = correctValue; await saveUserVocabularyToFirestore(); populateVocabManagerList(); setStatus("Regla añadida/actualizada.", "success", 2000); }
 async function handleEditVocabRule(keyToEdit) { const currentValue = customVocabulary[keyToEdit]; const newErrorKeyRaw = prompt(`Editar CLAVE (original: "${keyToEdit}"):\n(Dejar vacío para mantener)`, keyToEdit); if (newErrorKeyRaw === null) return; const newErrorKey = (newErrorKeyRaw.trim() === "" ? keyToEdit : newErrorKeyRaw.trim()).toLowerCase(); const newCorrectValueRaw = prompt(`Editar VALOR para "${newErrorKey}" (original: "${currentValue}"):`, currentValue); if (newCorrectValueRaw === null) return; const newCorrectValue = newCorrectValueRaw.trim(); if (newErrorKey !== keyToEdit && customVocabulary.hasOwnProperty(newErrorKey)) { alert(`La clave "${newErrorKey}" ya existe.`); return; } if (newErrorKey !== keyToEdit) delete customVocabulary[keyToEdit]; customVocabulary[newErrorKey] = newCorrectValue; await saveUserVocabularyToFirestore(); populateVocabManagerList(); setStatus("Regla actualizada.", "success", 2000); }
 async function handleDeleteVocabRule(keyToDelete) { if (confirm(`¿Borrar la regla para "${keyToDelete}"?`)) { delete customVocabulary[keyToDelete]; await saveUserVocabularyToFirestore(); populateVocabManagerList(); setStatus("Regla borrada.", "success", 2000); } }
