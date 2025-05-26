@@ -22,8 +22,8 @@ const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // API Key de Gemi
 // --- Variables para el Vocabulario del Usuario (estilo index (2).html) ---
 let currentUserId = null;      
 let customVocabulary = {};      // Corresponderá a rulesMap
-let learnedCorrections = {};    // Corresponderá a learnedMap
-let commonMistakeNormalization = {}; // Corresponderá a normalizations
+let learnedCorrections = {};    // Corresponderá a learnedMap (cargado pero no usado activamente en applyAllUserCorrections por ahora)
+let commonMistakeNormalization = {}; // Corresponderá a normalizations (cargado pero no usado activamente)
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -251,9 +251,103 @@ function blobToBase64(b){return new Promise((res,rej)=>{if(!b||b.size===0)return
 async function callGeminiAPI(p,isTxt=false){if(!userApiKey)throw new Error('No API Key');const u=`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;const t=isTxt?0.1:0.2;const y={contents:[{parts:p}],generationConfig:{temperature:t}};console.log(`Gemini (isTxt:${isTxt},temp:${t}). Prompt(inicio):`,JSON.stringify(p[0]).substring(0,200)+"...");const resp=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(y)});if(!resp.ok){const eD=await resp.json();console.error("Error Gemini API:",eD);throw new Error(`Error API:${eD.error?.message||resp.statusText}(${resp.status})`);}const d=await resp.json();if(d.candidates?.[0]?.content?.parts?.[0]?.text)return d.candidates[0].content.parts[0].text;if(d.promptFeedback?.blockReason)throw new Error(`Bloqueado:${d.promptFeedback.blockReason}.${d.promptFeedback.blockReasonMessage||''}`);if(d.candidates?.[0]?.finishReason&&d.candidates[0].finishReason!=="STOP")throw new Error(`Gemini fin:${d.candidates[0].finishReason}.`);if(d.candidates?.[0]?.finishReason==="STOP"&&!d.candidates?.[0]?.content?.parts?.[0]?.text)return"";throw new Error('Gemini respuesta inesperada.');}
 function capitalizeSentencesProperly(t){if(!t||t.trim()==="")return"";let r=t.trimStart();if(r.length>0)r=r.charAt(0).toUpperCase()+r.slice(1);r=r.replace(/([.!?])(\s*\n*|\s+)([a-záéíóúüñ])/g,(m,p,w,l)=>p+w+l.toUpperCase());return r;}
 async function transcribeAndPolishAudio(b){let tTxt='';try{setStatus('Transcribiendo...','processing');const tP=[{text:"Transcribe el audio a texto LITERALMENTE. No corrijas. Si dice 'coma', 'punto', transcribe 'coma', 'punto'."},{inline_data:{mime_type:"audio/webm",data:b}}];tTxt=await callGeminiAPI(tP,false);console.log("---Transcripción Original (Consola)---\n",tTxt,"\n-----------------------------------");}catch(e){console.error("Error transcripción:",e);throw new Error(`Fallo transcripción:${e.message}`);}if(!tTxt||tTxt.trim()==="")throw new Error("Transcripción vacía.");let pAI='';try{setStatus('Puliendo...','processing');const pP=[{text:`Revisa y pule. INSTRUCCIONES:\n1.Interpreta palabras dictadas como signos:\n'coma'➔, 'punto'➔. 'punto y aparte'➔.(salto línea único) 'nueva línea'➔(salto línea único) 'dos puntos'➔: 'punto y coma'➔; 'interrogación'➔? 'exclamación'➔!\n2.Corrige SOLO ortografía/gramática OBVIA.\n3.NO CAMBIES palabras/estructura si es OK.\n4.PRESERVA estilo.\n5.Si ya OK, cambios MÍNIMOS.\n6.Capitaliza inicio de frases.\n\nTexto:"${tTxt}"`}];pAI=await callGeminiAPI(pP,true);}catch(e){console.error("Error pulido IA:",e);setStatus(`Fallo pulido IA:${e.message}. Usando cruda.`,"error",4000);pAI=tTxt;}let cT=capitalizeSentencesProperly(pAI);let custT=applyAllUserCorrections(cT);let finT=custT.replace(/\.\s*\n\s*\n/g,'.\n').replace(/\n\s*\n/g,'\n');return finT;}
-async function loadUserVocabularyFromFirestore(userId) { if (!userId || !window.db) { customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; return; } console.log(`DEBUG: Cargando vocabulario (estilo index(2).html) para usuario: ${userId}`); const vocabDocRef = window.doc(window.db, "userVocabularies", userId); try { const docSnap = await window.getDoc(vocabDocRef); if (docSnap.exists()) { const firestoreData = docSnap.data(); customVocabulary = firestoreData.rulesMap || {}; learnedCorrections = firestoreData.learnedMap || {}; commonMistakeNormalization = firestoreData.normalizations || {}; console.log("DEBUG: Vocabulario cargado. Reglas:", Object.keys(customVocabulary).length, "Aprendidas:", Object.keys(learnedCorrections).length, "Normaliz.:", Object.keys(commonMistakeNormalization).length); } else { customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; console.log("DEBUG: No doc de vocabulario. Usando vacíos."); } } catch (error) { console.error("Error cargando vocabulario:", error); customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; setStatus("Error al cargar personalizaciones.", "error", 3000); } }
-async function saveUserVocabularyToFirestore() { if (!currentUserId || !window.db) { console.error("DEBUG: No hay userId o DB para guardar vocabulario."); return; } console.log(`DEBUG: Guardando vocabulario para ${currentUserId}. Contenido de customVocabulary (rulesMap) a guardar:`, JSON.parse(JSON.stringify(customVocabulary))); const vocabDocRef = window.doc(window.db, "userVocabularies", currentUserId); const dataToSave = { rulesMap: customVocabulary, learnedMap: learnedCorrections, normalizations: commonMistakeNormalization }; try { await window.setDoc(vocabDocRef, dataToSave, { merge: true }); console.log("DEBUG: Vocabulario del usuario guardado en Firestore."); } catch (error) { console.error("Error guardando vocabulario:", error); setStatus("Error al guardar personalizaciones.", "error", 3000); } }
-function applyAllUserCorrections(text) { if (!text) return ""; let processedText = text; /* Lógica para commonMistakeNormalization (ADAPTAR) console.log("DEBUG: Aplicando normalizaciones..."); for (const mistakeKey in commonMistakeNormalization) { const normalizedForm = commonMistakeNormalization[mistakeKey]; try { const regex = new RegExp(`\\b${escapeRegExp(mistakeKey)}\\b`, 'gi'); processedText = processedText.replace(regex, normalizedForm); } catch (e) { console.error(`Error regex (norm): "${mistakeKey}"`, e); } } Lógica para learnedCorrections (ADAPTAR) const LEARNED_THRESHOLD = 2; console.log("DEBUG: Aplicando correcciones aprendidas..."); const sortedLearnedKeys = Object.keys(learnedCorrections).sort((a, b) => b.length - a.length); for (const learnedError of sortedLearnedKeys) { const correctionData = learnedCorrections[learnedError]; if (correctionData && correctionData.count >= LEARNED_THRESHOLD) { try { const regex = new RegExp(`\\b${escapeRegExp(learnedError)}\\b`, 'gi'); processedText = processedText.replace(regex, correctionData.correctKey); } catch (e) { console.error(`Error regex (learned): "${learnedError}"`, e); } } } */ if (Object.keys(customVocabulary).length > 0) { console.log("DEBUG: Aplicando vocabulario personalizado (rulesMap)..."); const sortedCustomKeys = Object.keys(customVocabulary).sort((a, b) => b.length - a.length); for (const errorKey of sortedCustomKeys) { const correctValue = customVocabulary[errorKey]; try { const regex = new RegExp(`\\b${escapeRegExp(errorKey)}\\b`, 'gi'); processedText = processedText.replace(regex, correctValue); } catch (e) { console.error(`Error regex (custom): "${errorKey}"`, e); } } } return processedText; }
+
+async function loadUserVocabularyFromFirestore(userId) { 
+    if (!userId || !window.db) { 
+        customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; 
+        console.warn("DEBUG: loadUserVocabulary - No hay userId o DB, usando vocabularios vacíos.");
+        return; 
+    } 
+    console.log(`DEBUG: Cargando vocabulario (estilo index(2).html) para usuario: ${userId}`); 
+    const vocabDocRef = window.doc(window.db, "userVocabularies", userId); 
+    try { 
+        const docSnap = await window.getDoc(vocabDocRef); 
+        if (docSnap.exists()) { 
+            const firestoreData = docSnap.data(); 
+            customVocabulary = firestoreData.rulesMap || {}; 
+            learnedCorrections = firestoreData.learnedMap || {}; 
+            commonMistakeNormalization = firestoreData.normalizations || {}; 
+            console.log("DEBUG: Vocabulario cargado. Reglas:", Object.keys(customVocabulary).length, "Aprendidas:", Object.keys(learnedCorrections).length, "Normaliz.:", Object.keys(commonMistakeNormalization).length); 
+        } else { 
+            customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; 
+            console.log("DEBUG: No doc de vocabulario. Usando vacíos."); 
+        } 
+    } catch (error) { 
+        console.error("Error cargando vocabulario:", error); 
+        customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; 
+        setStatus("Error al cargar personalizaciones.", "error", 3000); 
+    } 
+}
+
+async function saveUserVocabularyToFirestore() { 
+    if (!currentUserId || !window.db) { 
+        console.error("DEBUG: saveUserVocabulary - No hay userId o DB."); 
+        return; 
+    }
+    // Clonar para el log, para ver el estado exacto que se intenta guardar
+    const customVocabToSave = JSON.parse(JSON.stringify(customVocabulary));
+    const learnedToSave = JSON.parse(JSON.stringify(learnedCorrections));
+    const normsToSave = JSON.parse(JSON.stringify(commonMistakeNormalization));
+
+    console.log(`DEBUG: Guardando vocabulario para ${currentUserId}.`, 
+        `rulesMap:`, customVocabToSave,
+        `learnedMap:`, learnedToSave,
+        `normalizations:`, normsToSave
+    );
+    
+    const vocabDocRef = window.doc(window.db, "userVocabularies", currentUserId);
+    const dataToSave = {
+        rulesMap: customVocabToSave, 
+        learnedMap: learnedToSave, 
+        normalizations: normsToSave 
+    };
+    try {
+        // Sobrescribir el documento completo con el estado actual de los tres mapas.
+        // Esto asegura que las eliminaciones de claves dentro de cada mapa se reflejen.
+        await window.setDoc(vocabDocRef, dataToSave); 
+        console.log("DEBUG: Vocabulario del usuario SOBRESCRITO en Firestore con el estado actual de los 3 mapas.");
+    } catch (error) { 
+        console.error("Error guardando vocabulario del usuario:", error); 
+        setStatus("Error al guardar personalizaciones.", "error", 3000); 
+    }
+}
+
+function applyAllUserCorrections(text) { 
+    if (!text) return ""; 
+    let processedText = text; 
+    // TODO: Implementar la lógica de aplicación para commonMistakeNormalization y learnedCorrections
+    // basándote en tu index (2).html si es necesario.
+    // Por ahora, solo se aplica customVocabulary (rulesMap).
+    // Ejemplo conceptual (necesitas tu lógica real para los otros dos):
+    /* 
+    // 1. Normalizaciones
+    for (const key in commonMistakeNormalization) {
+        const regex = new RegExp(`\\b${escapeRegExp(key)}\\b`, 'gi');
+        processedText = processedText.replace(regex, commonMistakeNormalization[key]);
+    }
+    // 2. Correcciones Aprendidas
+    const LEARNED_THRESHOLD = 2; // Ejemplo
+    const sortedLearned = Object.keys(learnedCorrections).sort((a,b) => b.length - a.length);
+    for (const key of sortedLearned) {
+        if (learnedCorrections[key].count >= LEARNED_THRESHOLD) {
+            const regex = new RegExp(`\\b${escapeRegExp(key)}\\b`, 'gi');
+            processedText = processedText.replace(regex, learnedCorrections[key].correctKey);
+        }
+    }
+    */
+    if (Object.keys(customVocabulary).length > 0) { 
+        console.log("DEBUG: Aplicando vocabulario personalizado (rulesMap)..."); 
+        const sortedCustomKeys = Object.keys(customVocabulary).sort((a, b) => b.length - a.length); 
+        for (const errorKey of sortedCustomKeys) { 
+            const correctValue = customVocabulary[errorKey]; 
+            try { 
+                const regex = new RegExp(`\\b${escapeRegExp(errorKey)}\\b`, 'gi'); 
+                processedText = processedText.replace(regex, correctValue); 
+            } catch (e) { console.error(`Error regex (custom): "${errorKey}"`, e); } 
+        } 
+    } 
+    return processedText; 
+}
 function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function openVocabManager() { vocabManagerModal = vocabManagerModal || document.getElementById('vocabManagerModal'); if (!vocabManagerModal) { console.error("Modal de vocabulario no encontrado."); return; } populateVocabManagerList(); vocabManagerModal.style.display = 'flex'; }
 function closeVocabManager() { vocabManagerModal = vocabManagerModal || document.getElementById('vocabManagerModal'); if (!vocabManagerModal) return; vocabManagerModal.style.display = 'none'; }
