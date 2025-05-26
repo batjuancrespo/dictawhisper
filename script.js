@@ -24,9 +24,9 @@ let currentUserId = null;
 // --- Variables para el Atajo de Teclado ---
 let isProcessingShortcut = false;
 const SHORTCUT_DEBOUNCE_MS = 300; 
-let firstShiftIsDown = false; // Primer Shift de la secuencia presionado
-let cmdCtrlIsDown = false;    // Cmd/Ctrl presionado después del primer Shift
-let shortcutSequenceActive = false; // Verdadero cuando esperamos el SEGUNDO Shift
+let firstShiftIsDown = false; 
+let cmdCtrlIsDown = false;    
+let shortcutSequenceActive = false; 
 let shortcutTimeoutId = null; 
 const SHORTCUT_WINDOW_MS = 700; 
 
@@ -236,44 +236,44 @@ function initializeDictationAppLogic(userId) {
     
     // --- Listener para el Atajo de Teclado Global: Shift + Cmd/Ctrl + Shift (REVISADO) ---
     if (!document.dataset.dictationGlobalShortcutListenerAttached) {
-        console.log("DEBUG: initializeDictationAppLogic - Añadiendo listener GLOBAL para atajo Shift+Cmd/Ctrl+Shift (versión revisada)");
+        console.log("DEBUG_SC: Añadiendo listeners GLOBALES para atajo Shift+Cmd/Ctrl+Shift (versión con logs exhaustivos)");
 
         document.addEventListener('keydown', function(event) {
-            if (!window.dictationAppInitialized) return; // Solo si la app de dictado está lista
-
+            // console.log(`DEBUG_SC KeyDown Event: Key='${event.key}', Shift:${event.shiftKey}, Ctrl:${event.ctrlKey}, Meta:${event.metaKey}, Repeat:${event.repeat}`);
+            if (!window.dictationAppInitialized) { return; }
             const targetTagName = event.target.tagName.toLowerCase();
-            if (['input', 'textarea'].includes(targetTagName) && !event.target.readOnly) {
-                return; // No interferir con la escritura
-            }
-            
-            // console.log(`DEBUG_SC KeyDown: Key: ${event.key}, Shift: ${event.shiftKey}, Ctrl: ${event.ctrlKey}, Meta: ${event.metaKey} | States: firstS:${firstShiftIsDown}, cmdCtrl:${cmdCtrlIsDown}, activeS:${shortcutSequenceActive}`);
+            if (['input', 'textarea'].includes(targetTagName) && !event.target.readOnly) { return; }
+            if (event.repeat) { return; }
 
             if (event.key === 'Shift') {
+                console.log(`DEBUG_SC: KeyDown 'Shift'. States: firstS:${firstShiftIsDown}, cmdCtrl:${cmdCtrlIsDown}, seqActive:${shortcutSequenceActive}`);
                 if (!isRecording && !isPaused && !shortcutSequenceActive && !firstShiftIsDown) { 
                     firstShiftIsDown = true;
+                    cmdCtrlIsDown = false; 
                     shortcutSequenceActive = false; 
-                    cmdCtrlIsDown = false;
+                    console.log("DEBUG_SC: Primer Shift. Esperando Cmd/Ctrl.");
                     clearTimeout(shortcutTimeoutId);
                     shortcutTimeoutId = setTimeout(resetShortcutKeys, SHORTCUT_WINDOW_MS);
                     return; 
                 }
-                
                 if (shortcutSequenceActive && firstShiftIsDown && cmdCtrlIsDown) {
                     event.preventDefault();
-                    console.log("DEBUG_SC: Atajo Shift+Cmd/Ctrl+Shift COMPLETADO!");
+                    console.log("DEBUG_SC: ATARJO Shift+Cmd/Ctrl+Shift COMPLETADO!");
                     if (!startRecordBtn || startRecordBtn.disabled || isProcessingShortcut) {
-                        console.warn("DEBUG_SC: Atajo ignorado (Botón deshabilitado o atajo en proceso).");
+                        console.warn("DEBUG_SC: Atajo COMPLETADO pero ignorado.");
                         resetShortcutKeys(); return;
                     }
                     isProcessingShortcut = true;
                     toggleRecordingState();
                     setTimeout(() => { isProcessingShortcut = false; }, SHORTCUT_DEBOUNCE_MS);
                     resetShortcutKeys(); 
-                }
+                } else { /* console.log("DEBUG_SC: KeyDown 'Shift' pero no se cumplieron condiciones."); */ }
             } else if (event.metaKey || event.ctrlKey) {
+                console.log(`DEBUG_SC: KeyDown Cmd/Ctrl. States: firstS:${firstShiftIsDown}, cmdCtrl:${cmdCtrlIsDown}, seqActive:${shortcutSequenceActive}`);
                 if (firstShiftIsDown && !cmdCtrlIsDown) { 
                     cmdCtrlIsDown = true;
                     shortcutSequenceActive = true; 
+                    console.log("DEBUG_SC: Cmd/Ctrl detectado. Esperando SEGUNDO Shift.");
                     clearTimeout(shortcutTimeoutId); 
                     shortcutTimeoutId = setTimeout(resetShortcutKeys, SHORTCUT_WINDOW_MS);
                 } else if (!firstShiftIsDown) {
@@ -281,6 +281,7 @@ function initializeDictationAppLogic(userId) {
                 }
             } else {
                 if (firstShiftIsDown || cmdCtrlIsDown) {
+                    console.log(`DEBUG_SC: Tecla '${event.key}' no relacionada. Reseteando.`);
                     resetShortcutKeys();
                 }
             }
@@ -288,18 +289,24 @@ function initializeDictationAppLogic(userId) {
 
         document.addEventListener('keyup', function(event) {
             if (!window.dictationAppInitialized) return;
+            // console.log(`DEBUG_SC KeyUp Event: Key='${event.key}', Shift:${event.shiftKey}, Ctrl:${event.ctrlKey}, Meta:${event.metaKey}`);
             if (event.key === 'Shift') {
                 if (firstShiftIsDown && !cmdCtrlIsDown) { 
+                     console.log("DEBUG_SC: KeyUp 'Shift' (era primer Shift sin Cmd/Ctrl). Reseteando.");
                      resetShortcutKeys();
                 }
-            } else if ((event.key === 'Meta' || event.key === 'Control')) {
+            } else if (event.key === 'Meta' || event.key === 'Control') {
                 if (cmdCtrlIsDown) {
+                    console.log("DEBUG_SC: KeyUp Cmd/Ctrl. Reseteando.");
                     resetShortcutKeys();
                 }
             }
         });
         
-        window.addEventListener('blur', resetShortcutKeys); 
+        window.addEventListener('blur', () => {
+            console.log("DEBUG_SC: Ventana perdió foco (blur), reseteando.");
+            resetShortcutKeys();
+        });
         document.dataset.dictationGlobalShortcutListenerAttached = 'true';
     }
     
@@ -307,6 +314,9 @@ function initializeDictationAppLogic(userId) {
 } 
 
 function resetShortcutKeys() {
+    if (firstShiftIsDown || cmdCtrlIsDown || shortcutSequenceActive) { 
+        console.log("DEBUG_SC: resetShortcutKeys() ejecutado. Estado anterior:", {firstShiftIsDown, cmdCtrlIsDown, shortcutSequenceActive});
+    }
     firstShiftIsDown = false;
     cmdCtrlIsDown = false;
     shortcutSequenceActive = false;
