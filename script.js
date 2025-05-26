@@ -21,14 +21,10 @@ const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // API Key de Gemi
 let currentUserVocabulary = {}; 
 let currentUserId = null;      
 
-// --- Variables para el Atajo de Teclado ---
+// --- Variables para el Atajo de Teclado (versión simplificada) ---
 let isProcessingShortcut = false;
 const SHORTCUT_DEBOUNCE_MS = 300; 
-let firstShiftIsDown = false; 
-let cmdCtrlIsDown = false;    
-let shortcutSequenceActive = false; 
-let shortcutTimeoutId = null; 
-const SHORTCUT_WINDOW_MS = 700; 
+// Ya no se necesitan: firstShiftIsDown, cmdCtrlIsDown, shortcutSequenceActive, shortcutTimeoutId, SHORTCUT_WINDOW_MS
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -234,78 +230,38 @@ function initializeDictationAppLogic(userId) {
     if (modalAddNewRuleButtonVocab && !modalAddNewRuleButtonVocab.dataset.listenerAttached) { modalAddNewRuleButtonVocab.addEventListener('click', handleAddNewVocabRule); modalAddNewRuleButtonVocab.dataset.listenerAttached = 'true'; }
     if (vocabManagerModal && !vocabManagerModal.dataset.listenerAttached) { vocabManagerModal.addEventListener('click', (e) => { if (e.target === vocabManagerModal) closeVocabManager(); }); vocabManagerModal.dataset.listenerAttached = 'true'; }
     
-    // --- Listener para el Atajo de Teclado Global: Shift + Cmd/Ctrl + Shift (REVISADO) ---
+    // --- Listener para el Atajo de Teclado Global (REPLICADO DE TU index (2).html) ---
     if (!document.dataset.dictationGlobalShortcutListenerAttached) {
-        console.log("DEBUG_SC: Añadiendo listeners GLOBALES para atajo Shift+Cmd/Ctrl+Shift (versión con logs exhaustivos)");
+        console.log("DEBUG: initializeDictationAppLogic - Añadiendo listener GLOBAL para atajo Shift+Cmd/Ctrl+Shift (estilo index(2).html)");
 
         document.addEventListener('keydown', function(event) {
-            // console.log(`DEBUG_SC KeyDown Event: Key='${event.key}', Shift:${event.shiftKey}, Ctrl:${event.ctrlKey}, Meta:${event.metaKey}, Repeat:${event.repeat}`);
-            if (!window.dictationAppInitialized) { return; }
-            const targetTagName = event.target.tagName.toLowerCase();
-            if (['input', 'textarea'].includes(targetTagName) && !event.target.readOnly) { return; }
-            if (event.repeat) { return; }
-
-            if (event.key === 'Shift') {
-                console.log(`DEBUG_SC: KeyDown 'Shift'. States: firstS:${firstShiftIsDown}, cmdCtrl:${cmdCtrlIsDown}, seqActive:${shortcutSequenceActive}`);
-                if (!isRecording && !isPaused && !shortcutSequenceActive && !firstShiftIsDown) { 
-                    firstShiftIsDown = true;
-                    cmdCtrlIsDown = false; 
-                    shortcutSequenceActive = false; 
-                    console.log("DEBUG_SC: Primer Shift. Esperando Cmd/Ctrl.");
-                    clearTimeout(shortcutTimeoutId);
-                    shortcutTimeoutId = setTimeout(resetShortcutKeys, SHORTCUT_WINDOW_MS);
-                    return; 
-                }
-                if (shortcutSequenceActive && firstShiftIsDown && cmdCtrlIsDown) {
-                    event.preventDefault();
-                    console.log("DEBUG_SC: ATARJO Shift+Cmd/Ctrl+Shift COMPLETADO!");
-                    if (!startRecordBtn || startRecordBtn.disabled || isProcessingShortcut) {
-                        console.warn("DEBUG_SC: Atajo COMPLETADO pero ignorado.");
-                        resetShortcutKeys(); return;
-                    }
-                    isProcessingShortcut = true;
-                    toggleRecordingState();
-                    setTimeout(() => { isProcessingShortcut = false; }, SHORTCUT_DEBOUNCE_MS);
-                    resetShortcutKeys(); 
-                } else { /* console.log("DEBUG_SC: KeyDown 'Shift' pero no se cumplieron condiciones."); */ }
-            } else if (event.metaKey || event.ctrlKey) {
-                console.log(`DEBUG_SC: KeyDown Cmd/Ctrl. States: firstS:${firstShiftIsDown}, cmdCtrl:${cmdCtrlIsDown}, seqActive:${shortcutSequenceActive}`);
-                if (firstShiftIsDown && !cmdCtrlIsDown) { 
-                    cmdCtrlIsDown = true;
-                    shortcutSequenceActive = true; 
-                    console.log("DEBUG_SC: Cmd/Ctrl detectado. Esperando SEGUNDO Shift.");
-                    clearTimeout(shortcutTimeoutId); 
-                    shortcutTimeoutId = setTimeout(resetShortcutKeys, SHORTCUT_WINDOW_MS);
-                } else if (!firstShiftIsDown) {
-                    resetShortcutKeys();
-                }
-            } else {
-                if (firstShiftIsDown || cmdCtrlIsDown) {
-                    console.log(`DEBUG_SC: Tecla '${event.key}' no relacionada. Reseteando.`);
-                    resetShortcutKeys();
-                }
+            if (!window.dictationAppInitialized) {
+                return;
             }
-        });
+            
+            if (event.shiftKey && (event.metaKey || event.ctrlKey) && event.key === 'Shift') {
+                // Opcional: Si quieres ser estricto y evitarlo en inputs
+                // const targetTagName = event.target.tagName.toLowerCase();
+                // if (['input', 'textarea'].includes(targetTagName) && !event.target.readOnly) {
+                //     return; 
+                // }
 
-        document.addEventListener('keyup', function(event) {
-            if (!window.dictationAppInitialized) return;
-            // console.log(`DEBUG_SC KeyUp Event: Key='${event.key}', Shift:${event.shiftKey}, Ctrl:${event.ctrlKey}, Meta:${event.metaKey}`);
-            if (event.key === 'Shift') {
-                if (firstShiftIsDown && !cmdCtrlIsDown) { 
-                     console.log("DEBUG_SC: KeyUp 'Shift' (era primer Shift sin Cmd/Ctrl). Reseteando.");
-                     resetShortcutKeys();
+                event.preventDefault(); 
+                console.log("DEBUG_SC: Atajo GLOBAL Shift+Cmd/Ctrl+Shift detectado (estilo index(2).html).");
+
+                if (!startRecordBtn || startRecordBtn.disabled || isProcessingShortcut) {
+                    console.warn("DEBUG_SC: Atajo ignorado (Botón deshabilitado o atajo en proceso).");
+                    return;
                 }
-            } else if (event.key === 'Meta' || event.key === 'Control') {
-                if (cmdCtrlIsDown) {
-                    console.log("DEBUG_SC: KeyUp Cmd/Ctrl. Reseteando.");
-                    resetShortcutKeys();
-                }
+                
+                isProcessingShortcut = true;
+                console.log("DEBUG_SC: Atajo - llamando a toggleRecordingState()");
+                toggleRecordingState(); 
+                
+                setTimeout(() => {
+                    isProcessingShortcut = false;
+                }, SHORTCUT_DEBOUNCE_MS);
             }
-        });
-        
-        window.addEventListener('blur', () => {
-            console.log("DEBUG_SC: Ventana perdió foco (blur), reseteando.");
-            resetShortcutKeys();
         });
         document.dataset.dictationGlobalShortcutListenerAttached = 'true';
     }
@@ -313,15 +269,7 @@ function initializeDictationAppLogic(userId) {
     updateButtonStates("initial"); 
 } 
 
-function resetShortcutKeys() {
-    if (firstShiftIsDown || cmdCtrlIsDown || shortcutSequenceActive) { 
-        console.log("DEBUG_SC: resetShortcutKeys() ejecutado. Estado anterior:", {firstShiftIsDown, cmdCtrlIsDown, shortcutSequenceActive});
-    }
-    firstShiftIsDown = false;
-    cmdCtrlIsDown = false;
-    shortcutSequenceActive = false;
-    clearTimeout(shortcutTimeoutId);
-}
+// YA NO SE NECESITA resetShortcutKeys() para esta versión del atajo.
 
 function applyTheme(theme) { document.body.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); if (themeSwitch) themeSwitch.checked = theme === 'dark'; if (mainTitleImage && mainTitleImageDark) { mainTitleImage.style.display = theme === 'light' ? 'inline-block' : 'none'; mainTitleImageDark.style.display = theme === 'dark' ? 'inline-block' : 'none'; } }
 function setAccentRGB() { try { const bS = getComputedStyle(document.body); if (!bS) return; const aC = bS.getPropertyValue('--accent-color').trim(); if (aC.startsWith('#')) { const r = parseInt(aC.slice(1,3),16), g = parseInt(aC.slice(3,5),16), b = parseInt(aC.slice(5,7),16); document.documentElement.style.setProperty('--accent-color-rgb',`${r},${g},${b}`); } else if (aC.startsWith('rgb')) { const p = aC.match(/[\d.]+/g); if (p && p.length >=3) document.documentElement.style.setProperty('--accent-color-rgb',`${p[0]},${p[1]},${p[2]}`);}} catch (e) { console.warn("Failed to set --accent-color-rgb:", e); }}
