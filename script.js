@@ -18,12 +18,16 @@ let isPaused = false;
 let recordingTimerInterval; 
 let recordingSeconds = 0;  
 const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // API Key de Gemini
-
-// --- Variables para el Vocabulario del Usuario (estilo index (2).html) ---
+let currentUserVocabulary = {}; 
 let currentUserId = null;      
-let customVocabulary = {};      // Corresponderá a rulesMap
-let learnedCorrections = {};    // Corresponderá a learnedMap
-let commonMistakeNormalization = {}; // Corresponderá a normalizations
+
+// --- Variables para el Atajo de Teclado ---
+let isProcessingShortcut = false;
+const SHORTCUT_DEBOUNCE_MS = 300; 
+let firstShiftDown = false;
+let cmdCtrlDown = false;
+let shortcutTimeoutId = null; 
+const SHORTCUT_WINDOW_MS = 700; // Aumentado ligeramente para más tolerancia
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -173,7 +177,7 @@ function initializeAuthAndApp() {
             authContainer.style.display = 'none'; appContainer.style.display = 'flex'; 
             userDisplaySpan.textContent = `${user.email || 'Usuario'}`;
             
-            await loadUserVocabularyFromFirestore(currentUserId); // Usar tu función de carga
+            await loadUserVocabularyFromFirestore(currentUserId); 
 
             if (!window.dictationAppInitialized) {
                 console.log("DEBUG: onAuthStateChanged - Llamando a initializeDictationAppLogic para el usuario:", currentUserId);
@@ -229,8 +233,69 @@ function initializeDictationAppLogic(userId) {
     if (modalAddNewRuleButtonVocab && !modalAddNewRuleButtonVocab.dataset.listenerAttached) { modalAddNewRuleButtonVocab.addEventListener('click', handleAddNewVocabRule); modalAddNewRuleButtonVocab.dataset.listenerAttached = 'true'; }
     if (vocabManagerModal && !vocabManagerModal.dataset.listenerAttached) { vocabManagerModal.addEventListener('click', (e) => { if (e.target === vocabManagerModal) closeVocabManager(); }); vocabManagerModal.dataset.listenerAttached = 'true'; }
     
+    // Listener para el Atajo de Teclado Global: Shift + Cmd/Ctrl + Shift
+    if (!document.dataset.dictationShortcutListenerAttached) {
+        console.log("DEBUG: Añadiendo listeners para atajo Shift+Cmd/Ctrl+Shift");
+        document.addEventListener('keydown', function(event) {
+            const targetTagName = event.target.tagName.toLowerCase();
+            if (['input', 'textarea'].includes(targetTagName) && !event.target.readOnly) {
+                return;
+            }
+
+            if (event.key === 'Shift') {
+                if (!firstShiftDown) { 
+                    firstShiftDown = true;
+                    clearTimeout(shortcutTimeoutId); 
+                    shortcutTimeoutId = setTimeout(resetShortcutState, SHORTCUT_WINDOW_MS);
+                } else if (firstShiftDown && cmdCtrlDown) { 
+                    event.preventDefault();
+                    console.log("DEBUG: ATARJO Shift+Cmd/Ctrl+Shift COMPLETADO!");
+                    if (!window.dictationAppInitialized || !startRecordBtn || startRecordBtn.disabled || isProcessingShortcut) {
+                        resetShortcutState(); return;
+                    }
+                    isProcessingShortcut = true;
+                    toggleRecordingState();
+                    setTimeout(() => { isProcessingShortcut = false; }, SHORTCUT_DEBOUNCE_MS);
+                    resetShortcutState(); 
+                }
+            } else if (event.metaKey || event.ctrlKey) {
+                if (firstShiftDown) { // Solo marcar cmdCtrlDown si el primer Shift ya está presionado
+                    cmdCtrlDown = true;
+                    clearTimeout(shortcutTimeoutId);
+                    shortcutTimeoutId = setTimeout(resetShortcutState, SHORTCUT_WINDOW_MS);
+                }
+            } else {
+                if (firstShiftDown || cmdCtrlDown) { 
+                    resetShortcutState();
+                }
+            }
+        });
+
+        document.addEventListener('keyup', function(event) {
+            if (event.key === 'Shift') {
+                if (firstShiftDown && !cmdCtrlDown) { // Si se suelta el primer Shift antes de Cmd/Ctrl
+                    resetShortcutState();
+                }
+                // No resetear firstShiftDown aquí directamente, resetShortcutState lo maneja mejor
+            } else if (event.metaKey === false && event.ctrlKey === false) { // Si se sueltan Cmd y Ctrl
+                if (cmdCtrlDown) { // Y estaban presionados como parte del atajo
+                    resetShortcutState();
+                }
+            }
+        });
+        
+        window.addEventListener('blur', resetShortcutState);
+        document.dataset.dictationShortcutListenerAttached = 'true';
+    }
+
     updateButtonStates("initial"); 
 } 
+
+function resetShortcutState() {
+    firstShiftDown = false;
+    cmdCtrlDown = false;
+    clearTimeout(shortcutTimeoutId);
+}
 
 function applyTheme(theme) { document.body.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); if (themeSwitch) themeSwitch.checked = theme === 'dark'; if (mainTitleImage && mainTitleImageDark) { mainTitleImage.style.display = theme === 'light' ? 'inline-block' : 'none'; mainTitleImageDark.style.display = theme === 'dark' ? 'inline-block' : 'none'; } }
 function setAccentRGB() { try { const bS = getComputedStyle(document.body); if (!bS) return; const aC = bS.getPropertyValue('--accent-color').trim(); if (aC.startsWith('#')) { const r = parseInt(aC.slice(1,3),16), g = parseInt(aC.slice(3,5),16), b = parseInt(aC.slice(5,7),16); document.documentElement.style.setProperty('--accent-color-rgb',`${r},${g},${b}`); } else if (aC.startsWith('rgb')) { const p = aC.match(/[\d.]+/g); if (p && p.length >=3) document.documentElement.style.setProperty('--accent-color-rgb',`${p[0]},${p[1]},${p[2]}`);}} catch (e) { console.warn("Failed to set --accent-color-rgb:", e); }}
@@ -253,7 +318,7 @@ function capitalizeSentencesProperly(t){if(!t||t.trim()==="")return"";let r=t.tr
 async function transcribeAndPolishAudio(b){let tTxt='';try{setStatus('Transcribiendo...','processing');const tP=[{text:"Transcribe el audio a texto LITERALMENTE. No corrijas. Si dice 'coma', 'punto', transcribe 'coma', 'punto'."},{inline_data:{mime_type:"audio/webm",data:b}}];tTxt=await callGeminiAPI(tP,false);console.log("---Transcripción Original (Consola)---\n",tTxt,"\n-----------------------------------");}catch(e){console.error("Error transcripción:",e);throw new Error(`Fallo transcripción:${e.message}`);}if(!tTxt||tTxt.trim()==="")throw new Error("Transcripción vacía.");let pAI='';try{setStatus('Puliendo...','processing');const pP=[{text:`Revisa y pule. INSTRUCCIONES:\n1.Interpreta palabras dictadas como signos:\n'coma'➔, 'punto'➔. 'punto y aparte'➔.(salto línea único) 'nueva línea'➔(salto línea único) 'dos puntos'➔: 'punto y coma'➔; 'interrogación'➔? 'exclamación'➔!\n2.Corrige SOLO ortografía/gramática OBVIA.\n3.NO CAMBIES palabras/estructura si es OK.\n4.PRESERVA estilo.\n5.Si ya OK, cambios MÍNIMOS.\n6.Capitaliza inicio de frases.\n\nTexto:"${tTxt}"`}];pAI=await callGeminiAPI(pP,true);}catch(e){console.error("Error pulido IA:",e);setStatus(`Fallo pulido IA:${e.message}. Usando cruda.`,"error",4000);pAI=tTxt;}let cT=capitalizeSentencesProperly(pAI);let custT=applyAllUserCorrections(cT);let finT=custT.replace(/\.\s*\n\s*\n/g,'.\n').replace(/\n\s*\n/g,'\n');return finT;}
 async function loadUserVocabularyFromFirestore(userId) { if (!userId || !window.db) { customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; return; } console.log(`DEBUG: Cargando vocabulario (estilo index(2).html) para usuario: ${userId}`); const vocabDocRef = window.doc(window.db, "userVocabularies", userId); try { const docSnap = await window.getDoc(vocabDocRef); if (docSnap.exists()) { const firestoreData = docSnap.data(); customVocabulary = firestoreData.rulesMap || {}; learnedCorrections = firestoreData.learnedMap || {}; commonMistakeNormalization = firestoreData.normalizations || {}; console.log("DEBUG: Vocabulario cargado. Reglas:", Object.keys(customVocabulary).length, "Aprendidas:", Object.keys(learnedCorrections).length, "Normaliz.:", Object.keys(commonMistakeNormalization).length); } else { customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; console.log("DEBUG: No doc de vocabulario. Usando vacíos."); } } catch (error) { console.error("Error cargando vocabulario:", error); customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; setStatus("Error al cargar personalizaciones.", "error", 3000); } }
 async function saveUserVocabularyToFirestore() { if (!currentUserId || !window.db) { console.error("DEBUG: No hay userId o DB para guardar vocabulario."); return; } const vocabDocRef = window.doc(window.db, "userVocabularies", currentUserId); const dataToSave = { rulesMap: customVocabulary, learnedMap: learnedCorrections, normalizations: commonMistakeNormalization }; try { await window.setDoc(vocabDocRef, dataToSave, { merge: true }); console.log("DEBUG: Vocabulario del usuario guardado en Firestore."); } catch (error) { console.error("Error guardando vocabulario:", error); setStatus("Error al guardar personalizaciones.", "error", 3000); } }
-function applyAllUserCorrections(text) { if (!text) return ""; let processedText = text; /* Lógica para commonMistakeNormalization (NECESITAS ADAPTAR ESTO) console.log("DEBUG: Aplicando normalizaciones..."); for (const mistakeKey in commonMistakeNormalization) { const normalizedForm = commonMistakeNormalization[mistakeKey]; try { const regex = new RegExp(`\\b${escapeRegExp(mistakeKey)}\\b`, 'gi'); processedText = processedText.replace(regex, normalizedForm); } catch (e) { console.error(`Error regex (norm): "${mistakeKey}"`, e); } } Lógica para learnedCorrections (NECESITAS ADAPTAR ESTO) const LEARNED_THRESHOLD = 2; console.log("DEBUG: Aplicando correcciones aprendidas..."); const sortedLearnedKeys = Object.keys(learnedCorrections).sort((a, b) => b.length - a.length); for (const learnedError of sortedLearnedKeys) { const correctionData = learnedCorrections[learnedError]; if (correctionData && correctionData.count >= LEARNED_THRESHOLD) { try { const regex = new RegExp(`\\b${escapeRegExp(learnedError)}\\b`, 'gi'); processedText = processedText.replace(regex, correctionData.correctKey); } catch (e) { console.error(`Error regex (learned): "${learnedError}"`, e); } } } */ if (Object.keys(customVocabulary).length > 0) { console.log("DEBUG: Aplicando vocabulario personalizado (rulesMap)..."); const sortedCustomKeys = Object.keys(customVocabulary).sort((a, b) => b.length - a.length); for (const errorKey of sortedCustomKeys) { const correctValue = customVocabulary[errorKey]; try { const regex = new RegExp(`\\b${escapeRegExp(errorKey)}\\b`, 'gi'); processedText = processedText.replace(regex, correctValue); } catch (e) { console.error(`Error regex (custom): "${errorKey}"`, e); } } } return processedText; }
+function applyAllUserCorrections(text) { if (!text) return ""; let processedText = text; /* Lógica para commonMistakeNormalization (ADAPTAR) console.log("DEBUG: Aplicando normalizaciones..."); for (const mistakeKey in commonMistakeNormalization) { const normalizedForm = commonMistakeNormalization[mistakeKey]; try { const regex = new RegExp(`\\b${escapeRegExp(mistakeKey)}\\b`, 'gi'); processedText = processedText.replace(regex, normalizedForm); } catch (e) { console.error(`Error regex (norm): "${mistakeKey}"`, e); } } Lógica para learnedCorrections (ADAPTAR) const LEARNED_THRESHOLD = 2; console.log("DEBUG: Aplicando correcciones aprendidas..."); const sortedLearnedKeys = Object.keys(learnedCorrections).sort((a, b) => b.length - a.length); for (const learnedError of sortedLearnedKeys) { const correctionData = learnedCorrections[learnedError]; if (correctionData && correctionData.count >= LEARNED_THRESHOLD) { try { const regex = new RegExp(`\\b${escapeRegExp(learnedError)}\\b`, 'gi'); processedText = processedText.replace(regex, correctionData.correctKey); } catch (e) { console.error(`Error regex (learned): "${learnedError}"`, e); } } } */ if (Object.keys(customVocabulary).length > 0) { console.log("DEBUG: Aplicando vocabulario personalizado (rulesMap)..."); const sortedCustomKeys = Object.keys(customVocabulary).sort((a, b) => b.length - a.length); for (const errorKey of sortedCustomKeys) { const correctValue = customVocabulary[errorKey]; try { const regex = new RegExp(`\\b${escapeRegExp(errorKey)}\\b`, 'gi'); processedText = processedText.replace(regex, correctValue); } catch (e) { console.error(`Error regex (custom): "${errorKey}"`, e); } } } return processedText; }
 function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function openVocabManager() { vocabManagerModal = vocabManagerModal || document.getElementById('vocabManagerModal'); if (!vocabManagerModal) { console.error("Modal de vocabulario no encontrado."); return; } populateVocabManagerList(); vocabManagerModal.style.display = 'flex'; }
 function closeVocabManager() { vocabManagerModal = vocabManagerModal || document.getElementById('vocabManagerModal'); if (!vocabManagerModal) return; vocabManagerModal.style.display = 'none'; }
