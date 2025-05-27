@@ -25,9 +25,12 @@ let customVocabulary = {};      // Corresponderá a rulesMap
 let learnedCorrections = {};    // Corresponderá a learnedMap 
 let commonMistakeNormalization = {}; // Corresponderá a normalizations
 
-// --- Variables para Debounce ---
+// --- Variables para Debounce y Dictado por Selección ---
 let isProcessingClick = false; 
 const CLICK_DEBOUNCE_MS = 300; 
+let isDictatingForReplacement = false;
+let replacementSelectionStart = 0;
+let replacementSelectionEnd = 0;
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -225,25 +228,21 @@ function initializeDictationAppLogic(userId) {
         startRecordBtn.addEventListener('click', () => {
             if (isProcessingClick) { console.warn("DEBUG: startRecordBtn - Clic ignorado (debouncing)"); return; }
             isProcessingClick = true;
-            console.log("DEBUG: startRecordBtn - Clic procesado.");
             toggleRecordingState();
             setTimeout(() => { isProcessingClick = false; }, CLICK_DEBOUNCE_MS);
         });
         startRecordBtn.dataset.listenerAttached = 'true';
-        console.log("DEBUG: Listener con debounce añadido a startRecordBtn.");
     }
     if (!pauseResumeBtn.dataset.listenerAttached) { 
         pauseResumeBtn.addEventListener('click', () => {
             if (isProcessingClick) { console.warn("DEBUG: pauseResumeBtn - Clic ignorado (debouncing)"); return; }
             isProcessingClick = true;
-            console.log("DEBUG: pauseResumeBtn - Clic procesado.");
             handlePauseResume();
             setTimeout(() => { isProcessingClick = false; }, CLICK_DEBOUNCE_MS);
         }); 
         pauseResumeBtn.dataset.listenerAttached = 'true';
-        console.log("DEBUG: Listener con debounce añadido a pauseResumeBtn.");
     }
-    if (!retryProcessBtn.dataset.listenerAttached) { retryProcessBtn.addEventListener('click', () => { if (currentAudioBlob) { if (isRecording || isPaused) { alert("Detén la grabación actual antes de reenviar."); return; } processAudioBlob(currentAudioBlob); }}); retryProcessBtn.dataset.listenerAttached = 'true';}
+    if (!retryProcessBtn.dataset.listenerAttached) { retryProcessBtn.addEventListener('click', () => { if (currentAudioBlob) { if (isRecording || isPaused) { alert("Detén la grabación actual antes de reenviar."); return; } processAudioBlobAndInsertText(currentAudioBlob); /* Cambiado */ }}); retryProcessBtn.dataset.listenerAttached = 'true';}
     if (!copyPolishedTextBtn.dataset.listenerAttached) { copyPolishedTextBtn.addEventListener('click', async () => { const h = headerArea.value.trim(); const r = polishedTextarea.value.trim(); let t = ""; if(h){t+=h;} if(r){if(t){t+="\n\n";} t+=r;} if(t===''){setStatus("Nada que copiar.", "idle", 2000); return;} try{await navigator.clipboard.writeText(t); setStatus("¡Texto copiado!", "success", 2000);}catch(e){console.error('Error copia:',e);setStatus("Error copia.", "error", 3000);}}); copyPolishedTextBtn.dataset.listenerAttached = 'true';}
     if (correctTextSelectionBtn && !correctTextSelectionBtn.dataset.listenerAttached) { correctTextSelectionBtn.addEventListener('click', handleCorrectTextSelection); correctTextSelectionBtn.dataset.listenerAttached = 'true';}
     if (techniqueButtonsContainer && !techniqueButtonsContainer.dataset.listenerAttached) { techniqueButtonsContainer.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON' && e.target.dataset.techniqueText) { headerArea.value = e.target.dataset.techniqueText; headerArea.focus(); }}); techniqueButtonsContainer.dataset.listenerAttached = 'true';}
@@ -257,25 +256,22 @@ function initializeDictationAppLogic(userId) {
         document.addEventListener('keydown', function(event) {
             if (event.shiftKey && (event.metaKey || event.ctrlKey) && event.key === 'Shift') {
                 event.preventDefault(); 
-                console.log("DEBUG: Atajo GLOBAL Shift+Cmd/Ctrl+Shift detectado (Empezar/Detener).");
                 if (document.body.classList.contains('logged-in') && startRecordBtn && !startRecordBtn.disabled) {
-                    if (isProcessingClick) { console.warn("DEBUG: Atajo Empezar/Detener ignorado (debouncing)."); return; }
+                    if (isProcessingClick) { return; }
                     isProcessingClick = true; toggleRecordingState(); 
                     setTimeout(() => { isProcessingClick = false; }, CLICK_DEBOUNCE_MS); 
-                } else { console.warn("DEBUG: Atajo Empezar/Detener ignorado: app no activa o botón no disponible/deshabilitado."); }
+                }
             }
             else if (event.shiftKey && event.altKey && event.key.toUpperCase() === 'P') { 
                 event.preventDefault();
-                console.log("DEBUG: Atajo GLOBAL Shift+Alt+P detectado (Pausar/Reanudar).");
                 if (document.body.classList.contains('logged-in') && pauseResumeBtn && !pauseResumeBtn.disabled) {
-                    if (isProcessingClick) { console.warn("DEBUG: Atajo Pausar/Reanudar ignorado (debouncing)."); return; }
+                    if (isProcessingClick) { return; }
                     isProcessingClick = true; handlePauseResume(); 
                     setTimeout(() => { isProcessingClick = false; }, CLICK_DEBOUNCE_MS);
-                } else { console.warn("DEBUG: Atajo Pausar/Reanudar ignorado: app no activa o botón no disponible/deshabilitado."); }
+                }
             }
         });
         document.body.dataset.keydownListenerAttached = 'true'; 
-        console.log("DEBUG: Listener de atajos de teclado GLOBAL añadido/actualizado.");
     }
     
     updateButtonStates("initial"); 
@@ -291,10 +287,94 @@ function resetRecordingTimerDisplay() { recordingTimeDisplay.textContent = ""; r
 function setupVolumeMeter(stream) { volumeMeterContainer.style.display='block'; if(!audioContext) audioContext=new(window.AudioContext||window.webkitAudioContext)(); if(audioContext.state==='suspended') audioContext.resume(); analyser=audioContext.createAnalyser(); microphoneSource=audioContext.createMediaStreamSource(stream); microphoneSource.connect(analyser); analyser.fftSize=256; analyser.smoothingTimeConstant=0.3; const l=analyser.frequencyBinCount, d=new Uint8Array(l); function draw(){if(!isRecording||isPaused){if(isPaused){volumeMeterBar.classList.add('paused'); volumeMeterBar.style.background='var(--button-default-bg)';}else{volumeMeterBar.classList.remove('paused'); volumeMeterBar.style.background='var(--volume-bar-gradient)';} animationFrameId=requestAnimationFrame(draw); return;} animationFrameId=requestAnimationFrame(draw); analyser.getByteFrequencyData(d); let s=0; for(let i=0;i<l;i++){s+=d[i];} let a=s/l; let v=(a/130)*100; v=Math.min(100,Math.max(0,v)); volumeMeterBar.style.width=v+'%'; volumeMeterBar.classList.remove('paused'); volumeMeterBar.style.background='var(--volume-bar-gradient)';} draw(); }
 function stopVolumeMeter() { if(animationFrameId) cancelAnimationFrame(animationFrameId); if(microphoneSource){microphoneSource.disconnect(); microphoneSource=null;} volumeMeterBar.style.width='0%'; volumeMeterBar.classList.remove('paused'); volumeMeterContainer.style.display='none';}
 function toggleRecordingState() { if(isRecording){if(mediaRecorder&&(mediaRecorder.state==="recording"||mediaRecorder.state==="paused")){mediaRecorder.stop();setStatus("Deteniendo...","processing");}else{isRecording=false;isPaused=false;updateButtonStates("initial");}}else{startActualRecording();}}
-async function startActualRecording() { setStatus("Permiso...","processing");isPaused=false;polishedTextarea.value='';audioChunks=[];currentAudioBlob=null;recordingSeconds=0;audioPlaybackSection.style.display='none';if(audioPlayback.src){URL.revokeObjectURL(audioPlayback.src);audioPlayback.src='';audioPlayback.removeAttribute('src');}if(!userApiKey){alert('API Key?');setStatus("Error Key","error");updateButtonStates("initial");return;}try{const s=await navigator.mediaDevices.getUserMedia({audio:true});isRecording=true;setupVolumeMeter(s);startRecordingTimer();mediaRecorder=new MediaRecorder(s,{mimeType:'audio/webm'});window.currentMediaRecorder=mediaRecorder;mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data);};mediaRecorder.onpause=()=>{setStatus('Pausada.','idle');isPaused=true;volumeMeterBar.classList.add('paused');volumeMeterBar.style.background='var(--button-default-bg)';updateButtonStates("paused");};mediaRecorder.onresume=()=>{setStatus('Grabando...','processing');isPaused=false;volumeMeterBar.classList.remove('paused');volumeMeterBar.style.background='var(--volume-bar-gradient)';updateButtonStates("recording");};mediaRecorder.onstop=async()=>{isRecording=false;isPaused=false;stopVolumeMeter();stopRecordingTimer();setStatus('Procesando...','processing');if(audioChunks.length===0){setStatus("No audio.","error",3000);updateButtonStates("stopped_error");return;}currentAudioBlob=new Blob(audioChunks,{type:'audio/webm'});if(currentAudioBlob.size===0){setStatus("Audio vacío.","error",3000);updateButtonStates("stopped_error");return;}const u=URL.createObjectURL(currentAudioBlob);audioPlayback.src=u;audioPlaybackSection.style.display='block';updateButtonStates("stopped_success");await processAudioBlob(currentAudioBlob);};mediaRecorder.onerror=e=>{isRecording=false;isPaused=false;stopVolumeMeter();stopRecordingTimer();resetRecordingTimerDisplay();setStatus(`Error MediaRec: ${e.error.name}`,"error",4000);updateButtonStates("error");};mediaRecorder.start();setStatus('Grabando...',"processing");updateButtonStates("recording");}catch(e){isRecording=false;isPaused=false;stopVolumeMeter();stopRecordingTimer();resetRecordingTimerDisplay();setStatus(`Error Mic: ${e.message}.`,"error",4000);updateButtonStates("initial");}}
+
+async function startActualRecording() { 
+    if (polishedTextarea.selectionStart !== polishedTextarea.selectionEnd) {
+        isDictatingForReplacement = true;
+        replacementSelectionStart = polishedTextarea.selectionStart;
+        replacementSelectionEnd = polishedTextarea.selectionEnd;
+        setStatus("Dicte el reemplazo...", "processing");
+    } else {
+        isDictatingForReplacement = false;
+        polishedTextarea.value = ''; 
+        setStatus("Solicitando permiso...", "processing");
+    }
+    isPaused = false; audioChunks = []; currentAudioBlob = null; recordingSeconds = 0; audioPlaybackSection.style.display = 'none'; 
+    if (audioPlayback.src) { URL.revokeObjectURL(audioPlayback.src); audioPlayback.src = ''; audioPlayback.removeAttribute('src');}
+    if (!userApiKey) { alert('API Key?'); setStatus("Error Key","error"); updateButtonStates("initial"); isDictatingForReplacement = false; return; } 
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        isRecording = true; setupVolumeMeter(stream); startRecordingTimer(); 
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        window.currentMediaRecorder = mediaRecorder; 
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.onpause = () => { setStatus(isDictatingForReplacement ? 'Reemplazo pausado.' : 'Grabación pausada.', 'idle'); isPaused = true; volumeMeterBar.classList.add('paused'); volumeMeterBar.style.background = 'var(--button-default-bg)'; updateButtonStates("paused"); };
+        mediaRecorder.onresume = () => { setStatus(isDictatingForReplacement ? 'Dictando reemplazo...' : 'Grabando... (Reanudado)', 'processing'); isPaused = false; volumeMeterBar.classList.remove('paused'); volumeMeterBar.style.background = 'var(--volume-bar-gradient)'; updateButtonStates("recording"); };
+        mediaRecorder.onstop = async () => {
+            isRecording = false; isPaused = false; 
+            stopVolumeMeter(); stopRecordingTimer(); 
+            setStatus('Grabación detenida. Procesando...', 'processing');
+            if (audioChunks.length === 0) { setStatus("No audio.", "error", 3000); updateButtonStates("stopped_error"); isDictatingForReplacement = false; return; }
+            currentAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            if (currentAudioBlob.size === 0) { setStatus("Audio vacío.", "error", 3000); updateButtonStates("stopped_error"); isDictatingForReplacement = false; return; }
+            const audioURL = URL.createObjectURL(currentAudioBlob);
+            audioPlayback.src = audioURL; audioPlaybackSection.style.display = 'block';
+            
+            await processAudioBlobAndInsertText(currentAudioBlob); // Nueva función para manejar inserción/reemplazo
+        };
+        mediaRecorder.onerror = e => { isRecording = false; isPaused = false; isDictatingForReplacement = false; stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay(); setStatus(`Error MediaRec: ${e.error.name}`, "error", 4000); updateButtonStates("error"); };
+        mediaRecorder.start();
+        if (!isDictatingForReplacement) setStatus('Grabando...', "processing"); 
+        updateButtonStates("recording");      
+    } catch (e) {
+        isRecording = false; isPaused = false; isDictatingForReplacement = false;
+        stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay();
+        setStatus(`Error Mic: ${e.message}.`, "error", 4000);
+        updateButtonStates("initial");
+    }
+}
+
+async function processAudioBlobAndInsertText(audioBlob) {
+    updateButtonStates("processing_audio"); // Indicar que estamos procesando
+    try {
+        const base64Audio = await blobToBase64(audioBlob);
+        if (!base64Audio || base64Audio.length < 100) throw new Error("Fallo Base64.");
+        
+        const processedNewText = await transcribeAndPolishAudio(base64Audio); 
+
+        if (isDictatingForReplacement) {
+            const originalContent = polishedTextarea.value;
+            const textBeforeSelection = originalContent.substring(0, replacementSelectionStart);
+            const textAfterSelection = originalContent.substring(replacementSelectionEnd);
+            let smartSpaceBefore = "";
+            if (textBeforeSelection.length > 0 && !/\s$/.test(textBeforeSelection) && processedNewText.length > 0 && !/^\s/.test(processedNewText) && !/^[,.;:!?)]/.test(processedNewText)) {
+                smartSpaceBefore = " ";
+            }
+            let smartSpaceAfter = "";
+            if (textAfterSelection.length > 0 && !/^\s/.test(textAfterSelection) && processedNewText.length > 0 && !/\s$/.test(processedNewText) && !/[([{]$/.test(processedNewText)) {
+                smartSpaceAfter = " ";
+            }
+            polishedTextarea.value = textBeforeSelection + smartSpaceBefore + processedNewText + smartSpaceAfter + textAfterSelection;
+            const newCursorPos = replacementSelectionStart + smartSpaceBefore.length + processedNewText.length;
+            polishedTextarea.selectionStart = polishedTextarea.selectionEnd = newCursorPos;
+            setStatus('Texto reemplazado.', 'success', 3000);
+        } else {
+            polishedTextarea.value = processedNewText; 
+            setStatus('Proceso completado.', 'success', 3000);
+        }
+        updateButtonStates("success_processing");
+    } catch (error) {
+        console.error('Error en processAudioBlobAndInsertText:', error);
+        setStatus(`Error Proc: ${error.message}`, "error", 4000);
+        if (!isDictatingForReplacement) polishedTextarea.value = `Error: ${error.message}`; 
+        updateButtonStates("error_processing"); 
+    } finally {
+        isDictatingForReplacement = false; 
+    }
+}
+
 function handlePauseResume() { if(!mediaRecorder||!isRecording)return;if(mediaRecorder.state==="recording"){mediaRecorder.pause();}else if(mediaRecorder.state==="paused"){mediaRecorder.resume();}}
-async function processAudioBlob(audioBlob) { polishedTextarea.value='';setStatus('Preparando...','processing');updateButtonStates("processing_audio");try{const b=await blobToBase64(audioBlob);if(!b||b.length<100)throw new Error("Fallo Base64.");const pR=await transcribeAndPolishAudio(b);polishedTextarea.value=pR;setStatus('Completado.','success',3000);updateButtonStates("success_processing");}catch(e){setStatus(`Error Proc: ${e.message}`,"error",4000);polishedTextarea.value=`Error: ${e.message}`;updateButtonStates("error_processing");}}
-function updateButtonStates(state) { startRecordBtn.disabled=true;pauseResumeBtn.disabled=true;retryProcessBtn.disabled=true;copyPolishedTextBtn.disabled=false;correctTextSelectionBtn.disabled=true;startRecordBtn.textContent="Empezar Dictado";startRecordBtn.classList.remove("stop-style");pauseResumeBtn.textContent="Pausar";let showPlayer=false;if(currentAudioBlob){if(["initial","stopped_success","error_processing","success_processing","stopped_error"].includes(state)){showPlayer=true;}}if(audioPlaybackSection)audioPlaybackSection.style.display=showPlayer?'block':'none';else console.warn("audioPlaybackSection null en updateButtonStates");switch(state){case "initial":startRecordBtn.disabled=false;if(statusDiv&&statusDiv.textContent.toLowerCase()!=="listo"&&!statusDiv.textContent.toLowerCase().includes("error")&&!statusDiv.textContent.toLowerCase().includes("pausada"))setStatus("Listo","idle");resetRecordingTimerDisplay();stopVolumeMeter();retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;case "recording":startRecordBtn.disabled=false;startRecordBtn.textContent="Detener Dictado";startRecordBtn.classList.add("stop-style");pauseResumeBtn.disabled=false;retryProcessBtn.disabled=true;correctTextSelectionBtn.disabled=true;break;case "paused":startRecordBtn.disabled=false;startRecordBtn.textContent="Detener Dictado";startRecordBtn.classList.add("stop-style");pauseResumeBtn.disabled=false;pauseResumeBtn.textContent="Reanudar";retryProcessBtn.disabled=true;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;case "stopped_success":startRecordBtn.disabled=false;retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;case "stopped_error":startRecordBtn.disabled=false;resetRecordingTimerDisplay();stopVolumeMeter();retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=true;break;case "processing_audio":startRecordBtn.disabled=true;pauseResumeBtn.disabled=true;retryProcessBtn.disabled=true;correctTextSelectionBtn.disabled=true;break;case "error_processing":startRecordBtn.disabled=false;retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;case "success_processing":startRecordBtn.disabled=false;retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;case "error":startRecordBtn.disabled=false;resetRecordingTimerDisplay();stopVolumeMeter();retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=true;break;default:startRecordBtn.disabled=false;resetRecordingTimerDisplay();stopVolumeMeter();retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;}}
+function updateButtonStates(state) { startRecordBtn.disabled=true;pauseResumeBtn.disabled=true;retryProcessBtn.disabled=true;copyPolishedTextBtn.disabled=false;correctTextSelectionBtn.disabled=true;startRecordBtn.textContent="Empezar Dictado";startRecordBtn.classList.remove("stop-style");pauseResumeBtn.textContent="Pausar";let showPlayer=false;if(currentAudioBlob){if(["initial","stopped_success","error_processing","success_processing","stopped_error"].includes(state)){showPlayer=true;}}if(audioPlaybackSection)audioPlaybackSection.style.display=showPlayer?'block':'none';else console.warn("audioPlaybackSection null en updateButtonStates");switch(state){case "initial":startRecordBtn.disabled=false;if(statusDiv&&statusDiv.textContent.toLowerCase()!=="listo"&&!statusDiv.textContent.toLowerCase().includes("error")&&!statusDiv.textContent.toLowerCase().includes("pausada")&&!statusDiv.textContent.toLowerCase().includes("reemplazo"))setStatus("Listo","idle");resetRecordingTimerDisplay();stopVolumeMeter();retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;case "recording":startRecordBtn.disabled=false;startRecordBtn.textContent=isDictatingForReplacement?"Detener Reemplazo":"Detener Dictado";startRecordBtn.classList.add("stop-style");pauseResumeBtn.disabled=false;retryProcessBtn.disabled=true;correctTextSelectionBtn.disabled=true;if(!isDictatingForReplacement&&statusDiv.textContent.toLowerCase()!=='grabando...')setStatus('Grabando...','processing');break;case "paused":startRecordBtn.disabled=false;startRecordBtn.textContent=isDictatingForReplacement?"Detener Reemplazo":"Detener Dictado";startRecordBtn.classList.add("stop-style");pauseResumeBtn.disabled=false;pauseResumeBtn.textContent="Reanudar";retryProcessBtn.disabled=true;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";if(!isDictatingForReplacement&&statusDiv.textContent.toLowerCase()!=='reemplazo pausado.')setStatus('Grabación pausada.','idle');break;case "stopped_success":startRecordBtn.disabled=false;retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;case "stopped_error":startRecordBtn.disabled=false;resetRecordingTimerDisplay();stopVolumeMeter();retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=true;break;case "processing_audio":startRecordBtn.disabled=true;pauseResumeBtn.disabled=true;retryProcessBtn.disabled=true;correctTextSelectionBtn.disabled=true;break;case "error_processing":startRecordBtn.disabled=false;retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;case "success_processing":startRecordBtn.disabled=false;retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;case "error":startRecordBtn.disabled=false;resetRecordingTimerDisplay();stopVolumeMeter();retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=true;break;default:startRecordBtn.disabled=false;resetRecordingTimerDisplay();stopVolumeMeter();retryProcessBtn.disabled=!currentAudioBlob;correctTextSelectionBtn.disabled=polishedTextarea.value.trim()==="";break;}}
 async function handleCorrectTextSelection(){if(!polishedTextarea)return;const sS=polishedTextarea.selectionStart;const sE=polishedTextarea.selectionEnd;const sT=polishedTextarea.value.substring(sS,sE).trim();if(!sT){setStatus("Selecciona texto.","idle",3000);return;}const cTU=prompt(`Corregir:\n"${sT}"\n\nCorrección:` ,sT);if(cTU===null){setStatus("Cancelado.","idle",2000);return;}const fCT=cTU.trim();const ruleKey = sT.toLowerCase(); if(sT.toLowerCase()===fCT.toLowerCase()&&sT!==fCT){}else if(sT.toLowerCase()!==fCT.toLowerCase()||fCT==="" || !customVocabulary.hasOwnProperty(ruleKey) || customVocabulary[ruleKey] !== fCT ){customVocabulary[ruleKey]=fCT;await saveUserVocabularyToFirestore();setStatus(`Regla guardada: "${ruleKey}"➔"${fCT}"`,"success",3000);}else{setStatus("No cambios para guardar.","idle",2000);}const tB=polishedTextarea.value.substring(0,sS);const tA=polishedTextarea.value.substring(sE);polishedTextarea.value=tB+fCT+tA;polishedTextarea.selectionStart=polishedTextarea.selectionEnd=sS+fCT.length;polishedTextarea.focus();}
 function blobToBase64(b){return new Promise((res,rej)=>{if(!b||b.size===0)return rej(new Error("Blob nulo"));const r=new FileReader();r.onloadend=()=>{if(r.result){const s=r.result.toString().split(',')[1];if(!s)return rej(new Error("Fallo Base64"));res(s);}else rej(new Error("FileReader sin resultado"));};r.onerror=e=>rej(e);r.readAsDataURL(b);});}
 async function callGeminiAPI(p,isTxt=false){if(!userApiKey)throw new Error('No API Key');const u=`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`;const t=isTxt?0.1:0.2;const y={contents:[{parts:p}],generationConfig:{temperature:t}};console.log(`Gemini (isTxt:${isTxt},temp:${t}). Prompt(inicio):`,JSON.stringify(p[0]).substring(0,200)+"...");const resp=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(y)});if(!resp.ok){const eD=await resp.json();console.error("Error Gemini API:",eD);throw new Error(`Error API:${eD.error?.message||resp.statusText}(${resp.status})`);}const d=await resp.json();if(d.candidates?.[0]?.content?.parts?.[0]?.text)return d.candidates[0].content.parts[0].text;if(d.promptFeedback?.blockReason)throw new Error(`Bloqueado:${d.promptFeedback.blockReason}.${d.promptFeedback.blockReasonMessage||''}`);if(d.candidates?.[0]?.finishReason&&d.candidates[0].finishReason!=="STOP")throw new Error(`Gemini fin:${d.candidates[0].finishReason}.`);if(d.candidates?.[0]?.finishReason==="STOP"&&!d.candidates?.[0]?.content?.parts?.[0]?.text)return"";throw new Error('Gemini respuesta inesperada.');}
@@ -302,7 +382,7 @@ function capitalizeSentencesProperly(t){if(!t||t.trim()==="")return"";let r=t.tr
 async function transcribeAndPolishAudio(b){let tTxt='';try{setStatus('Transcribiendo...','processing');const tP=[{text:"Transcribe el audio a texto LITERALMENTE. No corrijas. Si dice 'coma', 'punto', transcribe 'coma', 'punto'."},{inline_data:{mime_type:"audio/webm",data:b}}];tTxt=await callGeminiAPI(tP,false);console.log("---Transcripción Original (Consola)---\n",tTxt,"\n-----------------------------------");}catch(e){console.error("Error transcripción:",e);throw new Error(`Fallo transcripción:${e.message}`);}if(!tTxt||tTxt.trim()==="")throw new Error("Transcripción vacía.");let pAI='';try{setStatus('Puliendo...','processing');const pP=[{text:`Revisa y pule. INSTRUCCIONES:\n1.Interpreta palabras dictadas como signos:\n'coma'➔, 'punto'➔. 'punto y aparte'➔.(salto línea único) 'nueva línea'➔(salto línea único) 'dos puntos'➔: 'punto y coma'➔; 'interrogación'➔? 'exclamación'➔!\n2.Corrige SOLO ortografía/gramática OBVIA.\n3.NO CAMBIES palabras/estructura si es OK.\n4.PRESERVA estilo.\n5.Si ya OK, cambios MÍNIMOS.\n6.Capitaliza inicio de frases.\n\nTexto:"${tTxt}"`}];pAI=await callGeminiAPI(pP,true);}catch(e){console.error("Error pulido IA:",e);setStatus(`Fallo pulido IA:${e.message}. Usando cruda.`,"error",4000);pAI=tTxt;}let cT=capitalizeSentencesProperly(pAI);let custT=applyAllUserCorrections(cT);let finT=custT.replace(/\.\s*\n\s*\n/g,'.\n').replace(/\n\s*\n/g,'\n');return finT;}
 async function loadUserVocabularyFromFirestore(userId) { if (!userId || !window.db) { customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; return; } console.log(`DEBUG: Cargando vocabulario (estilo index(2).html) para usuario: ${userId}`); const vocabDocRef = window.doc(window.db, "userVocabularies", userId); try { const docSnap = await window.getDoc(vocabDocRef); if (docSnap.exists()) { const firestoreData = docSnap.data(); customVocabulary = firestoreData.rulesMap || {}; learnedCorrections = firestoreData.learnedMap || {}; commonMistakeNormalization = firestoreData.normalizations || {}; console.log("DEBUG: Vocabulario cargado. Reglas:", Object.keys(customVocabulary).length, "Aprendidas:", Object.keys(learnedCorrections).length, "Normaliz.:", Object.keys(commonMistakeNormalization).length); } else { customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; console.log("DEBUG: No doc de vocabulario. Usando vacíos."); } } catch (error) { console.error("Error cargando vocabulario:", error); customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; setStatus("Error al cargar personalizaciones.", "error", 3000); } }
 async function saveUserVocabularyToFirestore() { if (!currentUserId || !window.db) { console.error("DEBUG: No hay userId o DB para guardar vocabulario."); return; } const vocabToSaveForLog = JSON.parse(JSON.stringify(customVocabulary)); console.log(`DEBUG: Guardando vocabulario para ${currentUserId}. Contenido de customVocabulary (rulesMap) a guardar:`, vocabToSaveForLog); const vocabDocRef = window.doc(window.db, "userVocabularies", currentUserId); const dataToSave = { rulesMap: customVocabulary, learnedMap: learnedCorrections, normalizations: commonMistakeNormalization }; try { await window.setDoc(vocabDocRef, dataToSave); console.log("DEBUG: Vocabulario del usuario SOBRESCRITO en Firestore con el estado actual de los 3 mapas."); } catch (error) { console.error("Error guardando vocabulario del usuario:", error); setStatus("Error al guardar personalizaciones.", "error", 3000); } }
-function applyAllUserCorrections(text) { if (!text) return ""; let processedText = text; /* Lógica para commonMistakeNormalization (ADAPTAR) console.log("DEBUG: Aplicando normalizaciones..."); for (const mistakeKey in commonMistakeNormalization) { const normalizedForm = commonMistakeNormalization[mistakeKey]; try { const regex = new RegExp(`\\b${escapeRegExp(mistakeKey)}\\b`, 'gi'); processedText = processedText.replace(regex, normalizedForm); } catch (e) { console.error(`Error regex (norm): "${mistakeKey}"`, e); } } Lógica para learnedCorrections (ADAPTAR) const LEARNED_THRESHOLD = 2; console.log("DEBUG: Aplicando correcciones aprendidas..."); const sortedLearnedKeys = Object.keys(learnedCorrections).sort((a, b) => b.length - a.length); for (const learnedError of sortedLearnedKeys) { const correctionData = learnedCorrections[learnedError]; if (correctionData && correctionData.count >= LEARNED_THRESHOLD) { try { const regex = new RegExp(`\\b${escapeRegExp(learnedError)}\\b`, 'gi'); processedText = processedText.replace(regex, correctionData.correctKey); } catch (e) { console.error(`Error regex (learned): "${learnedError}"`, e); } } } */ if (Object.keys(customVocabulary).length > 0) { console.log("DEBUG: Aplicando vocabulario personalizado (rulesMap)..."); const sortedCustomKeys = Object.keys(customVocabulary).sort((a, b) => b.length - a.length); for (const errorKey of sortedCustomKeys) { const correctValue = customVocabulary[errorKey]; try { const regex = new RegExp(`\\b${escapeRegExp(errorKey)}\\b`, 'gi'); processedText = processedText.replace(regex, correctValue); } catch (e) { console.error(`Error regex (custom): "${errorKey}"`, e); } } } return processedText; }
+function applyAllUserCorrections(text) { if (!text) return ""; let processedText = text; if (Object.keys(customVocabulary).length > 0) { console.log("DEBUG: Aplicando vocabulario personalizado (rulesMap)..."); const sortedCustomKeys = Object.keys(customVocabulary).sort((a, b) => b.length - a.length); for (const errorKey of sortedCustomKeys) { const correctValue = customVocabulary[errorKey]; try { const regex = new RegExp(`\\b${escapeRegExp(errorKey)}\\b`, 'gi'); processedText = processedText.replace(regex, correctValue); } catch (e) { console.error(`Error regex (custom): "${errorKey}"`, e); } } } return processedText; }
 function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function openVocabManager() { vocabManagerModal = vocabManagerModal || document.getElementById('vocabManagerModal'); if (!vocabManagerModal) { console.error("Modal de vocabulario no encontrado."); return; } populateVocabManagerList(); vocabManagerModal.style.display = 'flex'; }
 function closeVocabManager() { vocabManagerModal = vocabManagerModal || document.getElementById('vocabManagerModal'); if (!vocabManagerModal) return; vocabManagerModal.style.display = 'none'; }
