@@ -22,8 +22,8 @@ const userApiKey = 'AIzaSyASbB99MVIQ7dt3MzjhidgoHUlMXIeWvGc'; // API Key de Gemi
 // --- Variables para el Vocabulario del Usuario (estilo index (2).html) ---
 let currentUserId = null;      
 let customVocabulary = {};      // Corresponderá a rulesMap
-let learnedCorrections = {};    // Corresponderá a learnedMap (cargado pero no usado activamente en applyAllUserCorrections por ahora)
-let commonMistakeNormalization = {}; // Corresponderá a normalizations (cargado pero no usado activamente)
+let learnedCorrections = {};    // Corresponderá a learnedMap 
+let commonMistakeNormalization = {}; // Corresponderá a normalizations
 
 // --- Variables para Debounce ---
 let isProcessingClick = false; 
@@ -223,8 +223,9 @@ function initializeDictationAppLogic(userId) {
     
     if (!startRecordBtn.dataset.listenerAttached) { 
         startRecordBtn.addEventListener('click', () => {
-            if (isProcessingClick) return;
+            if (isProcessingClick) { console.warn("DEBUG: startRecordBtn - Clic ignorado (debouncing)"); return; }
             isProcessingClick = true;
+            console.log("DEBUG: startRecordBtn - Clic procesado.");
             toggleRecordingState();
             setTimeout(() => { isProcessingClick = false; }, CLICK_DEBOUNCE_MS);
         });
@@ -233,8 +234,9 @@ function initializeDictationAppLogic(userId) {
     }
     if (!pauseResumeBtn.dataset.listenerAttached) { 
         pauseResumeBtn.addEventListener('click', () => {
-            if (isProcessingClick) return;
+            if (isProcessingClick) { console.warn("DEBUG: pauseResumeBtn - Clic ignorado (debouncing)"); return; }
             isProcessingClick = true;
+            console.log("DEBUG: pauseResumeBtn - Clic procesado.");
             handlePauseResume();
             setTimeout(() => { isProcessingClick = false; }, CLICK_DEBOUNCE_MS);
         }); 
@@ -251,30 +253,31 @@ function initializeDictationAppLogic(userId) {
     if (modalAddNewRuleButtonVocab && !modalAddNewRuleButtonVocab.dataset.listenerAttached) { modalAddNewRuleButtonVocab.addEventListener('click', handleAddNewVocabRule); modalAddNewRuleButtonVocab.dataset.listenerAttached = 'true'; }
     if (vocabManagerModal && !vocabManagerModal.dataset.listenerAttached) { vocabManagerModal.addEventListener('click', (e) => { if (e.target === vocabManagerModal) closeVocabManager(); }); vocabManagerModal.dataset.listenerAttached = 'true'; }
     
-    // --- Event Listener Atajo Teclado ---
     if (!document.body.dataset.keydownListenerAttached) { 
         document.addEventListener('keydown', function(event) {
             if (event.shiftKey && (event.metaKey || event.ctrlKey) && event.key === 'Shift') {
                 event.preventDefault(); 
-                console.log("DEBUG: Atajo GLOBAL Shift+Cmd/Ctrl+Shift detectado.");
+                console.log("DEBUG: Atajo GLOBAL Shift+Cmd/Ctrl+Shift detectado (Empezar/Detener).");
                 if (document.body.classList.contains('logged-in') && startRecordBtn && !startRecordBtn.disabled) {
-                    if (isProcessingClick) {
-                        console.warn("DEBUG: Atajo ignorado (debouncing).");
-                        return;
-                    }
-                    console.log("DEBUG: Atajo activando toggleRecordingState.");
-                    isProcessingClick = true; 
-                    toggleRecordingState(); 
+                    if (isProcessingClick) { console.warn("DEBUG: Atajo Empezar/Detener ignorado (debouncing)."); return; }
+                    isProcessingClick = true; toggleRecordingState(); 
                     setTimeout(() => { isProcessingClick = false; }, CLICK_DEBOUNCE_MS); 
-                } else {
-                    console.warn("DEBUG: Atajo ignorado: app no activa o botón no disponible/deshabilitado.");
-                }
+                } else { console.warn("DEBUG: Atajo Empezar/Detener ignorado: app no activa o botón no disponible/deshabilitado."); }
+            }
+            else if (event.shiftKey && event.altKey && event.key.toUpperCase() === 'P') { 
+                event.preventDefault();
+                console.log("DEBUG: Atajo GLOBAL Shift+Alt+P detectado (Pausar/Reanudar).");
+                if (document.body.classList.contains('logged-in') && pauseResumeBtn && !pauseResumeBtn.disabled) {
+                    if (isProcessingClick) { console.warn("DEBUG: Atajo Pausar/Reanudar ignorado (debouncing)."); return; }
+                    isProcessingClick = true; handlePauseResume(); 
+                    setTimeout(() => { isProcessingClick = false; }, CLICK_DEBOUNCE_MS);
+                } else { console.warn("DEBUG: Atajo Pausar/Reanudar ignorado: app no activa o botón no disponible/deshabilitado."); }
             }
         });
         document.body.dataset.keydownListenerAttached = 'true'; 
-        console.log("DEBUG: Listener de atajo de teclado GLOBAL añadido.");
+        console.log("DEBUG: Listener de atajos de teclado GLOBAL añadido/actualizado.");
     }
-
+    
     updateButtonStates("initial"); 
 } 
 
