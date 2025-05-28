@@ -242,7 +242,7 @@ function initializeDictationAppLogic(userId) {
         }); 
         pauseResumeBtn.dataset.listenerAttached = 'true';
     }
-    if (!retryProcessBtn.dataset.listenerAttached) { retryProcessBtn.addEventListener('click', () => { if (currentAudioBlob) { if (isRecording || isPaused) { alert("Detén la grabación actual antes de reenviar."); return; } processAudioBlobAndInsertText(currentAudioBlob); }}); retryProcessBtn.dataset.listenerAttached = 'true';} // Llamar a processAudioBlobAndInsertText
+    if (!retryProcessBtn.dataset.listenerAttached) { retryProcessBtn.addEventListener('click', () => { if (currentAudioBlob) { if (isRecording || isPaused) { alert("Detén la grabación actual antes de reenviar."); return; } processAudioBlobAndInsertText(currentAudioBlob); }}); retryProcessBtn.dataset.listenerAttached = 'true';}
     if (!copyPolishedTextBtn.dataset.listenerAttached) { copyPolishedTextBtn.addEventListener('click', async () => { const h = headerArea.value.trim(); const r = polishedTextarea.value.trim(); let t = ""; if(h){t+=h;} if(r){if(t){t+="\n\n";} t+=r;} if(t===''){setStatus("Nada que copiar.", "idle", 2000); return;} try{await navigator.clipboard.writeText(t); setStatus("¡Texto copiado!", "success", 2000);}catch(e){console.error('Error copia:',e);setStatus("Error copia.", "error", 3000);}}); copyPolishedTextBtn.dataset.listenerAttached = 'true';}
     if (correctTextSelectionBtn && !correctTextSelectionBtn.dataset.listenerAttached) { correctTextSelectionBtn.addEventListener('click', handleCorrectTextSelection); correctTextSelectionBtn.dataset.listenerAttached = 'true';}
     if (techniqueButtonsContainer && !techniqueButtonsContainer.dataset.listenerAttached) { techniqueButtonsContainer.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON' && e.target.dataset.techniqueText) { headerArea.value = e.target.dataset.techniqueText; headerArea.focus(); }}); techniqueButtonsContainer.dataset.listenerAttached = 'true';}
@@ -288,14 +288,17 @@ function setupVolumeMeter(stream) { volumeMeterContainer.style.display='block'; 
 function stopVolumeMeter() { if(animationFrameId) cancelAnimationFrame(animationFrameId); if(microphoneSource){microphoneSource.disconnect(); microphoneSource=null;} volumeMeterBar.style.width='0%'; volumeMeterBar.classList.remove('paused'); volumeMeterContainer.style.display='none';}
 function toggleRecordingState() { if(isRecording){if(mediaRecorder&&(mediaRecorder.state==="recording"||mediaRecorder.state==="paused")){mediaRecorder.stop();setStatus("Deteniendo...","processing");}else{isRecording=false;isPaused=false;updateButtonStates("initial");}}else{startActualRecording();}}
 async function startActualRecording() { 
+    console.log("DEBUG startActualRecording: polishedTextarea.selectionStart =", polishedTextarea.selectionStart, "polishedTextarea.selectionEnd =", polishedTextarea.selectionEnd);
     if (polishedTextarea.selectionStart !== polishedTextarea.selectionEnd) {
         isDictatingForReplacement = true;
         replacementSelectionStart = polishedTextarea.selectionStart;
         replacementSelectionEnd = polishedTextarea.selectionEnd;
+        console.log("DEBUG startActualRecording: MODO REEMPLAZO ACTIVADO");
         setStatus("Dicte el reemplazo...", "processing");
     } else {
         isDictatingForReplacement = false;
         polishedTextarea.value = ''; 
+        console.log("DEBUG startActualRecording: MODO NUEVO DICTADO");
         setStatus("Solicitando permiso...", "processing");
     }
     isPaused = false; audioChunks = []; currentAudioBlob = null; recordingSeconds = 0; audioPlaybackSection.style.display = 'none'; 
@@ -333,23 +336,47 @@ async function startActualRecording() {
 }
 async function processAudioBlobAndInsertText(audioBlob) {
     updateButtonStates("processing_audio"); 
+    console.log("DEBUG processAudioBlobAndInsertText: isDictatingForReplacement =", isDictatingForReplacement);
     try {
         const base64Audio = await blobToBase64(audioBlob);
         if (!base64Audio || base64Audio.length < 100) throw new Error("Fallo Base64.");
-        const processedNewText = await transcribeAndPolishAudio(base64Audio); 
+        
+        let processedNewText = await transcribeAndPolishAudio(base64Audio); 
+        console.log("DEBUG processAudioBlobAndInsertText: Texto recibido de transcribeAndPolishAudio:", JSON.stringify(processedNewText.substring(0,100) + "..."));
+
         if (isDictatingForReplacement) {
+            console.log("DEBUG processAudioBlobAndInsertText: Ejecutando lógica de REEMPLAZO.");
             const originalContent = polishedTextarea.value;
             const textBeforeSelection = originalContent.substring(0, replacementSelectionStart);
             const textAfterSelection = originalContent.substring(replacementSelectionEnd);
+            
+            if (processedNewText.length > 0) {
+                const charBefore = textBeforeSelection.trim().slice(-1); 
+                const needsCapital = replacementSelectionStart === 0 || charBefore === '.' || charBefore === '!' || charBefore === '?' || textBeforeSelection.trim().endsWith('\n');
+                console.log(`DEBUG processAudioBlobAndInsertText (Reemplazo): Char antes: '${charBefore}', ¿Necesita Mayúscula?: ${needsCapital}`);
+                if (needsCapital) {
+                    processedNewText = processedNewText.charAt(0).toUpperCase() + processedNewText.slice(1);
+                } else {
+                    processedNewText = processedNewText.charAt(0).toLowerCase() + processedNewText.slice(1);
+                }
+            }
+            console.log("DEBUG processAudioBlobAndInsertText (Reemplazo): Texto procesado con capitalización contextual:", JSON.stringify(processedNewText.substring(0,100) + "..."));
+
             let smartSpaceBefore = "";
             if (textBeforeSelection.length > 0 && !/\s$/.test(textBeforeSelection) && processedNewText.length > 0 && !/^\s/.test(processedNewText) && !/^[,.;:!?)]/.test(processedNewText)) { smartSpaceBefore = " "; }
             let smartSpaceAfter = "";
             if (textAfterSelection.length > 0 && !/^\s/.test(textAfterSelection) && processedNewText.length > 0 && !/\s$/.test(processedNewText) && !/[([{]$/.test(processedNewText)) { smartSpaceAfter = " "; }
+            
             polishedTextarea.value = textBeforeSelection + smartSpaceBefore + processedNewText + smartSpaceAfter + textAfterSelection;
             const newCursorPos = replacementSelectionStart + smartSpaceBefore.length + processedNewText.length;
             polishedTextarea.selectionStart = polishedTextarea.selectionEnd = newCursorPos;
             setStatus('Texto reemplazado.', 'success', 3000);
-        } else {
+        } else { 
+            console.log("DEBUG processAudioBlobAndInsertText: Ejecutando lógica de NUEVO DICTADO (reemplazar todo).");
+            if (processedNewText.length > 0) { 
+                processedNewText = processedNewText.charAt(0).toUpperCase() + processedNewText.slice(1);
+            }
+            console.log("DEBUG processAudioBlobAndInsertText (Nuevo Dictado): Texto procesado con capitalización inicial:", JSON.stringify(processedNewText.substring(0,100) + "..."));
             polishedTextarea.value = processedNewText; 
             setStatus('Proceso completado.', 'success', 3000);
         }
@@ -360,6 +387,7 @@ async function processAudioBlobAndInsertText(audioBlob) {
         if (!isDictatingForReplacement) polishedTextarea.value = `Error: ${error.message}`; 
         updateButtonStates("error_processing"); 
     } finally {
+        console.log("DEBUG processAudioBlobAndInsertText: FINALLY - Reseteando isDictatingForReplacement a false. Valor anterior:", isDictatingForReplacement);
         isDictatingForReplacement = false; 
     }
 }
@@ -371,31 +399,15 @@ async function callGeminiAPI(p,isTxt=false){if(!userApiKey)throw new Error('No A
 
 function capitalizeSentencesProperly(text) {
     if (!text || typeof text !== 'string' || text.trim() === "") {
-        // console.log("DEBUG capitalizeSentencesProperly: Texto de entrada inválido o vacío, devolviendo original:", text);
         return text || ""; 
     }
-    // console.log("DEBUG capitalizeSentencesProperly: Texto ENTRANTE:", JSON.stringify(text.substring(0, 100) + "..."));
-    let processedText = text.replace(/ +/g, ' ').trim(); 
-    let firstCharIndex = -1;
-    for (let i = 0; i < processedText.length; i++) {
-        if (processedText[i].match(/[a-záéíóúüñ0-9]/i)) { 
-            firstCharIndex = i;
-            break;
-        }
-    }
-    if (firstCharIndex !== -1) {
-        processedText = 
-            processedText.substring(0, firstCharIndex) + 
-            processedText.charAt(firstCharIndex).toUpperCase() + 
-            processedText.slice(firstCharIndex + 1);
-    }
+    let processedText = text.trim(); 
     processedText = processedText.replace(
         /([.!?])(\s*)([a-záéíóúüñ])/g,
         (match, punctuation, whitespace, letter) => {
             return punctuation + whitespace + letter.toUpperCase();
         }
     );
-    // console.log("DEBUG capitalizeSentencesProperly: Texto SALIENTE:", JSON.stringify(processedText.substring(0, 100) + "..."));
     return processedText;
 }
 
@@ -414,7 +426,7 @@ async function transcribeAndPolishAudio(b){
     let pAI='';
     try{
         setStatus('Puliendo...','processing');
-        const pP=[{text:`Por favor, revisa el siguiente texto y aplica ÚNICAMENTE las siguientes modificaciones:\n1. Interpreta y reemplaza las siguientes palabras dictadas como signos de puntuación y formato EXACTAMENTE como se indica:\n    * 'coma' -> ','\n    * 'punto' -> '.'\n    * 'punto y aparte' -> '.' seguido de UN ÚNICO SALTO DE LÍNEA (\\n). NO insertes líneas en blanco adicionales.\n    * 'nueva línea' o 'siguiente línea' -> un único salto de línea (\\n).\n    * 'dos puntos' -> ':'\n    * 'punto y coma' -> ';'\n    * 'signo de interrogación', 'interrogación' o 'pregunta' (al final de una frase) -> '?'\n    * 'signo de exclamación', 'exclamación' o 'admiración' (al final de una frase) -> '!'\n2. Corrige ÚNICAMENTE errores ortográficos evidentes.\n3. Corrige ÚNICAMENTE errores gramaticales OBJETIVOS Y CLAROS que impidan la comprensión.\n4. NO CAMBIES la elección de palabras del hablante si son gramaticalmente correctas y comprensibles.\n5. NO REESTRUCTURES frases si son gramaticalmente correctas.\n6. PRESERVA el estilo y las expresiones exactas del hablante tanto como sea posible. El objetivo NO es "mejorar" el texto, sino formatearlo según lo dictado y corregir solo errores flagrantes.\n7. Si el texto ya contiene puntuación (ej. el hablante dictó "hola punto"), no la dupliques. Simplemente asegúrate de que el formato sea correcto.\n8. Asegúrate de que la primera letra de cada oración (después de un punto, signo de interrogación, o exclamación seguido de un espacio o salto de línea, y al inicio del texto) esté en mayúscula. \n\nTexto a procesar:\n"${tTxt}"`}];
+        const pP=[{text:`Por favor, revisa el siguiente texto y aplica ÚNICAMENTE las siguientes modificaciones:\n1. Interpreta y reemplaza las siguientes palabras dictadas como signos de puntuación y formato EXACTAMENTE como se indica:\n    * 'coma' -> ','\n    * 'punto' -> '.'\n    * 'punto y aparte' -> '.' seguido de UN ÚNICO SALTO DE LÍNEA (\\n). NO insertes líneas en blanco adicionales.\n    * 'nueva línea' o 'siguiente línea' -> un único salto de línea (\\n).\n    * 'dos puntos' -> ':'\n    * 'punto y coma' -> ';'\n    * 'signo de interrogación', 'interrogación' o 'pregunta' (al final de una frase) -> '?'\n    * 'signo de exclamación', 'exclamación' o 'admiración' (al final de una frase) -> '!'\n2. Corrige ÚNICAMENTE errores ortográficos evidentes.\n3. Corrige ÚNICAMENTE errores gramaticales OBJETIVOS Y CLAROS que impidan la comprensión.\n4. NO CAMBIES la elección de palabras del hablante si son gramaticalmente correctas y comprensibles.\n5. NO REESTRUCTURES frases si son gramaticalmente correctas.\n6. PRESERVA el estilo y las expresiones exactas del hablante tanto como sea posible. El objetivo NO es "mejorar" el texto, sino formatearlo según lo dictado y corregir solo errores flagrantes.\n7. Si el texto ya contiene puntuación (ej. el hablante dictó "hola punto"), no la dupliques. Simplemente asegúrate de que el formato sea correcto.\n\nTexto a procesar:\n"${tTxt}"`}];
         pAI=await callGeminiAPI(pP,true);
     } catch(e){
         console.error("Error pulido IA:",e);
@@ -423,11 +435,11 @@ async function transcribeAndPolishAudio(b){
     }
     console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de pulido IA (o fallback):", JSON.stringify(pAI.substring(0,150) + "..."));
     let cT=capitalizeSentencesProperly(pAI);
-    console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de capitalización JS:", JSON.stringify(cT.substring(0,150) + "..."));
+    console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de capitalización de PUNTUACIÓN:", JSON.stringify(cT.substring(0,150) + "..."));
     let custT=applyAllUserCorrections(cT);
     console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de correcciones de usuario:", JSON.stringify(custT.substring(0,150) + "..."));
     let finT=custT.replace(/\.\s*\n\s*\n/g,'.\n').replace(/\n\s*\n/g,'\n');
-    console.log("DEBUG transcribeAndPolishAudio: Texto FINAL después de limpieza de saltos:", JSON.stringify(finT.substring(0,150) + "..."));
+    console.log("DEBUG transcribeAndPolishAudio: Texto FINAL (antes de capitalización contextual):", JSON.stringify(finT.substring(0,150) + "..."));
     return finT;
 }
 
