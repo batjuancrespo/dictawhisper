@@ -31,7 +31,7 @@ const CLICK_DEBOUNCE_MS = 300;
 let isDictatingForReplacement = false;
 let replacementSelectionStart = 0;
 let replacementSelectionEnd = 0;
-let insertionPoint = 0; // Para inserción en el cursor
+let insertionPoint = 0; 
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -288,7 +288,6 @@ function resetRecordingTimerDisplay() { recordingTimeDisplay.textContent = ""; r
 function setupVolumeMeter(stream) { volumeMeterContainer.style.display='block'; if(!audioContext) audioContext=new(window.AudioContext||window.webkitAudioContext)(); if(audioContext.state==='suspended') audioContext.resume(); analyser=audioContext.createAnalyser(); microphoneSource=audioContext.createMediaStreamSource(stream); microphoneSource.connect(analyser); analyser.fftSize=256; analyser.smoothingTimeConstant=0.3; const l=analyser.frequencyBinCount, d=new Uint8Array(l); function draw(){if(!isRecording||isPaused){if(isPaused){volumeMeterBar.classList.add('paused'); volumeMeterBar.style.background='var(--button-default-bg)';}else{volumeMeterBar.classList.remove('paused'); volumeMeterBar.style.background='var(--volume-bar-gradient)';} animationFrameId=requestAnimationFrame(draw); return;} animationFrameId=requestAnimationFrame(draw); analyser.getByteFrequencyData(d); let s=0; for(let i=0;i<l;i++){s+=d[i];} let a=s/l; let v=(a/130)*100; v=Math.min(100,Math.max(0,v)); volumeMeterBar.style.width=v+'%'; volumeMeterBar.classList.remove('paused'); volumeMeterBar.style.background='var(--volume-bar-gradient)';} draw(); }
 function stopVolumeMeter() { if(animationFrameId) cancelAnimationFrame(animationFrameId); if(microphoneSource){microphoneSource.disconnect(); microphoneSource=null;} volumeMeterBar.style.width='0%'; volumeMeterBar.classList.remove('paused'); volumeMeterContainer.style.display='none';}
 function toggleRecordingState() { if(isRecording){if(mediaRecorder&&(mediaRecorder.state==="recording"||mediaRecorder.state==="paused")){mediaRecorder.stop();setStatus("Deteniendo...","processing");}else{isRecording=false;isPaused=false;updateButtonStates("initial");}}else{startActualRecording();}}
-
 async function startActualRecording() { 
     console.log("DEBUG startActualRecording: polishedTextarea.selectionStart =", polishedTextarea.selectionStart, "polishedTextarea.selectionEnd =", polishedTextarea.selectionEnd);
     if (polishedTextarea.selectionStart !== polishedTextarea.selectionEnd) {
@@ -305,8 +304,7 @@ async function startActualRecording() {
         setStatus("Solicitando permiso...", "processing");
     }
     isPaused = false; audioChunks = []; currentAudioBlob = null; recordingSeconds = 0; 
-    // No ocultamos audioPlaybackSection aquí, se maneja en updateButtonStates
-    
+    audioPlaybackSection.style.display = 'none'; 
     if (audioPlayback.src) { URL.revokeObjectURL(audioPlayback.src); audioPlayback.src = ''; audioPlayback.removeAttribute('src');}
     if (!userApiKey) { alert('API Key?'); setStatus("Error Key","error"); updateButtonStates("initial"); isDictatingForReplacement = false; return; } 
     try {
@@ -326,7 +324,6 @@ async function startActualRecording() {
             if (currentAudioBlob.size === 0) { setStatus("Audio vacío.", "error", 3000); updateButtonStates("stopped_error"); isDictatingForReplacement = false; return; }
             const audioURL = URL.createObjectURL(currentAudioBlob);
             audioPlayback.src = audioURL; 
-            // audioPlaybackSection se mostrará en updateButtonStates si es necesario
             await processAudioBlobAndInsertText(currentAudioBlob);
         };
         mediaRecorder.onerror = e => { isRecording = false; isPaused = false; isDictatingForReplacement = false; stopVolumeMeter(); stopRecordingTimer(); resetRecordingTimerDisplay(); setStatus(`Error MediaRec: ${e.error.name}`, "error", 4000); updateButtonStates("error"); };
@@ -334,7 +331,6 @@ async function startActualRecording() {
         if (isDictatingForReplacement) {
              setStatus('Dicte el reemplazo...', "processing");
         } else {
-             // Solo cambiar a "Grabando..." si no estaba ya en "Solicitando permiso..."
              if (statusDiv.textContent.toLowerCase() !== 'solicitando permiso...') {
                 setStatus('Grabando...', "processing"); 
              }
@@ -347,7 +343,6 @@ async function startActualRecording() {
         updateButtonStates("initial");
     }
 }
-
 async function processAudioBlobAndInsertText(audioBlob) {
     updateButtonStates("processing_audio"); 
     console.log("DEBUG processAudioBlobAndInsertText: isDictatingForReplacement =", isDictatingForReplacement);
@@ -441,6 +436,17 @@ function cleanupArtifacts(text) {
     cleanedText = cleanedText.replace(/(\s[pP])+[ \t]*$/gm, ""); 
     cleanedText = cleanedText.replace(/[pP]{2,}[ \t]*$/gm, "");   
     cleanedText = cleanedText.replace(/\s+[pP][\s.]*$/gm, ""); 
+    const trimmedTextForCheck = cleanedText.trim();
+    const wordCount = trimmedTextForCheck.split(/\s+/).filter(Boolean).length;
+    if (wordCount > 0 && wordCount <= 4) { 
+        if (trimmedTextForCheck.endsWith('.') && !trimmedTextForCheck.endsWith('..') && 
+            (trimmedTextForCheck.length === 1 || (trimmedTextForCheck.length > 1 && trimmedTextForCheck.charAt(trimmedTextForCheck.length - 2) !== '.'))) {
+            if (trimmedTextForCheck.length <= 1 || !/[.!?]$/.test(trimmedTextForCheck.substring(0, trimmedTextForCheck.length -1).trim())) {
+                cleanedText = trimmedTextForCheck.slice(0, -1);
+            }
+        }
+    }
+    cleanedText = cleanedText.replace(/\n+$/, "");
     cleanedText = cleanedText.replace(/\s+([.!?])$/, "$1");
     cleanedText = cleanedText.replace(/ +/g, ' ');
     return cleanedText.trim(); 
@@ -460,22 +466,28 @@ function capitalizeSentencesProperly(text) {
     return processedText;
 }
 
-async function transcribeAndPolishAudio(b){
-    let tTxt='';
+async function transcribeAndPolishAudio(base64Audio){
+    let transcribedText = '';
     try{
         setStatus('Transcribiendo...','processing');
-        const tP=[{text:"Transcribe el siguiente audio a texto con la MÁXIMA LITERALIDAD POSIBLE. Ignora sonidos de respiración o carraspeos. Si el hablante dice 'coma', 'punto', etc., transcríbelo tal cual como texto, no como el signo de puntuación. El objetivo es una transcripción fiel palabra por palabra de lo que se oye:"},{inline_data:{mime_type:"audio/webm",data:b}}];
-        tTxt=await callGeminiAPI(tP,false);
-        console.log("---Transcripción Original (Consola)---\n",JSON.stringify(tTxt),"\n-----------------------------------");
+        const transcriptPromptParts = [
+            {text:"Transcribe el siguiente audio a texto con la MÁXIMA LITERALIDAD POSIBLE. Ignora sonidos de respiración o carraspeos. Si el hablante dice 'coma', 'punto', etc., transcríbelo tal cual como texto, no como el signo de puntuación. El objetivo es una transcripción fiel palabra por palabra. Si el audio termina abruptamente sin una palabra de puntuación, NO añadas ninguna."},
+            {inline_data:{mime_type:"audio/webm",data:base64Audio}}
+        ];
+        transcribedText = await callGeminiAPI(transcriptPromptParts, false); 
+        console.log("---Transcripción Original (Consola)---\n",JSON.stringify(transcribedText),"\n-----------------------------------");
+        transcribedText = cleanupArtifacts(transcribedText);
+        console.log("---Transcripción Original LIMPIA (Consola)---\n",JSON.stringify(transcribedText),"\n-----------------------------------");
     } catch(e){
         console.error("Error transcripción:",e);throw new Error(`Fallo transcripción:${e.message}`);
     }
-    if(!tTxt||tTxt.trim()==="") throw new Error("Transcripción vacía.");
+    if(!transcribedText || transcribedText.trim()==="") throw new Error("Transcripción vacía después de limpieza inicial.");
     
-    let pAI='';
+    let polishedByAI = '';
     try{
         setStatus('Puliendo...','processing');
-        const pP=[{text:`Por favor, revisa el siguiente texto. Aplica las siguientes modificaciones ÚNICAMENTE:
+        const polishPromptParts = [{
+            text:`Por favor, revisa el siguiente texto. Aplica las siguientes modificaciones ÚNICAMENTE:
 1.  Interpreta y reemplaza las siguientes palabras dictadas como signos de puntuación y formato EXACTAMENTE como se indica: 'coma' -> ',', 'punto' -> '.', 'punto y aparte' -> '.\\n', 'nueva línea' -> '\\n', 'dos puntos' -> ':', 'punto y coma' -> ';', 'interrogación' -> '?', 'exclamación' -> '!'. Asegúrate de que 'punto y aparte' y 'nueva línea' resulten en UN ÚNICO salto de línea.
 2.  Corrige ÚNICAMENTE errores ortográficos evidentes y objetivos.
 3.  Corrige ÚNICAMENTE errores gramaticales OBJETIVOS Y CLAROS que impidan la comprensión.
@@ -487,24 +499,25 @@ async function transcribeAndPolishAudio(b){
 9.  CRUCIAL: NO AÑADAS NINGÚN SIGNO DE PUNTUACIÓN (especialmente un punto final '.') AL FINAL DEL TEXTO PROCESADO A MENOS QUE LA PALABRA "punto" (o equivalente para otra puntuación) HAYA SIDO DICTADA EXPLÍCITAMENTE COMO LA ÚLTIMA PARTE DE LA TRANSCRIPCIÓN ORIGINAL. Si la transcripción original no termina con una palabra de puntuación, el texto procesado tampoco debe terminar con un signo de puntuación añadido por ti.
 
 Texto a procesar:
-"${tTxt}"`}];
-        pAI=await callGeminiAPI(pP,true);
+"${transcribedText}"`
+        }];
+        polishedByAI = await callGeminiAPI(polishPromptParts, true);
     } catch(e){
         console.error("Error pulido IA:",e);
-        setStatus(`Fallo pulido IA:${e.message}. Usando cruda.`,"error",4000);
-        pAI=tTxt;
+        setStatus(`Fallo pulido IA:${e.message}. Usando transcripción limpia.`, "error", 4000);
+        polishedByAI = transcribedText; 
     }
 
-    console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de pulido IA (o fallback):", JSON.stringify(pAI));
-    let cleanedArtifacts = cleanupArtifacts(pAI);
-    console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de cleanupArtifacts:", JSON.stringify(cleanedArtifacts));
-    let capPunctuation = capitalizeSentencesProperly(cleanedArtifacts);
-    console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de capitalización de PUNTUACIÓN:", JSON.stringify(capPunctuation));
-    let custCorrected = applyAllUserCorrections(capPunctuation);
-    console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de correcciones de usuario:", JSON.stringify(custCorrected));
-    let finT=custCorrected.replace(/\s*\n\s*\n/g,'\n').replace(/\s+\n/g, '\n');
-    console.log("DEBUG transcribeAndPolishAudio: Texto FINAL (antes de capitalización contextual de inserción):", JSON.stringify(finT));
-    return finT;
+    console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de pulido IA (o fallback):", JSON.stringify(polishedByAI));
+    let cleanedAgain = cleanupArtifacts(polishedByAI);
+    console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de SEGUNDA limpieza de artefactos:", JSON.stringify(cleanedAgain));
+    let capitalizedText = capitalizeSentencesProperly(cleanedAgain);
+    console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de capitalización de PUNTUACIÓN:", JSON.stringify(capitalizedText));
+    let customCorrectedText = applyAllUserCorrections(capitalizedText);
+    console.log("DEBUG transcribeAndPolishAudio: Texto DESPUÉS de correcciones de usuario:", JSON.stringify(customCorrectedText));
+    let finalText = customCorrectedText.replace(/\s*\n\s*\n/g,'\n').replace(/\s+\n/g, '\n'); 
+    console.log("DEBUG transcribeAndPolishAudio: Texto FINAL (antes de capitalización contextual de inserción):", JSON.stringify(finalText));
+    return finalText;
 }
 
 async function loadUserVocabularyFromFirestore(userId) { if (!userId || !window.db) { customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; return; } console.log(`DEBUG: Cargando vocabulario (estilo index(2).html) para usuario: ${userId}`); const vocabDocRef = window.doc(window.db, "userVocabularies", userId); try { const docSnap = await window.getDoc(vocabDocRef); if (docSnap.exists()) { const firestoreData = docSnap.data(); customVocabulary = firestoreData.rulesMap || {}; learnedCorrections = firestoreData.learnedMap || {}; commonMistakeNormalization = firestoreData.normalizations || {}; console.log("DEBUG: Vocabulario cargado. Reglas:", Object.keys(customVocabulary).length, "Aprendidas:", Object.keys(learnedCorrections).length, "Normaliz.:", Object.keys(commonMistakeNormalization).length); } else { customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; console.log("DEBUG: No doc de vocabulario. Usando vacíos."); } } catch (error) { console.error("Error cargando vocabulario:", error); customVocabulary = {}; learnedCorrections = {}; commonMistakeNormalization = {}; setStatus("Error al cargar personalizaciones.", "error", 3000); } }
