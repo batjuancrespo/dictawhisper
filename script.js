@@ -433,20 +433,16 @@ function cleanupArtifacts(text) {
     if (!text || typeof text !== 'string') return text || "";
     let cleanedText = text;
     console.log("DEBUG cleanupArtifacts: Texto ENTRANTE para limpieza:", JSON.stringify(cleanedText));
-
     let trimmedForQuotesCheck = cleanedText.trim(); 
     if (trimmedForQuotesCheck.startsWith('"') && trimmedForQuotesCheck.endsWith('"') && trimmedForQuotesCheck.length > 2) {
         cleanedText = trimmedForQuotesCheck.substring(1, trimmedForQuotesCheck.length - 1).trim();
         console.log("DEBUG cleanupArtifacts: Comillas dobles envolventes eliminadas:", JSON.stringify(cleanedText));
     }
-
     cleanedText = cleanedText.replace(/(\s[pP])+[ \t]*$/gm, ""); 
     cleanedText = cleanedText.replace(/[pP]{2,}[ \t]*$/gm, "");   
     cleanedText = cleanedText.replace(/\s+[pP][\s.]*$/gm, ""); 
-    
     const trimmedTextForPunctuationCheck = cleanedText.trim(); 
     const wordCount = trimmedTextForPunctuationCheck.split(/\s+/).filter(Boolean).length;
-
     if (wordCount > 0 && wordCount <= 5) { 
         if (trimmedTextForPunctuationCheck.endsWith('.') && 
             !trimmedTextForPunctuationCheck.endsWith('..') && 
@@ -458,11 +454,9 @@ function cleanupArtifacts(text) {
             }
         }
     }
-    
     cleanedText = cleanedText.replace(/\n+$/, "");
     cleanedText = cleanedText.replace(/\s+([.!?])$/, "$1");
     cleanedText = cleanedText.replace(/ +/g, ' ');
-    
     console.log("DEBUG cleanupArtifacts: Texto SALIENTE después de limpieza:", JSON.stringify(cleanedText.trim()));
     return cleanedText.trim(); 
 }
@@ -509,7 +503,7 @@ async function transcribeAndPolishAudio(base64Audio){
 4.  NO CAMBIES la elección de palabras del hablante si son gramaticalmente correctas y comprensibles.
 5.  NO REESTRUCTURES frases si son gramaticalmente correctas.
 6.  PRESERVA el estilo y las expresiones exactas del hablante. NO intentes "mejorar" el texto.
-7.  Si el texto ya contiene la puntuación dictada, no la dupliques.
+7.  Al reemplazar palabras clave de puntuación (como "coma" por ","), asegúrate de que no resulten en signos de puntuación duplicados consecutivos (ej. ",," o ".."). Si esto ocurre, mantén solo un signo de puntuación. Evita espacios innecesarios alrededor de la puntuación.
 8.  Capitaliza la primera letra de una oración SOLO si sigue a un '.', '?', o '!' dictados explícitamente y que hayas insertado, o si es el inicio absoluto del texto completo.
 9.  CRUCIAL: NO AÑADAS NINGÚN SIGNO DE PUNTUACIÓN (especialmente un punto final '.') AL FINAL DEL TEXTO PROCESADO A MENOS QUE LA PALABRA "punto" (o equivalente para otra puntuación) HAYA SIDO DICTADA EXPLÍCITAMENTE COMO LA ÚLTIMA PARTE DE LA TRANSCRIPCIÓN ORIGINAL. Si la transcripción original no termina con una palabra de puntuación, el texto procesado tampoco debe terminar con un signo de puntuación añadido por ti.
 
