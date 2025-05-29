@@ -299,7 +299,6 @@ async function startActualRecording() {
     } else {
         isDictatingForReplacement = false;
         insertionPoint = polishedTextarea.selectionStart; 
-        // No limpiar polishedTextarea.value aquí para permitir añadir/insertar
         console.log("DEBUG startActualRecording: MODO INSERCIÓN/AÑADIR. Punto de inserción:", insertionPoint);
         setStatus("Solicitando permiso...", "processing");
     }
@@ -433,22 +432,38 @@ async function callGeminiAPI(p,isTxt=false){if(!userApiKey)throw new Error('No A
 function cleanupArtifacts(text) {
     if (!text || typeof text !== 'string') return text || "";
     let cleanedText = text;
+    console.log("DEBUG cleanupArtifacts: Texto ENTRANTE para limpieza:", JSON.stringify(cleanedText));
+
+    let trimmedForQuotesCheck = cleanedText.trim(); 
+    if (trimmedForQuotesCheck.startsWith('"') && trimmedForQuotesCheck.endsWith('"') && trimmedForQuotesCheck.length > 2) {
+        cleanedText = trimmedForQuotesCheck.substring(1, trimmedForQuotesCheck.length - 1).trim();
+        console.log("DEBUG cleanupArtifacts: Comillas dobles envolventes eliminadas:", JSON.stringify(cleanedText));
+    }
+
     cleanedText = cleanedText.replace(/(\s[pP])+[ \t]*$/gm, ""); 
     cleanedText = cleanedText.replace(/[pP]{2,}[ \t]*$/gm, "");   
     cleanedText = cleanedText.replace(/\s+[pP][\s.]*$/gm, ""); 
-    const trimmedTextForCheck = cleanedText.trim();
-    const wordCount = trimmedTextForCheck.split(/\s+/).filter(Boolean).length;
-    if (wordCount > 0 && wordCount <= 4) { 
-        if (trimmedTextForCheck.endsWith('.') && !trimmedTextForCheck.endsWith('..') && 
-            (trimmedTextForCheck.length === 1 || (trimmedTextForCheck.length > 1 && trimmedTextForCheck.charAt(trimmedTextForCheck.length - 2) !== '.'))) {
-            if (trimmedTextForCheck.length <= 1 || !/[.!?]$/.test(trimmedTextForCheck.substring(0, trimmedTextForCheck.length -1).trim())) {
-                cleanedText = trimmedTextForCheck.slice(0, -1);
+    
+    const trimmedTextForPunctuationCheck = cleanedText.trim(); 
+    const wordCount = trimmedTextForPunctuationCheck.split(/\s+/).filter(Boolean).length;
+
+    if (wordCount > 0 && wordCount <= 5) { 
+        if (trimmedTextForPunctuationCheck.endsWith('.') && 
+            !trimmedTextForPunctuationCheck.endsWith('..') && 
+            !trimmedTextForPunctuationCheck.endsWith('...') && 
+            (trimmedTextForPunctuationCheck.length === 1 || (trimmedTextForPunctuationCheck.length > 1 && trimmedTextForPunctuationCheck.charAt(trimmedTextForPunctuationCheck.length - 2) !== '.'))) {
+            if (trimmedTextForPunctuationCheck.length <= 1 || !/[.!?]$/.test(trimmedTextForPunctuationCheck.substring(0, trimmedTextForPunctuationCheck.length -1).trim())) {
+                console.log("DEBUG cleanupArtifacts: Fragmento corto termina en punto, eliminando:", JSON.stringify(trimmedTextForPunctuationCheck));
+                cleanedText = trimmedTextForPunctuationCheck.slice(0, -1);
             }
         }
     }
+    
     cleanedText = cleanedText.replace(/\n+$/, "");
     cleanedText = cleanedText.replace(/\s+([.!?])$/, "$1");
     cleanedText = cleanedText.replace(/ +/g, ' ');
+    
+    console.log("DEBUG cleanupArtifacts: Texto SALIENTE después de limpieza:", JSON.stringify(cleanedText.trim()));
     return cleanedText.trim(); 
 }
 
